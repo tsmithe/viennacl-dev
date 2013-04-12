@@ -48,6 +48,8 @@ option(BUILD_DOXYGEN_DOCS "Build the Doxygen-generated API docs" OFF)
 
 option(BUILD_MANUAL "Build the PDF manual" OFF)
 
+option(BUILD_PYVIENNACL "Build the PyViennaCL Python bindings" ON)
+
 cmake_dependent_option(ENABLE_DIST "Enable the the distribution tarball target" ON "BUILD_DOXYGEN_DOCS;BUILD_MANUAL" OFF)
 
 mark_as_advanced(BUILD_DOXYGEN_DOCS BUILD_MANUAL ENABLE_DIST)
@@ -61,6 +63,15 @@ endif()
 
 if(BUILD_MANUAL)
    find_package(LATEX REQUIRED)
+endif()
+
+if(BUILD_PYVIENNACL)
+  set(PythonLibs_FIND_VERSION 3)
+  set(PythonInterp_FIND_VERSION 3)
+  find_package(PythonInterp REQUIRED)
+  find_package(PythonLibs REQUIRED)
+  find_package(Numpy REQUIRED)
+  find_package(Boost REQUIRED COMPONENTS python-py33)
 endif()
 
 # Compile options
@@ -89,6 +100,10 @@ if(BUILD_TESTING)
 endif()
 
 add_subdirectory(doc)
+
+if(BUILD_PYVIENNACL)
+    add_subdirectory(pyviennacl)
+endif()
 
 # Install
 #########

@@ -1,0 +1,21 @@
+from distutils.core import setup, Extension
+
+include_dirs = '${INCLUDE_DIRS}'.split(";")
+libraries = [ 'boost_python-py33' ]
+
+if __name__=="__main__":
+    setup( name="pyviennacl",
+           version="${VERSION}",
+           packages=["pyviennacl"],
+           package_dir={'pyviennacl': 
+                          "${CMAKE_CURRENT_SOURCE_DIR}/src/pyviennacl"},
+           ext_package="pyviennacl",
+           ext_modules=[Extension( "_viennacl",
+                                   ["src/_viennacl.cpp"],
+                                   include_dirs=include_dirs,
+                                   libraries=libraries ),
+                        Extension( "_viennacl_numpy",
+                                   ["src/_viennacl_numpy.cpp"],
+                                   include_dirs=include_dirs,
+                                   libraries=libraries )] )
+
