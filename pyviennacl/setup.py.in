@@ -1,7 +1,7 @@
 from distutils.core import setup, Extension
 
 include_dirs = '${INCLUDE_DIRS}'.split(";")
-libraries = [ 'boost_python-py33' ]
+libraries = [ 'boost_python-py33', 'OpenCL' ]
 
 if __name__=="__main__":
     setup( name="pyviennacl",
