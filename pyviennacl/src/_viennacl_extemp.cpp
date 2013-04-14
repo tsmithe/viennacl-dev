@@ -32,47 +32,101 @@ using namespace boost::python;
 
 */
 
+/*
+
+  TODO: optimisation -- templates specialisation inheritance,
+                        rvalue references and move constructors,
+			expression templates
+			other c++11 stuff?
+  TODO: Pythonic operators/properties...
+  TODO: memory alignment handling -- meta-templates?
+  TODO: memory domain handling
+  TODO: operator+,+= with list (vs vector)
+
+ */
+
 namespace pyviennacl
 {
 
-  template <class VectorType, class ScalarType>
-  void vector_to_list(VectorType const& v, list *l)
+  template <class ScalarType>
+  void copy_vector(viennacl::vector<ScalarType> const* a,
+		   viennacl::vector<ScalarType> *b)
+  {
+    viennacl::copy(a->begin(), a->end(), b->begin());
+  }
+
+  template <class ScalarType>
+  void copy_vector(viennacl::vector<ScalarType> const* a,
+		   std::vector<ScalarType> *b)
+  {
+    viennacl::fast_copy(a->begin(), a->end(), b->begin());
+  }
+
+
+  template <class ScalarType>
+  void copy_vector(std::vector<ScalarType> const* a,
+		   viennacl::vector<ScalarType> *b)
+  {
+    viennacl::fast_copy(a->begin(), a->end(), b->begin());
+  }
+
+
+  template <class ScalarType>
+  void copy_vector(std::vector<ScalarType> const* a,
+		   std::vector<ScalarType> *b)
+  {
+    std::copy(a->begin(), a->end(), b->begin());
+  }
+
+  template <class ScalarType>
+  void vector_to_list(viennacl::vector<ScalarType> const& v, list *l)
+  {
+    std::vector<ScalarType> temp(v.size());
+    //viennacl::fast_copy(v.begin(), v.end(), temp.begin());
+    copy_vector<ScalarType>(&v, &temp);
+
+    for(unsigned int i=0; i < temp.size(); ++i)
+      l->append((ScalarType)temp[i]);
+  }
+
+  template <class ScalarType>
+  void vector_to_list(std::vector<ScalarType> const& v, list *l)
   {
     for(unsigned int i=0; i < v.size(); ++i)
       l->append((ScalarType)v[i]);
   }
 
-  template <class VectorType, class ScalarType>
-  void list_to_vector(list const& l, VectorType *v)
+  template <class ScalarType>
+  void list_to_vector(list const& l, std::vector<ScalarType> *v)
   {
-    // fill v from l
-    // very slow on gpu back-end
-    // need a more elegant solution!
-
     for(unsigned int i=0; i < v->size(); ++i)
       (*v)[i] = extract<ScalarType>(l[i]);
+  }
+
+  template <class ScalarType>
+  void list_to_vector(list const& l, viennacl::vector<ScalarType> *v)
+  {
+    std::vector<ScalarType> temp(v->size());
+
+    for(unsigned int i=0; i < v->size(); ++i)
+      temp[i] = extract<ScalarType>(l[i]);
+
+    //viennacl::fast_copy(temp.begin(), temp.end(), v->begin());
+    copy_vector<ScalarType>(&temp, v);
   }
 
   template <class VectorType, class ScalarType>
   class vector
   {
-  
+ 
   public:
     int align;
     VectorType *vec = NULL;
 
-    //TODO: constructors/destructor
-    //TODO: getter and setters
-    //TODO: operator overloads...
-    //TODO: Pythonic operators/properties...
-    //TODO: memory alignment handling -- meta-templates?
-    //TODO: memory domain handling
-    //TODO: operator+,+= with list (vs vector)
-
     list get_value()
     {
       list l;
-      vector_to_list<VectorType, ScalarType>((*vec), &l);
+      vector_to_list<ScalarType>((*vec), &l);
       return l;
     }
 
@@ -80,7 +134,7 @@ namespace pyviennacl
     {
       int size = len(l);
       VectorType *v = new VectorType(size);
-      list_to_vector<VectorType, ScalarType>(l, v);
+      list_to_vector<ScalarType>(l, v);
       vec = v;
     }
 
@@ -119,22 +173,19 @@ namespace pyviennacl
     {
       align = b.align;
       VectorType *v = new VectorType(b.vec->size());
-
-      // assuming that memory is allocated linearly, could fast_copy...
-      // currently, assumes very little, but both vectors are OpenCL
-      viennacl::copy(*(b.vec), *v);
+      //viennacl::copy(b.vec->begin(), b.vec->end(), v->begin());
+      copy_vector<ScalarType>(b.vec, v);
       vec = v;
-
     }
 
     vector(int a=NULL)
     {
-      align = a;
+      align = 0; // a;
     }
 
     vector(list l, int a=NULL)
     {
-      align = a;
+      align = 0; // a;
       set_value(l);
     }
 
@@ -145,7 +196,7 @@ namespace pyviennacl
   };
 }
 
-BOOST_PYTHON_MODULE(_viennacl)
+BOOST_PYTHON_MODULE(_viennacl_extemp)
 {
 
   using namespace pyviennacl;
@@ -161,7 +212,21 @@ BOOST_PYTHON_MODULE(_viennacl)
     .add_property("value",
 		  &vector<viennacl::vector<double>, double>::get_value,
 		  &vector<viennacl::vector<double>, double>::set_value)
-    .def_readonly("align", &vector<viennacl::vector<double>, double>::align);
+    .def_readonly("align", &vector<viennacl::vector<double>, double>::align)
+    ;
+
+  class_< vector<std::vector<double>, double> >("std_vector")
+    .def(init<int>())
+    .def(init<vector<std::vector<double>, double> >())
+    .def(init<list>())
+    .def(init<list, int>())
+    //.def(self + vector<std::vector<double>, double>())
+    //.def(vector<std::vector<double>, double>() + self)
+    //.def(self += vector<std::vector<double>, double>())
+    .add_property("value",
+		  &vector<std::vector<double>, double>::get_value,
+		  &vector<std::vector<double>, double>::set_value)
+    .def_readonly("align", &vector<std::vector<double>, double>::align)
     ;
 
 }
