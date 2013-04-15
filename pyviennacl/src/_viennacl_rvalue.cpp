@@ -94,7 +94,6 @@ namespace pyviennacl
   {
  
   public:
-    int align;
     VectorType *vec = NULL;
 
     list get_value()
@@ -130,36 +129,39 @@ namespace pyviennacl
     vector<VectorType, ScalarType>&
     operator+=(const vector<VectorType, ScalarType> &y)
     {
-      (*vec) += *(y.vec);
+      *vec += *(y.vec);
       return *this;
     }
-  
+
+    
     vector<VectorType, ScalarType>
     operator+(const vector<VectorType, ScalarType> &y) const
     {
       vector<VectorType, ScalarType> temp(y);
       temp += (*this);
-      
       return temp;
+    }
+    
+
+    vector(vector<VectorType, ScalarType> &&b)
+      : vec(b.vec)
+    {
+      b.vec = NULL;
     }
     
     vector(const vector<VectorType, ScalarType> &b)
     {
-      align = b.align;
       VectorType *v = new VectorType(b.vec->size());
-      //viennacl::copy(b.vec->begin(), b.vec->end(), v->begin());
       copy_vector<ScalarType>(b.vec, v);
       vec = v;
     }
-
-    vector(int a=NULL)
+    
+    vector()
     {
-      align = 0; // a;
     }
 
-    vector(list l, int a=NULL)
+    vector(list l)
     {
-      align = 0; // a;
       set_value(l);
     }
 
@@ -176,32 +178,28 @@ BOOST_PYTHON_MODULE(_viennacl_rvalue)
   using namespace pyviennacl;
 
   class_< vector<viennacl::vector<double>, double> >("vector")
-    .def(init<int>())
     .def(init<vector<viennacl::vector<double>, double> >())
     .def(init<list>())
-    .def(init<list, int>())
-    .def(self + vector<viennacl::vector<double>, double>())
-    .def(vector<viennacl::vector<double>, double>() + self)
-    .def(self += vector<viennacl::vector<double>, double>())
+    .def(self + self)
+    .def(self += self)
+    //.def(self + vector<std::vector<double>, double>())
+    //.def(self += vector<std::vector<double>, double>())
     .add_property("value",
 		  &vector<viennacl::vector<double>, double>::get_value,
 		  &vector<viennacl::vector<double>, double>::set_value)
-    .def_readonly("align", &vector<viennacl::vector<double>, double>::align)
     ;
 
+  /*
   class_< vector<std::vector<double>, double> >("std_vector")
-    .def(init<int>())
-    .def(init<vector<std::vector<double>, double> >())
+    //.def(init<vector<std::vector<double>, double> >())
     .def(init<list>())
-    .def(init<list, int>())
     //.def(self + vector<std::vector<double>, double>())
     //.def(vector<std::vector<double>, double>() + self)
     //.def(self += vector<std::vector<double>, double>())
     .add_property("value",
 		  &vector<std::vector<double>, double>::get_value,
 		  &vector<std::vector<double>, double>::set_value)
-    .def_readonly("align", &vector<std::vector<double>, double>::align)
     ;
-
+  */
 }
 

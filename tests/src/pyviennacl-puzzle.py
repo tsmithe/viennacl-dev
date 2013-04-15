@@ -21,8 +21,8 @@ def run_test(v):
     v is the implementation of pyviennacl to use.
 
     Executes (x = y1 + y2) and (x = y1 + y2 + y1 + y2) for vector sizes from 
-    1 to 10^7, with a step of size=1000. Runs each test 100 times, taking the
-    mean.
+    1 to 2*10^6, with a step of size=1000. Runs each test 100 times, taking
+    the mean.
 
     Prints the average execution times on each step.
 
@@ -32,17 +32,17 @@ def run_test(v):
     """
 
     bench = []
-    for n in range(1,1500):
+    for n in range(1,2000):
         a = 0.0
         b = 0.0
         c = 0.0
-        for m in range(100):
-            y1 = v.vector(list(numpy.ones(n*1000) * 3.142))
-            y2 = v.vector(list(numpy.ones(n*1000) * 2.718))
 
-            y3 = numpy.ones(n*1000) * 3.142
-            y4 = numpy.ones(n*1000) * 2.718
-            
+        y1 = v.vector(list(numpy.ones(n*1000) * 3.142))
+        y2 = v.vector(list(numpy.ones(n*1000) * 2.718))
+        y3 = numpy.ones(n*1000) * 3.142
+        y4 = numpy.ones(n*1000) * 2.718
+
+        for m in range(100):
             t1 = time.time()
             x1 = y1 + y2
             t2 = time.time()
@@ -66,14 +66,23 @@ def run_test(v):
         
     return bench
 
+def plot_test(bench):
+    """
+    Stub for matplotlib-based graphing of benchmark results.
+    """
+    return
 
 if __name__ == "__main__":
     print("Using pure C++...");
     from pyviennacl import _puzzle as p
     p.run_test()
 
-    print("Using _viennacl_rvalue....")
-    from pyviennacl import _viennacl_rvalue as v
+#    print("Using _viennacl_rvalue....")
+#    from pyviennacl import _viennacl_rvalue as v
+#    run_test(v)
+
+    print("Using _viennacl_extemp....")
+    from pyviennacl import _viennacl_extemp as v
     run_test(v)
 
     sys.exit(os.EX_OK)
