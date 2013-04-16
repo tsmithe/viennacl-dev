@@ -32,44 +32,34 @@ def run_test(v):
     """
 
     bench = []
-    for n in range(1,2000):
+    for n in range(1,2001):
         a = 0.0
         b = 0.0
-        c = 0.0
 
-        y3 = numpy.ones(n*1000) * 3.142
-        y4 = numpy.ones(n*1000) * 2.718
-
-        for m in range(100):
-            y1 = v.new_vector(n*1000, 3.142)
-            y2 = v.new_vector(n*1000, 2.718)
+        for m in range(200):
+            try:
+                y1 = v.vector(n*1000, 3.142)
+                y2 = v.vector(n*1000, 2.718)
+            except:
+                y1 = v.scalar_vector(1000, 3.142)
+                y2 = v.scalar_vector(1000, 2.718)
 
             t1 = time.time()
             x1 = y1 + y2
-            p = x1.get_value()
-            #print(x1.get_value())
             t2 = time.time()
             a += t2 - t1
 
             t1 = time.time()
             x2 = y1 + y2 + y1 + y2
-            #q = x2.get_value()
-            #print(q)
             t2 = time.time()
             b += t2 - t1
 
-            del x1, x2
-
-            t1 = time.time()
-            x3 = y3 + y4 + y3 + y4
-            t2 = time.time()
-            c += t2 - t1
-
         a /= 100.0
         b /= 100.0
-        c /= 100.0
-        print("{:d}\t\t{:.6g}\t{:.6g}\t{:.6g}".format(n*1000, a, b, c))
-        bench.append((n*1000, a, b, c))
+        
+        print("{:d}\t\t{:.6g}\t{:.6g}".format(n*1000, a, b))
+        
+        bench.append((n*1000, a, b))
         
     return bench
 
@@ -84,9 +74,13 @@ if __name__ == "__main__":
 #    from pyviennacl import _puzzle as p
 #    p.run_test()
 
-    print("Using _viennacl_null....")
-    from pyviennacl import _viennacl_null as v
+    print("Using pyviennacl....")
+    import pyviennacl as v
     run_test(v)
+
+#    print("Using _viennacl....")
+#    from pyviennacl import _viennacl as v
+#    run_test(v)
 
     sys.exit(os.EX_OK)
 

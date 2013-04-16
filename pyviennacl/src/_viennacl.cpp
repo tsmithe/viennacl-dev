@@ -1,5 +1,5 @@
 #include <boost/python.hpp>
-//#define VIENNACL_WITH_OPENCL
+#define VIENNACL_WITH_OPENCL
 #define VIENNACL_WITH_PYTHON
 #include <viennacl/vector.hpp>
 #include <iostream>
@@ -32,6 +32,9 @@ list vcl_vector_to_list(vcl_vector_type const& v)
 template <class E>
 list vcl_vector_expression_to_list(E const& v)
 {
+ 
+  // Highly dubious code...
+
   list l;
 
   typename E::VectorType r(v);
@@ -47,15 +50,14 @@ list vcl_vector_expression_to_list(E const& v)
 template <class T, class L, class R>
 T vcl_add(L a, R b)
 {
-  std::cout << typeid(T) << " *** " << typeid(L) << " *** " << typeid(R) << std::endl;
   return a + b;
 }
 
-vcl_vector_type new_vector(int length, double value) {
+vcl_vector_type new_scalar_vector(int length, double value) {
   return static_cast<vcl_vector_type>(scalar_vector<scalar_type>(length, value));
 }
 
-BOOST_PYTHON_MODULE(_viennacl_null)
+BOOST_PYTHON_MODULE(_viennacl)
 {
 
   class_<vcl_vector_add_type>("vector_expression", no_init)
@@ -67,11 +69,11 @@ BOOST_PYTHON_MODULE(_viennacl_null)
     .def(init<int>())
     .def(init<list>())
     .def(init<vcl_vector_type>())
-    .def("__add__", vcl_add<vcl_vector_add_type, vcl_vector_type const&, vcl_vector_type const&>)
+    .def("__add__", vcl_add<vcl_vector_type, vcl_vector_type const&, vcl_vector_type const&>)
     .def("get_value", &vcl_vector_to_list)
     ;
 
-  def("new_vector", new_vector);
+  def("scalar_vector", new_scalar_vector);
 
 }
 
