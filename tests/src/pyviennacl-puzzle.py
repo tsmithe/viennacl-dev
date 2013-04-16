@@ -36,7 +36,7 @@ def run_test(v):
         a = 0.0
         b = 0.0
 
-        for m in range(200):
+        for m in range(100):
             try:
                 y1 = v.vector(n*1000, 3.142)
                 y2 = v.vector(n*1000, 2.718)
