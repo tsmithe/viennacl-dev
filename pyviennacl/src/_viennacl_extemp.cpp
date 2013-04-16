@@ -38,31 +38,51 @@ using namespace boost::python;
 
 #define CHILD_CONST_FUNCTION(R, T, f) \
         R f() const { return static_cast<T const&>(*this).f(); }
+#define CHILD_FUNCTION(R, T, f) \
+  R& f() { return std::forward<T&>(*this).f(); }
+#define CHILD_RVREF_FUNCTION(R, T, f) \
+  R&& f() { return std::move<T>(*this).f(); }
 #define CHILD_CONST_MEMBER(R, T, m) \
         R get_ ## m () const { return static_cast<T const&>(*this).m; }
 
+
 namespace pyviennacl
 {
-
+  typedef std::vector<double>      cpu_vector_type;
+  typedef viennacl::vector<double> vcl_vector_type;
+  
+  typedef vcl_vector_type::value_type value_type;
+  typedef vcl_vector_type::size_type  size_type;
+  
   template <class CRTP>
   class VCLVectorBase 
   {
   public:
-    typedef std::vector<double>      cpu_vector_type;
-    typedef viennacl::vector<double> vcl_vector_type;
-
-    typedef vcl_vector_type::value_type value_type;
-    typedef vcl_vector_type::size_type  size_type;
-
     value_type operator[](size_type i) const
     {
       // Needs optimising
       return static_cast<CRTP const&>(*this)[i];
     }
 
-    CHILD_CONST_MEMBER(vcl_vector_type, CRTP, vector)
+    /*
+    VCLVectorBase() {}
 
-    CHILD_CONST_FUNCTION(list, CRTP, get_value)
+    VCLVectorBase(VCLVectorBase<CRTP> const& v)
+      : VCLVectorBase()
+    {
+      this = &(VCLVectorBase<CRTP>)CRTP(v);
+    }
+
+    VCLVectorBase(VCLVectorBase<CRTP>&& v)
+      : VCLVectorBase()
+    {
+      this = &(VCLVectorBase<CRTP>)CRTP(std::move<CRTP>(v));
+    }
+    */
+
+    CHILD_FUNCTION(vcl_vector_type, CRTP, get_vector)
+    CHILD_CONST_FUNCTION(CRTP, CRTP, get_lhs)
+    CHILD_CONST_FUNCTION(CRTP, CRTP, get_rhs)
     CHILD_CONST_FUNCTION(size_type, CRTP, size)
     CHILD_CONST_FUNCTION(vcl_vector_type::const_iterator, CRTP, begin)
     CHILD_CONST_FUNCTION(vcl_vector_type::const_iterator, CRTP, end)
@@ -71,31 +91,29 @@ namespace pyviennacl
 
   class VCLVector : public VCLVectorBase<VCLVector>
   {
+    /*
     typedef typename VCLVectorBase<VCLVector>::cpu_vector_type cpu_vector_type;
     typedef typename VCLVectorBase<VCLVector>::vcl_vector_type vcl_vector_type;
 
     typedef typename VCLVectorBase<VCLVector>::size_type  size_type;
     typedef typename VCLVectorBase<VCLVector>::value_type value_type;
-
-  public:
+    */
+   
     vcl_vector_type vector;
 
+  public:
+
     // Need to reimplement using boost::numpy
-    list get_value() const
-    {
-      list l;
-      size_type&& s = vector.size();
-      cpu_vector_type temp(s);
-      viennacl::fast_copy(vector.begin(), vector.end(),
-			  temp.begin());
-      for (size_type i = 0; i < s; ++i)
-	l.append((double)temp[i]);
-      return l;
-    }
 
     size_type size() const
     {
       return vector.size();
+    }
+
+    vcl_vector_type& get_vector()
+    {
+      std::cout << "VCLVectorL: " << vector.size() << std::endl;
+      return std::forward<vcl_vector_type&>(vector);
     }
 
     vcl_vector_type::const_iterator begin() const
@@ -103,9 +121,14 @@ namespace pyviennacl
       return vector.begin();
     }
 
-    vcl_vector_type::const_iterator end() const
+    vcl_vector_type::const_iterator lend() const
     {
       return vector.end();
+    }
+
+    static void swap(VCLVector& a, VCLVector& b)
+    {
+      viennacl::fast_swap(a.get_vector(), b.get_vector());
     }
 
     VCLVector() {}
@@ -116,14 +139,18 @@ namespace pyviennacl
     }
 
     template <class CRTP>
-    VCLVector(VCLVector const& vcl_v)
+    VCLVector(VCLVectorBase<CRTP> const& vcl_v)
+      : VCLVector()
     {
-      // need an intermediary so as to inhibit infinite regress
-      std::cout << vcl_v.size() << std::endl;
-      //CRTP const& v = vcl_v;
-      //this->vector.resize(v.size());
-      //viennacl::copy(v.begin(), v.end(), this->vector.begin());
-      vector = vcl_v.vector;
+      vector = vcl_vector_type(vcl_v.size());
+      viennacl::copy(vcl_v.begin(), vcl_v.end(), vector.begin());
+    }
+
+    template <class CRTP>
+    VCLVector(VCLVectorBase<CRTP>&& vcl_v)
+      : VCLVector()
+    {
+      swap(*this, static_cast<VCLVector&>(vcl_v));
     }
 
     // Need to reimplement using boost::numpy
@@ -145,9 +172,9 @@ namespace pyviennacl
       return vector[i];
     }
 
-    VCLVector const& operator=(VCLVector const& b)
+    VCLVector& operator=(VCLVector b)
     {
-      vector = b.vector;
+      swap(*this, b);
       return *this;
     }
       
@@ -157,55 +184,116 @@ namespace pyviennacl
   class VCLVectorAdd : public VCLVectorBase<VCLVectorAdd<VCLVectorL, 
 							 VCLVectorR> >
   {
+    /*
     typedef typename VCLVectorBase<VCLVector>::cpu_vector_type cpu_vector_type;
     typedef typename VCLVectorBase<VCLVector>::vcl_vector_type vcl_vector_type;
 
     typedef typename VCLVectorBase<VCLVector>::size_type  size_type;
     typedef typename VCLVectorBase<VCLVector>::value_type value_type;
-    
-    VCLVectorBase<VCLVectorL> const& lhs;
-    VCLVectorBase<VCLVectorR> const& rhs;
+    */    
+
+    vcl_vector_type vector;
+    cpu_vector_type cpu_vector;
+
+    VCLVectorL lhs;
+    VCLVectorR rhs;
+
     int accessed = 0;
+    int executed = 0;
 
   public:
-    cpu_vector_type cpu_vector;
-    vcl_vector_type vector;
+    VCLVectorL& get_lhs() const
+    {
+      return std::forward<VCLVectorL>(lhs);
+    }
+
+    VCLVectorR& get_rhs() const
+    {
+      return std::forward<VCLVectorR>(rhs);
+    }
+
+    static void swap(VCLVectorBase<VCLVectorAdd<VCLVectorL, VCLVectorR> >& a,
+		     VCLVectorBase<VCLVectorAdd<VCLVectorL, VCLVectorR> >& b)
+    {
+      VCLVectorL::swap(std::forward<VCLVectorL&>(a.get_lhs()), 
+		       std::forward<VCLVectorL&>(b.get_lhs()));
+      VCLVectorR::swap(std::forward<VCLVectorR&>(a.get_rhs()), 
+		       std::forward<VCLVectorR&>(b.get_rhs()));
+    }
 
     ~VCLVectorAdd() {}
 
     VCLVectorAdd() 
-      : lhs(VCLVectorBase<VCLVectorL>()), 
-	rhs(VCLVectorBase<VCLVectorL>())
-    {}
+      : lhs(VCLVectorL()),
+	rhs(VCLVectorR())
+    { std::cout << "H\n"; }
 
     VCLVectorAdd(VCLVectorBase<VCLVectorL> const& _lhs,
 		 VCLVectorBase<VCLVectorR> const& _rhs)
-      : lhs(_lhs), rhs(_rhs)
+      : lhs((VCLVectorL)(_lhs)),
+	rhs((VCLVectorR)(_rhs))
     {
       //only do the actual addition when we access the vector
       assert(_lhs.size() == _rhs.size());
+      std::cout << "VCLVectorAdd: " << _lhs.size() 
+		<< ", " << _rhs.size() << std::endl;
     }
 
-    // Need to reimplement using boost::numpy
-    list get_value()
+    VCLVectorAdd(VCLVectorBase<VCLVectorAdd<VCLVectorL,VCLVectorR> > const& v)
+      : VCLVectorAdd()
     {
-      if (!accessed) {
-	cpu_vector.resize(lhs.size());
-	vector = lhs.get_vector() + rhs.get_vector();
-	viennacl::fast_copy(vector.begin(), vector.end(),
-			    cpu_vector.begin());
-	accessed = 1;
-      }
+      lhs = VCLVectorL(v.get_lhs());
+      rhs = VCLVectorR(v.get_rhs());
+    }
 
-      list l;
-      for (size_type i = 0; i < lhs.size(); ++i)
-	l.append((double)cpu_vector[i]);
-      return l;
+    VCLVectorAdd(VCLVectorBase<VCLVectorAdd<VCLVectorL, VCLVectorR> >&& v)
+      : VCLVectorAdd()
+    {
+      swap(*this, v);
+    }
+
+    VCLVectorAdd<VCLVectorL, VCLVectorR>
+    operator=(VCLVectorAdd<VCLVectorL, VCLVectorR> v)
+    {
+      swap(*this, v);
+      return *this;
     }
 
     size_type size() const
     {
-      return lhs.size();
+      if (!executed) {
+	return 0;
+      } else {
+	return vector.size();
+      }
+      //vcl_vector_type const& v = get_vector();
+      //return v.size();
+    }
+
+    vcl_vector_type get_vector()
+    {
+      std::cout << executed << std::endl;
+      if (!executed) {
+	this->vector = lhs.get_vector() + rhs.get_vector();
+	executed = 1;
+      }
+      return vector;
+    }
+
+    /*
+    // Need to reimplement using boost::numpy
+    list get_value()
+    {
+      if (!accessed) {
+	cpu_vector_type c(rhs.size());
+	cpu_vector = c;
+	viennacl::fast_copy(get_vector().begin(), get_vector().end(),
+			    cpu_vector.begin());
+      }
+      list l;
+      for (size_type i = 0; i < lhs.size(); ++i)
+	l.append((double)cpu_vector[i]);
+      return l;
     }
 
     value_type operator[](size_type i) const
@@ -214,13 +302,13 @@ namespace pyviennacl
 	return cpu_vector[i];
       } else {
 	cpu_vector.resize(lhs.size());
-	vector = lhs.get_vector() + rhs.get_vector();
-	viennacl::fast_copy(vector.begin(), vector.end(),
+	viennacl::fast_copy(get_vector().begin(), get_vector().end(),
 			    cpu_vector.begin());
 	accessed = 1;
 	return cpu_vector[i];
       }      
     }
+    */
   };
 
   template <class L, class R>
@@ -249,18 +337,33 @@ namespace pyviennacl
     }
   };
 
+  template <class V>
+  list vector_to_list(V v)
+  {
+    list l;
+    vcl_vector_type vcl_vector(v.get_vector());
+    size_type&& s = vcl_vector.size();
+    cpu_vector_type cpu_vector(s);
+    viennacl::fast_copy(vcl_vector.begin(), vcl_vector.end(),
+			cpu_vector.begin());
+    for (size_type i = 0; i < s; ++i)
+      l.append((double)cpu_vector[i]);
+    return l;
+    }
+
 }
 
 BOOST_PYTHON_MODULE(_viennacl_extemp)
 {
   using namespace pyviennacl;
 
+  /*
   class_<VCLVectorAdd<VCLVectorAdd<VCLVectorAdd<VCLVector, VCLVector>, VCLVector>, VCLVector> >
     ("vector", no_init)
     .def(self + VCLVector())
     .def(VCLVector() + self)
     .def(self + self)
-    .add_property("value", &VCLVectorAdd<VCLVectorAdd<VCLVectorAdd<VCLVector, VCLVector>, VCLVector>, VCLVector>::get_value)
+    .add_property("value", &vector_to_list<VCLVectorAdd<VCLVectorAdd<VCLVectorAdd<VCLVector, VCLVector>, VCLVector>, VCLVector> >)
     ;
 
   class_<VCLVectorAdd<VCLVectorAdd<VCLVector, VCLVector>, VCLVector> >
@@ -268,27 +371,28 @@ BOOST_PYTHON_MODULE(_viennacl_extemp)
     .def(self + VCLVector())
     .def(VCLVector() + self)
     .def(self + self)
-    .add_property("value", &VCLVectorAdd<VCLVectorAdd<VCLVector, VCLVector>, VCLVector>::get_value)
+    .add_property("value", &vector_to_list<VCLVectorAdd<VCLVectorAdd<VCLVector, VCLVector>, VCLVector> >)
     ;
+  */
 
   class_<VCLVectorAdd<VCLVector, VCLVector> >
     ("vector", no_init)
     .def(self + VCLVector())
-    .def(VCLVector() + self)
-    .def(self + self)
-    .add_property("value", &VCLVectorAdd<VCLVector, VCLVector>::get_value)
+    //.def(VCLVector() + self)
+    //.def(self + self)
+    .add_property("value", &vector_to_list<VCLVectorAdd<VCLVector, VCLVector> >)
     ;
-
+  
   class_<VCLVector>("vector")
     .def(init<int>())
     .def(init<list>())
     //.def(init<boost::python::object>())
     .def(self + self)
-    .def(self + VCLVectorAdd<VCLVector, VCLVector>())
-    .def(VCLVectorAdd<VCLVector, VCLVector>() + self)
+    //.def(self + VCLVectorAdd<VCLVector, VCLVector>())
+    //.def(VCLVectorAdd<VCLVector, VCLVector>() + self)
     //.def(vector<viennacl::vector<double>, double>() + self)
     //.def(self += vector<viennacl::vector<double>, double>())
-    .add_property("value", &VCLVector::get_value)
+    .add_property("value", &vector_to_list<VCLVector>)
     ;
 
 }

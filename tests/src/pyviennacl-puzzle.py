@@ -37,24 +37,31 @@ def run_test(v):
         b = 0.0
         c = 0.0
 
-        y1 = v.vector(list(numpy.ones(n*1000) * 3.142))
-        y2 = v.vector(list(numpy.ones(n*1000) * 2.718))
         y3 = numpy.ones(n*1000) * 3.142
         y4 = numpy.ones(n*1000) * 2.718
 
         for m in range(100):
+            y1 = v.new_vector(n*1000, 3.142)
+            y2 = v.new_vector(n*1000, 2.718)
+
             t1 = time.time()
             x1 = y1 + y2
+            p = x1.get_value()
+            #print(x1.get_value())
             t2 = time.time()
             a += t2 - t1
 
             t1 = time.time()
             x2 = y1 + y2 + y1 + y2
+            #q = x2.get_value()
+            #print(q)
             t2 = time.time()
             b += t2 - t1
 
+            del x1, x2
+
             t1 = time.time()
-            x2 = y3 + y4 + y3 + y4
+            x3 = y3 + y4 + y3 + y4
             t2 = time.time()
             c += t2 - t1
 
@@ -73,16 +80,12 @@ def plot_test(bench):
     return
 
 if __name__ == "__main__":
-    print("Using pure C++...");
-    from pyviennacl import _puzzle as p
-    p.run_test()
+#    print("Using pure C++...");
+#    from pyviennacl import _puzzle as p
+#    p.run_test()
 
-#    print("Using _viennacl_rvalue....")
-#    from pyviennacl import _viennacl_rvalue as v
-#    run_test(v)
-
-    print("Using _viennacl_extemp....")
-    from pyviennacl import _viennacl_extemp as v
+    print("Using _viennacl_null....")
+    from pyviennacl import _viennacl_null as v
     run_test(v)
 
     sys.exit(os.EX_OK)

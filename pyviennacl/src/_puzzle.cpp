@@ -4,6 +4,8 @@
 #include <chrono>
 #include <cstdio>
 
+#include <typeinfo>
+
 using namespace boost::python;
 using namespace std::chrono;
 
@@ -16,7 +18,7 @@ list run_test()
   unsigned int n, m;
   high_resolution_clock::time_point t1, t2;
   double a, b;
-  v x1, x2, y1, y2;
+  v x1, x2, y1, y2, y3, y4;
 
   std::cout << "Clock period is ";
   std::cout << (double) high_resolution_clock::period::num
@@ -30,6 +32,10 @@ list run_test()
       y1 = v(viennacl::scalar_vector<double>(n*1000, 3.142));
       y2 = v(viennacl::scalar_vector<double>(n*1000, 2.718));
 
+      //y3 = v(viennacl::scalar_vector<double>(n*1000, 3.142));
+      //y4 = v(viennacl::scalar_vector<double>(n*1000, 2.718));
+      //std::cout << typeid(y3+y4+y3+y4).name() << std::endl;
+      
       t1 = high_resolution_clock::now();
       x1 = y1 + y2;
       t2 = high_resolution_clock::now();

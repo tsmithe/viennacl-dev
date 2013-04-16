@@ -23,47 +23,6 @@ namespace pyviennacl
 {
 
   template <class ScalarType>
-  void copy_vector(viennacl::vector<ScalarType> const* a,
-		   viennacl::vector<ScalarType> *b)
-  {
-    viennacl::copy(a->begin(), a->end(), b->begin());
-  }
-
-  template <class ScalarType>
-  void copy_vector(viennacl::vector<ScalarType> const* a,
-		   std::vector<ScalarType> *b)
-  {
-    viennacl::fast_copy(a->begin(), a->end(), b->begin());
-  }
-
-
-  template <class ScalarType>
-  void copy_vector(std::vector<ScalarType> const* a,
-		   viennacl::vector<ScalarType> *b)
-  {
-    viennacl::fast_copy(a->begin(), a->end(), b->begin());
-  }
-
-
-  template <class ScalarType>
-  void copy_vector(std::vector<ScalarType> const* a,
-		   std::vector<ScalarType> *b)
-  {
-    std::copy(a->begin(), a->end(), b->begin());
-  }
-
-  template <class ScalarType>
-  void vector_to_list(viennacl::vector<ScalarType> const& v, list *l)
-  {
-    std::vector<ScalarType> temp(v.size());
-    //viennacl::fast_copy(v.begin(), v.end(), temp.begin());
-    copy_vector<ScalarType>(&v, &temp);
-
-    for(unsigned int i=0; i < temp.size(); ++i)
-      l->append((ScalarType)temp[i]);
-  }
-
-  template <class ScalarType>
   void vector_to_list(std::vector<ScalarType> const& v, list *l)
   {
     for(unsigned int i=0; i < v.size(); ++i)
