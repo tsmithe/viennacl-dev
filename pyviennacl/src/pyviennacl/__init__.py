@@ -1,4 +1,5 @@
 import sys, os.path
+import numpy
 
 path = os.path.abspath(os.path.dirname(__file__))
 
@@ -110,7 +111,9 @@ class vector:
                 self.__copy_vector(self.args[0])
             elif isinstance(self.args[0], _viennacl.vector):
                 self.__copy_vcl_vector(self.args[0])
-            elif isinstance(self.args[0], list): # should be ndarray
+            elif isinstance(self.args[0], list):
+                self.__set_vector_from_list(self.args[0])
+            elif isinstance(self.args[0], numpy.ndarray):
                 self.__set_vector_from_list(self.args[0])
         elif len(self.args) == 2:
             if (isinstance(self.args[0], int) 
@@ -153,7 +156,10 @@ class vector:
         self._vcl_vector = other # Or copy?
 
     def __set_vector_from_list(self, l):
-        self._vcl_vector = _viennacl.vector(l)
+        try:
+            self._vcl_vector = _viennacl.vector_from_list(l)
+        except:
+            self._vcl_vector = _viennacl.vector_from_ndarray(numpy.array(l))
 
     def __set_size(self, n):
         if self._vcl_vector is not None:
