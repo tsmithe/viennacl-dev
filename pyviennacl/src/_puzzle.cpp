@@ -9,7 +9,7 @@
 using namespace boost::python;
 using namespace std::chrono;
 
-list run_test()
+list run_test(unsigned int max_size, unsigned int iterations)
 {
 
   typedef viennacl::vector<double> v;
@@ -25,37 +25,41 @@ list run_test()
                       / high_resolution_clock::period::den;
   std::cout << " seconds." << std::endl;
 
-  for (n = 1; n<=2000; ++n) {
+  for (n = 1; n<=max_size; n *= 2) {
     a = 0; b = 0;
-    
-    for (m = 0; m<100; ++m) {
-      y1 = v(viennacl::scalar_vector<double>(n*1000, 3.142));
-      y2 = v(viennacl::scalar_vector<double>(n*1000, 2.718));
 
-      //y3 = v(viennacl::scalar_vector<double>(n*1000, 3.142));
-      //y4 = v(viennacl::scalar_vector<double>(n*1000, 2.718));
-      //std::cout << typeid(y3+y4+y3+y4).name() << std::endl;
-      
-      t1 = high_resolution_clock::now();
+    y1 = v(viennacl::scalar_vector<double>(n, 3.142));
+    y2 = v(viennacl::scalar_vector<double>(n, 2.718));
+
+    // Startup calculations
+    x1 = y1+y2;
+    x2 = y1+y2+y1+y2;
+    viennacl::backend::finish();
+
+    t1 = high_resolution_clock::now();
+    for (m = 0; m<iterations; ++m)
       x1 = y1 + y2;
-      t2 = high_resolution_clock::now();
-      a += duration_cast<duration<double>>(t2 - t1).count();
+    viennacl::backend::finish();
+    t2 = high_resolution_clock::now();
+    a = duration_cast<duration<double>>(t2 - t1).count();
 
-      t1 = high_resolution_clock::now();
+    t1 = high_resolution_clock::now();
+    for (m = 0; m<iterations; ++m)
       x2 = y1 + y2 + y1 + y2;
-      t2 = high_resolution_clock::now();
-      b += duration_cast<duration<double>>(t2 - t1).count();
-    }
-    
-    a /= 100;
-    b /= 100;
+    viennacl::backend::finish();
+    t2 = high_resolution_clock::now();
+    b = duration_cast<duration<double>>(t2 - t1).count();
 
-    printf("%d\t\t%g\t%g\n", n*1000, a, b);
-    bench.append(make_tuple<unsigned int, double, double>(n*1000, a, b));
+    a /= iterations;
+    b /= iterations;
+
+    printf("%d\t\t%g\t%g\n", n, a, b);
+    bench.append(make_tuple<unsigned int, double, double>(n, a, b));
 
   }
  
   return bench;
+
 }
 
 BOOST_PYTHON_MODULE(_puzzle)

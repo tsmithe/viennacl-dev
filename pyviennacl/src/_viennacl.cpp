@@ -117,5 +117,7 @@ BOOST_PYTHON_MODULE(_viennacl)
   def("vector_from_ndarray", vector_from_ndarray);
   def("scalar_vector", new_scalar_vector);
 
+  def("backend_finish", backend::finish);
+
 }
 

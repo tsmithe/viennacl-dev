@@ -13,6 +13,9 @@ del path, oldpath
 
 OP_ADD = 1
 
+def backend_finish():
+    return _viennacl.backend_finish()
+
 class build_expression:
     pass
 

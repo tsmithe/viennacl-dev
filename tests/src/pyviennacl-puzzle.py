@@ -16,7 +16,7 @@ import numpy, time
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
-def run_test(v):
+def run_test(v, max_size=2147483648, iterations=10000):
     """
     Benchmarks vector addition using pyviennacl.
 
@@ -34,34 +34,44 @@ def run_test(v):
     """
 
     bench = []
-    for n in range(1,2001):
+    n = 1;
+
+    while n <= max_size:
         a = 0.0
         b = 0.0
 
-        for m in range(100):
-            try:
-                y1 = v.vector(n*1000, 3.142)
-                y2 = v.vector(n*1000, 2.718)
-            except:
-                y1 = v.scalar_vector(1000, 3.142)
-                y2 = v.scalar_vector(1000, 2.718)
+        try:
+            y1 = v.vector(n*1000, 3.142)
+            y2 = v.vector(n*1000, 2.718)
+        except:
+            y1 = v.scalar_vector(1000, 3.142)
+            y2 = v.scalar_vector(1000, 2.718)
+        
+        # Startup calculations
+        x1 = y1+y2;
+        x2 = y1+y2+y1+y2;
+        v.backend_finish()
 
-            t1 = time.time()
+        t1 = time.time()
+        for m in range(iterations):
             x1 = y1 + y2
-            t2 = time.time()
-            a += t2 - t1
+        v.backend_finish()
+        t2 = time.time()
+        a = t2 - t1
 
-            t1 = time.time()
+        t1 = time.time()
+        for m in range(iterations):
             x2 = y1 + y2 + y1 + y2
-            t2 = time.time()
-            b += t2 - t1
+        v.backend_finish()
+        t2 = time.time()
+        b = t2 - t1
 
-        a /= 100.0
-        b /= 100.0
+        a /= iterations
+        b /= iterations
         
-        print("{:d}\t\t{:.6g}\t{:.6g}".format(n*1000, a, b))
-        
-        bench.append((n*1000, a, b))
+        print("{:d}\t\t{:.6g}\t{:.6g}".format(n, a, b))
+        bench.append((n, a, b))
+        n *= 2
         
     return bench
 
@@ -81,35 +91,50 @@ def plot_test(bench, title=None):
     ylocs, ylabels = plt.yticks()
     plt.yticks(ylocs, ["%.1f" % y for y in ylocs*1e6])
     plt.ylabel("Microseconds per addition")
-    sub.legend(loc='best', fancybox=True)
+    sub.set_xscale("log")
+    #sub.set_yscale("log")
+    #sub.legend(loc='best', fancybox=True)
+    sub.legend(loc=7, fancybox=True)
     sub.set_title(title)
 
     return fig
 
 if __name__ == "__main__":
+    max_size = 2**21
+    iterations = 10**4
+    figures = []
+    fail = 0
+    
     try:
-        figures = []
-        
         print("Using pure C++...");
-        from pyviennacl import _puzzle as p
-        figures.append(plot_test(p.run_test(), "Implementation: _puzzle.cpp"))
+        from pyviennacl import _puzzle as p 
+        figures.append(plot_test(p.run_test(max_size, iterations), "Implementation: _puzzle.cpp"))
+    except:
+        fail = 1
         
+    try:
         print("Using _viennacl....")
         from pyviennacl import _viennacl as v
-        figures.append(plot_test(run_test(v), "Implementation: _viennacl.cpp"))
-
+        figures.append(plot_test(run_test(v, max_size, iterations), "Implementation: _viennacl.cpp"))
+    except:
+        fail = 1
+    
+    try:
         print("Using pyviennacl....")
         import pyviennacl as v
-        figures.append(plot_test(run_test(v), "Implementation: pyviennacl"))
-        
-        fname = "pyviennacl-puzzle.pdf"
-        pp = PdfPages(fname)
-        for fig in figures: fig.savefig(pp, format='pdf', bbox_inches=0)
-        pp.close()
-
-        print("\nSaved %d graphs to '%s'" % (len(figures), fname))
+        figures.append(plot_test(run_test(v, max_size, iterations), "Implementation: pyviennacl"))
     except:
-        sys.exit(os.EX_SOFTWARE)
+        fail = 1
+        
+    fname = "pyviennacl-puzzle.pdf"
+    pp = PdfPages(fname)
+    for fig in figures: fig.savefig(pp, format='pdf', bbox_inches=0)
+    pp.close()
 
-    sys.exit(os.EX_OK)
+    print("\nSaved %d graphs to '%s'" % (len(figures), fname))
+
+    if fail:
+        sys.exit(os.EX_SOFTWARE)
+    else:
+        sys.exit(os.EX_OK)
 
