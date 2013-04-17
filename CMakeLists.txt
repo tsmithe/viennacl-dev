@@ -102,7 +102,8 @@ endif()
 add_subdirectory(doc)
 
 if(BUILD_PYVIENNACL)
-    add_subdirectory(pyviennacl)
+   add_subdirectory(external/boost_numpy)
+   add_subdirectory(pyviennacl)
 endif()
 
 # Install

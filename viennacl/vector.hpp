@@ -33,10 +33,6 @@
 #include "viennacl/meta/result_of.hpp"
 #include "viennacl/rand/utils.hpp"
 
-#ifdef VIENNACL_WITH_PYTHON
-#include <boost/python.hpp>
-#endif
-
 namespace viennacl
 {
   //
@@ -339,8 +335,6 @@ namespace viennacl
     typedef vcl_ptrdiff_t                                     difference_type;
     typedef const_vector_iterator<SCALARTYPE, ALIGNMENT>      const_iterator;
     typedef vector_iterator<SCALARTYPE, ALIGNMENT>            iterator;
-
-    typedef typename std::vector<SCALARTYPE>               cpu_vector_type;
     
     static const int alignment = ALIGNMENT;
 
@@ -451,20 +445,6 @@ namespace viennacl
       }
     }
 
-#ifdef VIENNACL_WITH_PYTHON
-    /** @brief Creates the vector from the supplied Python list */
-    // Need to reimplement using numpy.ndarray..
-    vector(boost::python::list const& l) : vector((size_type)len(l))
-    {
-      size_type s = (size_type) len(l);
-      cpu_vector_type cpu_vector(s);
-
-      for (size_type i=0; i < s; ++i)
-	cpu_vector[i] = boost::python::extract<SCALARTYPE>(l[i]);
-
-      fast_copy(cpu_vector.begin(), cpu_vector.end(), this->begin());
-    }
-#endif
 
     /** @brief Creates the vector from the supplied random vector. */
     template<class DISTRIBUTION>

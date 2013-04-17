@@ -1,6 +1,7 @@
 include_directories(
   ${PYTHON_INCLUDE_DIRS}
   ${Boost_INCLUDE_DIRS}
+  ${PROJECT_SOURCE_DIR}/external/boost_numpy
   ${NUMPY_INCLUDE_DIRS}
 )
 get_property(INCLUDE_DIRS DIRECTORY
