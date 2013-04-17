@@ -21,16 +21,17 @@ def run_test(v, max_size=2147483648, iterations=10000):
     Benchmarks vector addition using pyviennacl.
 
     v is the implementation of pyviennacl to use.
+    max_size is the maximum vector size to benchmark.
+    iterations is the number of times to perform each test.
 
-    Executes (x = y1 + y2) and (x = y1 + y2 + y1 + y2) for vector sizes from 
-    1 to 2*10^6, with a step of size=1000. Runs each test 100 times, taking
-    the mean.
+    Executes (x = y1 + y2) and (x = y1 + y2 + y1 + y2) for vector
+    sizes from 1 to max_size, with a logarithmic (base 2) step
+    size. Runs each test `iterations' times, taking the mean.
 
     Prints the average execution times on each step.
 
-    Returns a list of tuples (n, a, b, c) where n in the vector size, a is
-    the average time taken for (y1+y2), b is the time for (y1+y2+y1+y2), and
-    c is the time for (y1+y2+y1+y2) given pure numpy types.
+    Returns a list of tuples (n, a, b) where n in the vector size, a is
+    the average time taken for (y1+y2), and b is the time for (y1+y2+y1+y2)
     """
 
     bench = []
