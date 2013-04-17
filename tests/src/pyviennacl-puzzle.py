@@ -12,7 +12,9 @@ if sys.version_info.major < 3:
     print("You need to use Python 3 for this!")
     sys.exit(os.EX_CONFIG)
 
-import matplotlib, numpy, time
+import numpy, time
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
 
 def run_test(v):
     """
@@ -63,24 +65,51 @@ def run_test(v):
         
     return bench
 
-def plot_test(bench):
+def plot_test(bench, title=None):
     """
-    Stub for matplotlib-based graphing of benchmark results.
+    matplotlib-based graphing of benchmark results.
     """
-    return
+    x = [x[0] for x in bench]
+    x1 = [x[1] for x in bench]
+    x2 = [x[2] for x in bench]
+
+    fig = plt.figure()
+    sub = fig.add_subplot(111)
+    sub.plot(x, x1, label="x1 = y1 + y2")
+    sub.plot(x, x2, label="x2 = y1 + y2 + y1 + y2")
+    plt.xlabel("Vector length")
+    ylocs, ylabels = plt.yticks()
+    plt.yticks(ylocs, ["%.1f" % y for y in ylocs*1e6])
+    plt.ylabel("Microseconds per addition")
+    sub.legend(loc='best', fancybox=True)
+    sub.set_title(title)
+
+    return fig
 
 if __name__ == "__main__":
-#    print("Using pure C++...");
-#    from pyviennacl import _puzzle as p
-#    p.run_test()
+    try:
+        figures = []
+        
+        print("Using pure C++...");
+        from pyviennacl import _puzzle as p
+        figures.append(plot_test(p.run_test(), "Implementation: _puzzle.cpp"))
+        
+        print("Using _viennacl....")
+        from pyviennacl import _viennacl as v
+        figures.append(plot_test(run_test(v), "Implementation: _viennacl.cpp"))
 
-    print("Using pyviennacl....")
-    import pyviennacl as v
-    run_test(v)
+        print("Using pyviennacl....")
+        import pyviennacl as v
+        figures.append(plot_test(run_test(v), "Implementation: pyviennacl"))
+        
+        fname = "pyviennacl-puzzle.pdf"
+        pp = PdfPages(fname)
+        for fig in figures: fig.savefig(pp, format='pdf', bbox_inches=0)
+        pp.close()
 
-#    print("Using _viennacl....")
-#    from pyviennacl import _viennacl as v
-#    run_test(v)
+        print("\nSaved %d graphs to '%s'" % (len(figures), fname))
+    except:
+        sys.exit(os.EX_SOFTWARE)
 
     sys.exit(os.EX_OK)
 
