@@ -35,22 +35,28 @@ def run_test(v, max_size=2147483648, iterations=10000):
     """
 
     bench = []
-    n = 1;
+    n = 2;
 
     while n <= max_size:
         a = 0.0
         b = 0.0
 
         try:
-            y1 = v.vector(n*1000, 3.142)
-            y2 = v.vector(n*1000, 2.718)
+            y1 = v.vector(n, 3.142)
+            y2 = v.vector(n, 2.718)
         except:
-            y1 = v.scalar_vector(1000, 3.142)
-            y2 = v.scalar_vector(1000, 2.718)
+            y1 = v.scalar_vector(n, 3.142)
+            y2 = v.scalar_vector(n, 2.718)
         
         # Startup calculations
         x1 = y1+y2;
         x2 = y1+y2+y1+y2;
+        try:
+            print("\t\t\t\t\t\t%g" % x1.value[1])
+            print("\t\t\t\t\t\t%g" % x2.value[1])
+        except:
+            print("\t\t\t\t\t\t%g" % x1.get_value()[1])
+            print("\t\t\t\t\t\t%g" % x2.get_value()[1])
         v.backend_finish()
 
         t1 = time.time()
@@ -59,6 +65,11 @@ def run_test(v, max_size=2147483648, iterations=10000):
         v.backend_finish()
         t2 = time.time()
         a = t2 - t1
+        try:
+            print("\t\t\t\t\t\t%g" % x1.value[1])
+        except:
+            print("\t\t\t\t\t\t%g" % x1.get_value()[1])
+        v.backend_finish()
 
         t1 = time.time()
         for m in range(iterations):
@@ -66,6 +77,10 @@ def run_test(v, max_size=2147483648, iterations=10000):
         v.backend_finish()
         t2 = time.time()
         b = t2 - t1
+        try:
+            print("\t\t\t\t\t\t%g" % x2.value[1])
+        except:
+            print("\t\t\t\t\t\t%g" % x2.get_value()[1])
 
         a /= iterations
         b /= iterations
@@ -89,20 +104,21 @@ def plot_test(bench, title=None):
     sub.plot(x, x1, label="x1 = y1 + y2")
     sub.plot(x, x2, label="x2 = y1 + y2 + y1 + y2")
     plt.xlabel("Vector length")
-    ylocs, ylabels = plt.yticks()
-    plt.yticks(ylocs, ["%.1f" % y for y in ylocs*1e6])
-    plt.ylabel("Microseconds per addition")
-    sub.set_xscale("log")
-    #sub.set_yscale("log")
-    #sub.legend(loc='best', fancybox=True)
-    sub.legend(loc=7, fancybox=True)
+    sub.set_xscale("log", basex=2)
+    sub.set_yscale("log")
+    #ylocs, ylabels = plt.yticks()
+    #plt.yticks(ylocs, ["%.1f" % y for y in ylocs*1e6])
+    #plt.ylabel("Execution time (microseconds)")
+    plt.ylabel("Execution time (seconds)")
+    sub.legend(loc='best', fancybox=True)
+    #sub.legend(loc=7, fancybox=True)
     sub.set_title(title)
 
     return fig
 
 if __name__ == "__main__":
-    max_size = 2**21
-    iterations = 10**4
+    max_size = 2**20
+    iterations = 10**3
     figures = []
     fail = 0
     

@@ -18,22 +18,26 @@ list run_test(unsigned int max_size, unsigned int iterations)
   unsigned int n, m;
   high_resolution_clock::time_point t1, t2;
   double a, b;
-  v x1, x2, y1, y2, y3, y4;
 
   std::cout << "Clock period is ";
   std::cout << (double) high_resolution_clock::period::num
                       / high_resolution_clock::period::den;
   std::cout << " seconds." << std::endl;
 
-  for (n = 1; n<=max_size; n *= 2) {
+  // ViennaCL doesn't seem to work for vectors of length one
+  for (n = 2; n<=max_size; n *= 2) {
     a = 0; b = 0;
 
-    y1 = v(viennacl::scalar_vector<double>(n, 3.142));
-    y2 = v(viennacl::scalar_vector<double>(n, 2.718));
+    v x1(n);
+    v x2(n);
+    v y1(viennacl::scalar_vector<double>(n, 3.142));
+    v y2(viennacl::scalar_vector<double>(n, 2.718));
 
     // Startup calculations
     x1 = y1+y2;
     x2 = y1+y2+y1+y2;
+    printf("\t\t\t\t\t\t%g\n", static_cast<double>(x1(1)));
+    printf("\t\t\t\t\t\t%g\n", static_cast<double>(x2(1)));
     viennacl::backend::finish();
 
     t1 = high_resolution_clock::now();
@@ -42,6 +46,8 @@ list run_test(unsigned int max_size, unsigned int iterations)
     viennacl::backend::finish();
     t2 = high_resolution_clock::now();
     a = duration_cast<duration<double>>(t2 - t1).count();
+    printf("\t\t\t\t\t\t%g\n", static_cast<double>(x1(1)));
+    viennacl::backend::finish();
 
     t1 = high_resolution_clock::now();
     for (m = 0; m<iterations; ++m)
@@ -49,13 +55,13 @@ list run_test(unsigned int max_size, unsigned int iterations)
     viennacl::backend::finish();
     t2 = high_resolution_clock::now();
     b = duration_cast<duration<double>>(t2 - t1).count();
+    printf("\t\t\t\t\t\t%g\n", static_cast<double>(x2(1)));
 
     a /= iterations;
     b /= iterations;
 
     printf("%d\t\t%g\t%g\n", n, a, b);
     bench.append(make_tuple<unsigned int, double, double>(n, a, b));
-
   }
  
   return bench;
