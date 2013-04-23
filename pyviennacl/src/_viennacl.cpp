@@ -21,6 +21,12 @@ typedef vector_expression<const vcl_vector_type, const vcl_vector_type, op_add> 
 
 template <class T, class L, class R> T vcl_add(L a, R b) { return a + b; }
 
+template <class T, class R> T vcl_mul_obj_l(object const& a, R b) { return static_cast<double>(extract<double>(a)) * b; }
+template <class T, class L> T vcl_mul_obj_r(L a, object const& b) { return a * static_cast<double>(extract<double>(b)); }
+
+template <class T, class L, class R> T vcl_iadd(L a, R b) { a += b; return a; }
+
+
 /** @brief Returns a Python list describing the VCL_T */
 list vcl_vector_to_list(vcl_vector_type const& v)
 {
@@ -108,8 +114,11 @@ BOOST_PYTHON_MODULE(_viennacl)
 
   class_<vcl_vector_type>("vector")
     .def(init<int>())
-     .def(init<vcl_vector_type>())
+    .def(init<vcl_vector_type>())
     .def("__add__", vcl_add<vcl_vector_type, vcl_vector_type const&, vcl_vector_type const&>)
+    .def("__mul__", vcl_mul_obj_l<vcl_vector_type, vcl_vector_type const&>)
+    .def("__mul__", vcl_mul_obj_r<vcl_vector_type, vcl_vector_type const&>)
+    .def("__iadd__", vcl_iadd<vcl_vector_type, vcl_vector_type, vcl_vector_type const&>)
     .def("get_value", &vcl_vector_to_ndarray)
     ;
 
