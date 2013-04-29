@@ -78,43 +78,41 @@ Constructible from Python =float=, and provides =value= and =result= attributes.
 
 **** =pyviennacl.vector= *implements* =viennacl::vector<double, 1>=
 
-Initially, memory alignment need not be configurable, and so alignment choice constitutes a "nice-to-have".
+The template parameter for memory alignment is due to disappear in a future release of ViennaCL, owing to the integration of a dynamic kernel generator. As such, it will largely be ignored here and below.
 
 #+CAPTION: []{pyviennacl.vector -- see Table 3.2 in the [[http://viennacl.sourceforge.net/viennacl-manual-current.pdf][ViennaCL manual]]}
 #+LABEL: tab:vector
 #+ATTR_LaTeX: :environment tabu :mode inline-math
 #+ATTR_LaTeX: placement=[H]\small
-| ViennaCL Interface          | pyviennacl Interface    | Comment                                  |
-|-----------------------------+-------------------------+------------------------------------------|
-|                             |                         | <40>                                     |
-| =CTOR()=                    | =vector()=              | Empty vector, size unspecified           |
-| =CTOR(n)=                   | =vector(n)=             | Empty vector, size specified by =n=      |
-| =scalar_vector<double> ..=  | =vector(n, value)=      | Vector of length =n= with                |
-| =.. (n, value)=             |                         | each element set to =value=              |
-| =CTOR(v)=                   | =vector(v)=             | New vector using size and                |
-|                             |                         | values of old vector =v=                 |
-| =N/A=                       | =vector(nd)=            | New vector taking values from ndarray =nd= |
-| =N/A=                       | =vector(l)=             | New vector taking values from list =l=   |
-| =v.clear()=                 | =v.clear()=             | Set all entries to =0=                   |
-| =v.resize(n, preserve)=     | =v.resize(n, preserve)= | Set new size to =n=, preserving values   |
-|                             |                         | according to bool =preserve= \fn{1}      |
-| =v.size()=                  | =v.size=                | In pyviennacl, =v.size= is an            |
-|                             |                         | attribute, not a function \fn{1}         |
-| =v.internal_size()=         | =v.internal_size=       | Again, attribute, not function           |
-| =v.swap(v2)=                | =t = v; v = v2; v2 = t= | Python maintains references to           |
-|                             |                         | objects, so the equality                 |
-|                             |                         | operator does not incur copying          |
-| =v.empty()=                 | =v.size === =0=         | The explicit check is much clearer       |
-| =v.handle()=                | ?                       | This is a "nice-to-have", and            |
-|                             |                         | comes with the later work on             |
-|                             |                         | pyviennacl custom kernels                |
+| ViennaCL Interface         | pyviennacl Interface    | Comment                                  |
+|----------------------------+-------------------------+------------------------------------------|
+|                            |                         | <40>                                     |
+| =CTOR()=                   | =vector()=              | Empty vector, size unspecified           |
+| =CTOR(n)=                  | =vector(n)=             | Empty vector, size specified by =n=      |
+| =scalar_vector<double> ..= | =vector(n, value)=      | Vector of length =n= with                |
+| =.. (n, value)=            |                         | each element set to =value=              |
+| =CTOR(v)=                  | =vector(v)=             | New vector using size and                |
+|                            |                         | values of old vector =v=                 |
+| =N/A=                      | =vector(nd)=            | New vector taking values from ndarray =nd= |
+| =N/A=                      | =vector(l)=             | New vector taking values from list =l=   |
+| =v.clear()=                | =v.clear()=             | Set all entries to =0=                   |
+| =v.resize(n, preserve)=    | =v.resize(n, preserve)= | Set new size to =n=, preserving values   |
+|                            |                         | according to bool =preserve= \fn{1}      |
+| =v.size()=                 | =v.size=                | In pyviennacl, =v.size= is an            |
+|                            |                         | attribute, not a function \fn{1}         |
+| =v.internal_size()=        | =v.internal_size=       | Again, attribute, not function           |
+| =v.swap(v2)=               | =t = v; v = v2; v2 = t= | Python maintains references to           |
+|                            |                         | objects, so the equality                 |
+|                            |                         | operator does not incur copying          |
+| =v.empty()=                | =v.size === =0=         | The explicit check is much clearer       |
+| =v.handle()=               | ?                       | This is a "nice-to-have", and            |
+|                            |                         | comes with the later work on             |
+|                            |                         | pyviennacl custom kernels                |
 \footnotesize
 \fn{1} I am unsure whether or not to implement resizing using a function, or just to allow the =size= attribute to be read-write. The latter case is more elegant, but it is not obvious in this situation what to do about value preservation. I might just have it that the =size= attribute is read-write, and values are always discarded.
 \normalsize
 
 **** =pyviennacl.matrix= *implements* =viennacl::matrix<double, row_major, 1>=
-
-Initially, neither memory alignment nor storage layout need be configurable, and so these both constitute "nice-to-haves". This is true for all matrix types.
 
 #+CAPTION: []{pyviennacl.matrix -- see Table 3.3 in the [[http://viennacl.sourceforge.net/viennacl-manual-current.pdf][ViennaCL manual]]}
 #+LABEL: tab:matrix
@@ -375,8 +373,6 @@ To implement these functions in PyViennaCL requires the work on run-time back-en
 This functionality includes: additional iterative solvers and preconditioners; the fast Fourier transform; bandwidth-reduction algorithms; and algorithms for non-negative matrix factorisation.
 
 ***** *Structured matrix types and algorithms*
-
-**** *Configurable memory alignment and storage layout for vector and matrix types.*
 
 **** *API compatibility with NumPy/SciPy, letting PyViennaCL and NumPy be interchangeable*
 ***** *PyViennaCL implements a* =numpy.ndarray= *compatible class, performing operations on the requested compute back-end.*
