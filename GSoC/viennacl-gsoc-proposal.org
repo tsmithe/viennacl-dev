@@ -51,13 +51,13 @@ And of course there are benefits for me: I would gain experience in GPGPU progra
 
 ** Technical details
 
-A prototype branch is available [[https://github.com/tsmithe/viennacl-dev/tree/pyviennacl][on GitHub]], which will be referred to occasionally below. This branch provides an answer to benchmark puzzle using PyViennaCL, implemented as a test unit using the prototype pyviennacl code. The branch build pyviennacl, being fully integrated into the CMake build and test system, but it has extra dependencies: Python3 (interpreter, headers and libraries); NumPy (inc. headers); Boost::Python (for Python3); and, included as a git submodule, Boost::NumPy. A further limitation is that the pyviennacl test will not run unless pyviennacl is installed (ie, run =make install && ldconfig=).
+A prototype branch is available [[https://github.com/tsmithe/viennacl-dev/tree/pyviennacl][on GitHub]], which will be referred to occasionally below. This branch provides an answer to the benchmark puzzle using PyViennaCL, implemented as a test unit using the prototype =pyviennacl= code. The branch builds =pyviennacl=, being fully integrated into the CMake build and test system, but it has extra dependencies: Python3 (interpreter, headers and libraries); NumPy (inc. headers); Boost::Python (for Python3); and, included as a git submodule, Boost::NumPy. A further limitation is that the =pyviennacl= test will not run unless =pyviennacl= is installed (ie, run =make install && ldconfig=).
 
-The pyviennacl prototype implementation exhibits many of the features described below, such as API abstraction, an expression class, delayed execution, =numpy.ndarray= support, and partial artithmetic support. It defaults to using the OpenCL compute back-end.
+The =pyviennacl= prototype implementation exhibits many of the features described below, such as API abstraction, an expression class, delayed execution, =numpy.ndarray= support, and partial artithmetic support. It defaults to using the OpenCL compute back-end.
 
 *** Implementation details and dependencies
 
-ViennaCL is a largely self-contained header-only C++ library, making use of such C++ meta-programming techniques as expression templates to enable compile-time kernel generation and expression optimisation; available back-ends, for instance, are decided by compiler defines. These features are useful for a C++ system, but make building a Python one more complex.
+ViennaCL is a largely self-contained header-only C++ library, making use of such C++ meta-programming techniques as expression templates to enable compile-time kernel generation and expression optimisation; available back-ends, for instance, are decided by compiler =#define= constants. These features are useful for a C++ system, but make building a Python one more complex.
 
 For this reason, PyViennaCL is implemented with a core in C++ using Boost::Python -- also depending on Boost::NumPy (and thus by extension Python and NumPy themselves) -- beneath a more user-friendly Python wrapper. Compile-time techniques such as expression templates are only available in a limited form for Python code, since the bindings are pre-built and invoked at runtime. Consequently, Boost::Python is used to wrap a subset of the C++ templates (eg, the viennacl::vector_expression class) into coherent objects (eg, the pyviennacl.vector object). Boost::Python also translates C++ features such as operator overloading neatly to and from Python, allowing ViennaCL objects to be constructed and manipulated in terms of native Python types.
 
@@ -205,13 +205,17 @@ Again, this is implemented as with other sparse matrix types.
 
 Implemented as the other sparse matrix types, but unsure whether to use =pyviennacl.hybrid_matrix= or =pyviennacl.hyb_matrix= as the class name; I'm not sure that there's much weight to the length argument, since we already have =compressed_matrix= and =coordinate_matrix=, and =hyb= isn't immediately obvious as to function.
 
+**** *Infrastructure for run-time kernel generation and execution*
+
+A C++ interface for automated user kernel generation is documented in chapter 11 of the [[http://viennacl.sourceforge.net/viennacl-manual-current.pdf][ViennaCL manual]]. This could usefully be exploited in PyViennaCL for the automatic generation of kernels for the evaluation of complex expressions produced by the pyviennacl.expression class (see below). A long-term goal in ViennaCL is the dynamic integration of the kernel generator; the current situation is such that kernels are compiled on the basis of a static and pre-defined mapping of expressions to kernels. Given the usefulness of this work for the high-performance computation of represented expressions, yet given its relative immaturity, the summer project will only require that some infrastructure hooking into the kernel generator is in place, so that once the work has matured in ViennaCL proper, it can swiftly be taken advantage of in Python programs.
+
 **** =pyviennacl.expression= *implements a binary heap representing supported computations (eg, vector addition, matrix multiplication)*
 
 This does not map directly onto any ViennaCL C++ class, instead providing the 'delayed execution' functionality supplied by C++ expression templates. The expression class does most of the "heavy lifting" of computations; whereas in C++, an addition operation on two =viennacl::vector= instances would produce a =viennacl::vector_expression= instance, in PyViennaCL, it produces a =pyviennacl.expression= object.
 
 Python performs arithmetic operations in binary pairs, and so the =pyviennacl.expression= class represents arithmetic expressions as a binary heap. No computations are actually performed until the result of the computation is required to be known, either for algorithmic reasons, or where the user accesses the result.
 
-Depending on how [[https://github.com/viennacl/viennacl-dev/issues/8][ViennaCL issue 8]] is solved, this should serve to improve performance, and minimise copying and the creation of temporary objects.
+Depending on how [[https://github.com/viennacl/viennacl-dev/issues/8][ViennaCL issue 8]] is solved, this should serve to improve performance, and minimise copying and the creation of temporary objects. Furthermore, this class should take advantage of dynamic kernel generation wherever worthwhile for performance reasons, and wherever possible given the maturity of the code.
 
 **** *BLAS operations are implemented where possible using operator overloading and the* =pyviennacl.expression class=
 
@@ -385,10 +389,6 @@ ViennaCL provides an API for determining global and local compute work sizes (i.
 
 [fn:20] [[http://viennacl.sourceforge.net/viennacl-manual-current.pdf][ViennaCL manual]], version 1.4.1, page 54.
 
-**** *Run-time kernel generation and execution*
-
-A C++ interface for automated user kernel generation is documented in chapter 11 of the [[http://viennacl.sourceforge.net/viennacl-manual-current.pdf][ViennaCL manual]]. This could usefully be exploited in PyViennaCL for the automatic generation of kernels for the evaluation of complex expressions produced by the pyviennacl.expression class. The feasibility of this feature depends on the flexibility of the ViennaCL kernel generator interface, which is currently classed as "experimental". As such, this is only a "nice to have" feature.
-
 **** *Run-time switching of compute back-end*
 
 Because the compute back-end is determined by a compiler =#define=, this feature requires that the =pyviennacl._viennacl= implementation code is abstracted into back-end-specific modules, eg, =pyviennacl._viennacl_ocl= and =pyviennacl._viennacl_cuda=. These would be API-compatible, and types from one should be transparently sharable with types from the other. In this way, Python code could call both (say) OpenCL and CUDA kernels as desired.
@@ -417,7 +417,7 @@ Compute devices vary in their performance characteristics. As such, a desirable 
 
 ViennaCL makes much use of C++ compile-time optimisation via meta-programming techniques like expression templates. However, these cannot easily be translated into run-time optimisations, since it is not known at run-time which expressions -- after a set of primitives -- will be needed. Without hard-coding a complex and unmaintainable recursive type hierarchy in the =pyviennacl._viennacl= C++ module, then, this work is not available.
 
-As a result, in order to avoid a large number of slow GPU/CPU copies and kernel initialisations, an equivalent means of optimisation is required. This is implemented in the =pyviennacl.expression= class binary heap.
+As a result, in order to avoid a large number of slow GPU/CPU copies and kernel initialisations, an equivalent means of optimisation is required. This is implemented in the =pyviennacl.expression= class binary heap. Current work on the core ViennaCL aims to simplify the expression templating system: whilst at the moment each "base type" (such as =viennacl::vector= or =viennacl::matrix=) has a corresponding and unrelated =*_expression= class, in the future, a the set of expression classes will inherit from =viennacl::symbolic_base=, with the kernel generator dynamically producing the relevant kernel from =std::list<symbolic_base*>=. This future template structure will map fairly straightforwardly onto the =pyviennacl.expression= class, which will also have direct access to the kernel generator.
 
 **** *Single precision devices and the Python* =float= *type*
 
@@ -438,34 +438,34 @@ Work begins on implementing and documenting basic types and tests
 Basic types and arithmetic operations implemented; =pyviennacl.expression= class has a naive implementation
 
 *** <2013-07-08 Mon>: Week 4
-Remaining matrix types implemented; BLAS Level 1 complete
+Lay groundwork for interfacing with the dynamic kernel generator, and rework =pyviennacl.expression= if necessary
 
 *** <2013-07-15 Mon>: Week 5
-BLAS Level 2 complete; optimisation work on =pyviennacl.expression= class continues in earnest
+Remaining matrix types implemented; BLAS Level 1 complete
 
 *** <2013-07-22 Mon>: Week 6
-(work continues)
+BLAS Level 2 complete; optimisation work on =pyviennacl.expression= class continues in earnest. The complexity of expressions in BLAS Level 2 and up warrants increased use of the kernel generator, and as such this should be integrated into =pyviennacl.expression=.
 
 *** <2013-07-29 Mon>: Week 7
-BLAS Level 3 complete; =pyviennacl.expression= and algorithm API complete to the required extent
+(work continues)
 
 *** <2013-08-05 Mon>: Week 8
-Documentation of finished work completed; any remaining functions have documented stubs; regression test coverage hits at least 50%
+BLAS Level 3 complete; =pyviennacl.expression= and algorithm API complete to the required extent, and hooks to the kernel generator are available and in a working state.
 
 *** <2013-08-12 Mon>: Week 9
-Spare week, catch-up if falling behind schedule; start working on portability
+Documentation of finished work completed; any functions yet to be implemented have documented stubs; regression test coverage hits at least 50%
 
 *** <2013-08-19 Mon>: Week 10
-Work on build system and cross-platform portability is complete
+Spare week, catch-up if falling behind schedule; start working on portability
 
 *** <2013-08-26 Mon>: Week 11
-Code review: go back over code, documentation and tests; implement remaining ViennaCL algorithm wrappers
+Work on build system and cross-platform portability is complete
 
 *** <2013-09-02 Mon>: Week 12
-Work on nice-to-have features: plan NumPy/SciPy implementation; implement parameter tuning
+Code review: go back over code, documentation and tests; implement remaining ViennaCL algorithm wrappers
 
 *** <2013-09-09 Mon>: Week 13
-Work on NumPy/SciPy reaches an early usable stage; parameter tuning implementation done; run-time back-end/kernel work progress
+Work on nice-to-have features: plan NumPy/SciPy implementation; implement parameter tuning
 
 *** <2013-09-16 Mon>: Week 14
 Soft "pencils down": code clean-up; check API consistency
@@ -493,7 +493,7 @@ So the two major determining processes are as follows: firstly, initialisation o
 
 Expression templates are a C++ metaprogramming technique wherein the type of a class instance recursively represents the operation which produced that instance; C++ /templates/ are used to construct the /expression/ (hence "expression templates"), using the "curiously recurring template pattern" (CRTP) and, usually, operator overloading. By representing the expression in the instance type, the expression does not have to be evaluated at the point in the C++ code at which it is created, but only when it is accessed; in effect, part of the calculation is performed at compile time, with the rest performed at some unspecified point. For instance, the addition of two instances of type =Vector= might produce an instance of type =VectorExpression<Vector, Vector>= such that the actual addition is only performed on accessing some element of the =VectorExpression= instance.
 
-Expression templates are therefore a powerful and, unsurprisingly, expressive technique. But, complex expressions necessarily produce complex types. In most C++ code, this doesn't pose a difficulty, because the compiler is able to resolve the types through inheritance. ViennaCL, because it has to mediate interaction between C++ code on the CPU and OpenCL/CUDA code on the GPU, implements a limited form of expression templating, up to a recursive depth of two. This means that even fairly simple expressions, like =x = y1 + y2 + y1 + y2=, are computed in a somewhat indirect fashion using a temporary object, rather than a neat single expression type. Work is on-going in ViennaCL itself to mitigate this.
+Expression templates are therefore a powerful and, unsurprisingly, expressive technique. But, complex expressions necessarily produce complex types. In most C++ code, this doesn't pose a difficulty, because the compiler is able to resolve the types through inheritance. ViennaCL, because it has to mediate interaction between C++ code on the CPU and OpenCL/CUDA code on the GPU, implements a limited form of expression templating, up to a recursive depth of two. This means that even fairly simple expressions, like =x = y1 + y2 + y1 + y2=, are computed in a somewhat indirect fashion using a temporary object, rather than a neat single expression type. Work is on-going in ViennaCL itself to mitigate this, and includes work such as the dynamic kernel generator and restructuring of the expression classes, as referenced above.
 
-Nonetheless, even expression templates to a depth of two are not easily available at run-time, because they are a compile-time optimisation, determined by the compiler. As a result, Python code cannot take advantage of a substantial hierarchy of templates, without bearing a complex maintenance burden. Instead, another solution is required. In PyViennaCL, this takes the form of the =pyviennacl.expression= class; see above for details.
+Nonetheless, even expression templates to a depth of two are not easily available at run-time, because they are a compile-time optimisation, determined by the compiler. As a result, Python code cannot take advantage of a substantial hierarchy of templates, without bearing a complex maintenance burden. Instead, another solution is required. In PyViennaCL, this takes the form of the =pyviennacl.expression= class and direct hooks to the kernel generator; see above for details.
 

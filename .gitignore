@@ -4,3 +4,4 @@
 .emacs.desktop*
 build
 !build/README
+GSoC/*tex
