@@ -217,6 +217,8 @@ Python performs arithmetic operations in binary pairs, and so the =pyviennacl.ex
 
 Depending on how [[https://github.com/viennacl/viennacl-dev/issues/8][ViennaCL issue 8]] is solved, this should serve to improve performance, and minimise copying and the creation of temporary objects. Furthermore, this class should take advantage of dynamic kernel generation wherever worthwhile for performance reasons, and wherever possible given the maturity of the code.
 
+It is also sensible to note that there are a number of optimising heuristics for symbolic expressions which could be implemented to improve performance reasons. This includes both simple heuristics such as merging duplicated expressions (ie, where =(x+y)= occurs twice in an expression, only compute the result once) and more complicated analyses about symbolic equivalence (eg, substitutions for BLAS-equivalent expressions). Though ultimately desirable, the requirement for this GSoC project does not include the implementation of such optimisations: the priority is the completeness of computational functionality. Optimisations are a longer-term goal, and as such, only "nice to have"; see below.
+
 **** *BLAS operations are implemented where possible using operator overloading and the* =pyviennacl.expression class=
 
 Where operator overloading is not possible or ambiguous, BLAS operations are implemented as named functions in the =pyviennacl= namespace, returning =pyviennacl.expression= objects where possible. See the details below.
@@ -358,7 +360,7 @@ QR factorisation is only a nice-to-have, because of its external dependency on u
 
 *** Nice to have
 
-The following are ordered in descending order of desirability; that is, most desirable comes first.
+The following are ordered in descending order of desirability; that is, though none are required, the most desirable comes first.
 
 **** *Full coverage of the ViennaCL algorithm library*
 ***** *Preconditioners*
@@ -376,16 +378,22 @@ This functionality includes: additional iterative solvers and preconditioners; t
 
 ***** *Structured matrix types and algorithms*
 
+**** *Symbolic optimisations*
+
+There are many algebraic equivalences for which it would be useful, for performance reasons, to include heuristics (see the discussion about =pyviennacl.expression= under 'Required deliverables' above). Such heuristics could be implemented (eg) in a pluggable fashion for easy extensibility, or directly in =pyviennacl.expression=. It is also unclear at this stage whether or not such heuristics would not be better implemented within the ViennaCL core library -- perhaps in the kernel generator itself. Because of the inherent difficulty (/pace/ Alonzo Church) of evaluating symbolic expressions for equivalences, and because of uncertainty about its potential implementation, this is likely to be a never-ending goal, and thus only "nice to have".
+
 **** *API compatibility with NumPy/SciPy, letting PyViennaCL and NumPy be interchangeable*
 ***** *PyViennaCL implements a* =numpy.ndarray= *compatible class, performing operations on the requested compute back-end.*
 
-The aim here is that PyViennaCL can ultimately provide a GPGPU drop-in for many NumPy/SciPy functions. As such, the API would look just like the relevant parts of NumPy/SciPy.
+The aim here is that PyViennaCL can ultimately provide a GPGPU drop-in for many NumPy/SciPy functions. As such, the API would look just like the relevant parts of NumPy/SciPy. However, because numpy.ndarray provides a general tensor class, numpy-completeness cannot be obtained until ViennaCL supports more generalised tensors[fn:20].
+
+[fn:20] This is also something I would like to work on, but it does not fall within the scope of this proposed project.
 
 **** *Parameter tuning*
 
-ViennaCL provides an API for determining global and local compute work sizes (i.e., number of work groups, and work items per group) on the OpenCL back-end. These tunables have a "considerable impact on the obtained device performance"[fn:20]. As such, it is worthwhile exposing this interface in PyViennaCL.
+ViennaCL provides an API for determining global and local compute work sizes (i.e., number of work groups, and work items per group) on the OpenCL back-end. These tunables have a "considerable impact on the obtained device performance"[fn:21]. As such, it is worthwhile exposing this interface in PyViennaCL.
 
-[fn:20] [[http://viennacl.sourceforge.net/viennacl-manual-current.pdf][ViennaCL manual]], version 1.4.1, page 54.
+[fn:21] [[http://viennacl.sourceforge.net/viennacl-manual-current.pdf][ViennaCL manual]], version 1.4.1, page 54.
 
 **** *Run-time switching of compute back-end*
 
@@ -423,52 +431,52 @@ The Python =float= type represents a C++ =double=. However, some compute devices
 
 ** Project schedule
 
-*** <2013-06-07 Mon>: Week 0
+*** [2013-06-07 Mon]: Week 0
 End of exam period.
 
-*** <2013-06-17 Mon>: Week 1
+*** [2013-06-17 Mon]: Week 1
 Work begins on implementing and documenting basic types and tests
 
-*** <2013-06-24 Mon>: Week 2
+*** [2013-06-24 Mon]: Week 2
 (work continues)
 
-*** <2013-07-01 Mon>: Week 3
+*** [2013-07-01 Mon]: Week 3
 Basic types and arithmetic operations implemented; =pyviennacl.expression= class has a naive implementation
 
-*** <2013-07-08 Mon>: Week 4
+*** [2013-07-08 Mon]: Week 4
 Lay groundwork for interfacing with the dynamic kernel generator, and rework =pyviennacl.expression= if necessary
 
-*** <2013-07-15 Mon>: Week 5
+*** [2013-07-15 Mon]: Week 5
 Remaining matrix types implemented; BLAS Level 1 complete
 
-*** <2013-07-22 Mon>: Week 6
+*** [2013-07-22 Mon]: Week 6
 BLAS Level 2 complete; optimisation work on =pyviennacl.expression= class continues in earnest. The complexity of expressions in BLAS Level 2 and up warrants increased use of the kernel generator, and as such this should be integrated into =pyviennacl.expression=.
 
-*** <2013-07-29 Mon>: Week 7
+*** [2013-07-29 Mon]: Week 7
 (work continues)
 
-*** <2013-08-05 Mon>: Week 8
+*** [2013-08-05 Mon]: Week 8
 BLAS Level 3 complete; =pyviennacl.expression= and algorithm API complete to the required extent, and hooks to the kernel generator are available and in a working state.
 
-*** <2013-08-12 Mon>: Week 9
+*** [2013-08-12 Mon]: Week 9
 Documentation of finished work completed; any functions yet to be implemented have documented stubs; regression test coverage hits at least 50%
 
-*** <2013-08-19 Mon>: Week 10
+*** [2013-08-19 Mon]: Week 10
 Spare week, catch-up if falling behind schedule; start working on portability
 
-*** <2013-08-26 Mon>: Week 11
+*** [2013-08-26 Mon]: Week 11
 Work on build system and cross-platform portability is complete
 
-*** <2013-09-02 Mon>: Week 12
+*** [2013-09-02 Mon]: Week 12
 Code review: go back over code, documentation and tests; implement remaining ViennaCL algorithm wrappers
 
-*** <2013-09-09 Mon>: Week 13
-Work on nice-to-have features: plan NumPy/SciPy implementation; implement parameter tuning
+*** [2013-09-09 Mon]: Week 13
+Work on nice-to-have features: plan NumPy/SciPy implementation; implement parameter tuning; basic symbolic optimisations
 
-*** <2013-09-16 Mon>: Week 14
+*** [2013-09-16 Mon]: Week 14
 Soft "pencils down": code clean-up; check API consistency
 
-*** <2013-09-23 Mon>: Week 15
+*** [2013-09-23 Mon]: Week 15
 Firm "pencils down"
 
 ** Answers to puzzles
@@ -479,9 +487,9 @@ Firm "pencils down"
 
 (Graphs are contained in the [[file:pyviennacl-puzzle.pdf][pyviennacl-puzzle.pdf]] file, which is produced by the =pyviennacl= test.)
 
-Every time an operation is performed on the GPU, the relevant kernel has to be copied over (and whatever initialisation necessary done). This is of constant time complexity, but it takes a time long enough to dwarf the time it takes to do the actual operation, until the vector becomes large enough. On my nVidia GeForce 610M GPU (using driver version 319), this critical point is at 2**12 vector entries.
+Every time an operation is performed on the GPU, the relevant kernel has to be initialised. This is of constant time complexity, but it takes a time long enough to dwarf the time it takes to do the actual operation, until the vector becomes large enough. On my nVidia GeForce 610M GPU (using driver version 319), this critical point is at 2**12 vector entries. In particular, because of its commitment to hardware-agnosticism, OpenCL kernels must be compiled on first use; first-run initialisation overhead in ViennaCL using OpenCL is thus comparatively large (versus CUDA/PTX), but ViennaCL caches the generated compute kernel after initial compilation.
 
-Alternatively, plotting the execution time /per entry/ shows strictly linearly decreasing time up to 2**12, and constant time thereafter. The negative slope up to 2**12 entires is because the kernel initialisation takes a constant time, which is always greater than the actual calculation time; the flat slope after this point is because the actual calculation takes longer than initialisation, and the time taken is directly proportional to vector length.
+Plotting the execution time /per entry/ shows strictly linearly decreasing time up to 2**12, and constant time thereafter. The negative slope up to 2**12 entires is because the kernel initialisation takes a constant time, which is always greater than the actual calculation time; the flat slope after this point is because the actual calculation takes longer than initialisation, and the time taken is directly proportional to vector length.
 
 The operation =x = y1 + y2 + y1 + y2= takes a constant multiple of time longer than the operation =x = y1 + y2= because it involves a second operation, but it does not take simply twice as long; instead, it takes around four times longer. This is because =y1 + y2= is computed twice -- with only one initialisation of the corresponding kernel -- and then the result is substituted into the computation =[(y1 + y2) + (y1 + y2)]=, which uses a different kernel: =(y1 + y2)= uses =avbv_cpu_cpu= in this case, while here =[(y1 + y2) + (y1 + y2)]= uses =avbv_gpu_gpu=, and this requires the results of the first calculations to be stored, the re-initialisation of the compute device, and then the final calculation to be performed.
 
