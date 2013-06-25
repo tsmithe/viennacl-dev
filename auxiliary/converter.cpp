@@ -32,7 +32,7 @@ void writeSourceFile(std::ofstream & out_file, std::string const & filename, con
     {
         //write variable declaration:
         out_file << "const char * const " << dirname << "_" << alignment << "_" << filename.substr(0, filename.size()-3) << " = " << std::endl;
-    
+
         //write source string:
         while (getline(in_file, tmp, '\n'))
         {
@@ -48,7 +48,7 @@ void writeSourceFile(std::ofstream & out_file, std::string const & filename, con
 
 //              std::replace( tmp.begin(), tmp.end(), '"', '\"');
 
-      	        //out_file << "\"" << tmp.replace(tmp.end()-1, tmp.end(), "\\n\"") << std::endl;
+                //out_file << "\"" << tmp.replace(tmp.end()-1, tmp.end(), "\\n\"") << std::endl;
                 if ( *(tmp.end()-1) == '\r')  //Windows line delimiter, \r\n
                     out_file << "\"" << tmp.replace(tmp.end()-1, tmp.end(), "\\n\"") << std::endl;
                 else //Unix line delimiter \n
@@ -56,7 +56,7 @@ void writeSourceFile(std::ofstream & out_file, std::string const & filename, con
             }
         }
         out_file << "; //" << dirname << "_" << alignment << "_" << filename.substr(0, filename.size()-3)  << std::endl << std::endl;
-        
+
     }
     else
         std::cerr << "Failed to open file " << filename << std::endl;
@@ -121,7 +121,7 @@ void createSourceFile(const char * dirname)
                     if (fname.substr(fname.size()-3, 3) == ".cl")
                         sorted_paths.insert(std::make_pair(fname,alignment));
                         //std::cout << alignment_itr->path().filename() << "/" << fname << std::endl;
-                } //for                
+                } //for
             } //if is_directory
         } //for alignment_iterator
     } //if is_directory
@@ -210,20 +210,20 @@ void writeKernelInit(std::ostream & kernel_file, const char * dirname, std::stri
         kernel_file << "d";
     kernel_file << "_" << dirname << "_" << alignment << "\";" << std::endl;
     kernel_file << "    }" << std::endl;
-    
-    kernel_file << "    static void init()" << std::endl;
+
+    kernel_file << "    static void init(viennacl::ocl::context & ctx)" << std::endl;
     kernel_file << "    {" << std::endl;
     if (is_float)
-      kernel_file << "      viennacl::ocl::DOUBLE_PRECISION_CHECKER<float>::apply();" << std::endl;
+      kernel_file << "      viennacl::ocl::DOUBLE_PRECISION_CHECKER<float>::apply(ctx);" << std::endl;
     else
-      kernel_file << "      viennacl::ocl::DOUBLE_PRECISION_CHECKER<double>::apply();" << std::endl;
+      kernel_file << "      viennacl::ocl::DOUBLE_PRECISION_CHECKER<double>::apply(ctx);" << std::endl;
     kernel_file << "      static std::map<cl_context, bool> init_done;" << std::endl;
-    kernel_file << "      viennacl::ocl::context & context_ = viennacl::ocl::current_context();" << std::endl;
-    kernel_file << "      if (!init_done[context_.handle().get()])" << std::endl;
+    kernel_file << "      if (!init_done[ctx.handle().get()])" << std::endl;
     kernel_file << "      {" << std::endl;
     kernel_file << "        std::string source;" << std::endl;
+    kernel_file << "        source.reserve(8192);" << std::endl; //to avoid some early reallocations
     if (!is_float)
-      kernel_file << "        std::string fp64_ext = viennacl::ocl::current_device().double_support_extension();" << std::endl;
+      kernel_file << "        std::string fp64_ext = ctx.current_device().double_support_extension();" << std::endl;
 
     //iterate over all kernels in align1-folder:
     std::string current_dir(dirname);
@@ -250,8 +250,8 @@ void writeKernelInit(std::ostream & kernel_file, const char * dirname, std::stri
             //add kernel source to program string:
             std::string kernel_name_ending = fname.size() > 8 ? fname.substr(fname.size()-7, 4) : " ";
             if (kernel_name_ending == "_amd")
-              kernel_file << "        if (viennacl::ocl::current_device().local_memory() > 20000)" << std::endl << "  ";  //fast AMD kernels require more than 20 kB of local memory
-            
+              kernel_file << "        if (ctx.current_device().local_mem_size() > 20000)" << std::endl << "  ";  //fast AMD kernels require more than 20 kB of local memory
+
             kernel_file << "        source.append(";
             if (!is_float)
                 kernel_file << "viennacl::tools::make_double_kernel(";
@@ -260,37 +260,15 @@ void writeKernelInit(std::ostream & kernel_file, const char * dirname, std::stri
                 kernel_file << ", fp64_ext)";
             kernel_file << ");" << std::endl;
         }
-    } //for                
-    
+    } //for
+
     kernel_file << "        std::string prog_name = program_name();" << std::endl;
     kernel_file << "        #ifdef VIENNACL_BUILD_INFO" << std::endl;
     kernel_file << "        std::cout << \"Creating program \" << prog_name << std::endl;" << std::endl;
     kernel_file << "        #endif" << std::endl;
-    kernel_file << "        context_.add_program(source, prog_name);" << std::endl;
-    kernel_file << "        viennacl::ocl::program & prog_ = context_.get_program(prog_name);" << std::endl;
-    
-    //write and register single precision sources:
-    for ( fs::directory_iterator cl_itr( filepath );
-          cl_itr != end_iter;
-          ++cl_itr )
-    {
-#ifdef USE_OLD_BOOST_FILESYSTEM_VERSION
-        std::string fname = cl_itr->path().filename();
-#else
-        std::string fname = cl_itr->path().filename().string();
-#endif
-        size_t pos = fname.find(".cl");
-        if ( pos == std::string::npos )
-          continue;
+    kernel_file << "        ctx.add_program(source, prog_name);" << std::endl;
 
-        if (fname.substr(fname.size()-3, 3) == ".cl")
-        {
-            //initialize kernel:
-            kernel_file << "        prog_.add_kernel(\"" << fname.substr(0, fname.size()-3) << "\");" << std::endl;
-        }
-    } //for                
-    
-    kernel_file << "        init_done[context_.handle().get()] = true;" << std::endl;
+    kernel_file << "        init_done[ctx.handle().get()] = true;" << std::endl;
     kernel_file << "       } //if" << std::endl;
     kernel_file << "     } //init" << std::endl;
     kernel_file << "    }; // struct" << std::endl << std::endl;
@@ -329,7 +307,7 @@ void createKernelFile(const char * dirname)
     //Step 3: Write class information:
     kernel_file << "   template<class TYPE, unsigned int alignment>" << std::endl;
     kernel_file << "   struct " << dirname << ";" << std::endl << std::endl;
-    
+
     //Step 4: Write single precision kernels
     std::string dir(dirname);
     kernel_file << std::endl << "    /////////////// single precision kernels //////////////// " << std::endl;

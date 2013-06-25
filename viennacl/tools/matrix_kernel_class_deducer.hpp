@@ -12,7 +12,7 @@
                             -----------------
 
    Project Head:    Karl Rupp                   rupp@iue.tuwien.ac.at
-               
+
    (A list of authors and contributors can be found in the PDF manual)
 
    License:         MIT (X11), see file LICENSE in the base directory
@@ -39,34 +39,23 @@ namespace viennacl
     /**     @brief Implementation of a helper meta class for deducing the correct kernels for the supplied matrix */
     template <typename MatrixType1>
     struct MATRIX_KERNEL_CLASS_DEDUCER
-    {};
-    
-    /** \cond */
-    template <typename SCALARTYPE, unsigned int ALIGNMENT>
-    struct MATRIX_KERNEL_CLASS_DEDUCER< viennacl::matrix<SCALARTYPE, viennacl::row_major, ALIGNMENT> >
     {
-      typedef viennacl::linalg::kernels::matrix_row<SCALARTYPE, ALIGNMENT>     ResultType;
-    };
-    
-    template <typename SCALARTYPE, unsigned int ALIGNMENT>
-    struct MATRIX_KERNEL_CLASS_DEDUCER< viennacl::matrix<SCALARTYPE, viennacl::column_major, ALIGNMENT> >
-    {
-      typedef viennacl::linalg::kernels::matrix_col<SCALARTYPE, ALIGNMENT>     ResultType;
+      typedef typename MatrixType1::ERROR_INVALID_ARGUMENT_FOR_KERNEL_CLASS_DEDUCER    ResultType;
     };
 
-    //support for matrix range:
-    template <typename T>
-    struct MATRIX_KERNEL_CLASS_DEDUCER< viennacl::matrix_range<T> >
+    /** \cond */
+    template <typename SCALARTYPE>
+    struct MATRIX_KERNEL_CLASS_DEDUCER< viennacl::matrix_base<SCALARTYPE, viennacl::row_major> >
     {
-      typedef typename MATRIX_KERNEL_CLASS_DEDUCER<T>::ResultType    ResultType;
+      typedef viennacl::linalg::kernels::matrix_row<SCALARTYPE, 1>     ResultType;
     };
-    
-    //support for matrix slice:
-    template <typename T>
-    struct MATRIX_KERNEL_CLASS_DEDUCER< viennacl::matrix_slice<T> >
+
+    template <typename SCALARTYPE>
+    struct MATRIX_KERNEL_CLASS_DEDUCER< viennacl::matrix_base<SCALARTYPE, viennacl::column_major> >
     {
-      typedef typename MATRIX_KERNEL_CLASS_DEDUCER<T>::ResultType    ResultType;
+      typedef viennacl::linalg::kernels::matrix_col<SCALARTYPE, 1>     ResultType;
     };
+
     /** \endcond */
   }
 

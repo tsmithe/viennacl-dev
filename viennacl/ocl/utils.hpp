@@ -12,7 +12,7 @@
                             -----------------
 
    Project Head:    Karl Rupp                   rupp@iue.tuwien.ac.at
-               
+
    (A list of authors and contributors can be found in the PDF manual)
 
    License:         MIT (X11), see file LICENSE in the base directory
@@ -30,26 +30,26 @@ namespace viennacl
 {
   namespace ocl
   {
-    
+
     /** @brief Ensures that double precision types are only allocated if it is supported by the device. If double precision is requested for a device not capable of providing that, a double_precision_not_provided_error is thrown.
      */
     template <typename ScalarType>
     struct DOUBLE_PRECISION_CHECKER
     {
-      static void apply() {} 
+      static void apply(viennacl::ocl::context const & ctx) {}
     };
-    
+
     template <>
     struct DOUBLE_PRECISION_CHECKER<double>
     {
-      static void apply()
+      static void apply(viennacl::ocl::context const & ctx)
       {
-        if (!viennacl::ocl::current_device().double_support())
+        if (!ctx.current_device().double_support())
           throw viennacl::ocl::double_precision_not_provided_error();
       }
     };
-    
-    
+
+
 
   } //ocl
 } //viennacl

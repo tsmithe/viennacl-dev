@@ -12,7 +12,7 @@
                             -----------------
 
    Project Head:    Karl Rupp                   rupp@iue.tuwien.ac.at
-               
+
    (A list of authors and contributors can be found in the PDF manual)
 
    License:         MIT (X11), see file LICENSE in the base directory
@@ -28,7 +28,7 @@
 #include "viennacl/forwards.h"
 #include "viennacl/meta/result_of.hpp"
 
-#ifdef VIENNACL_WITH_EIGEN  
+#ifdef VIENNACL_WITH_EIGEN
 #include <Eigen/Core>
 #include <Eigen/Sparse>
 #endif
@@ -41,16 +41,16 @@ namespace viennacl
 
   namespace traits
   {
-    //
-    // Resize: Change the size of vectors and matrices
-    //
+
+    /** @brief Generic filler routine for setting an entry of a matrix to a particular value */
     template <typename MatrixType, typename SCALARTYPE>
     void fill(MatrixType & matrix, std::size_t row_index, std::size_t col_index, SCALARTYPE value)
     {
-      matrix(row_index, col_index) = value; 
+      matrix(row_index, col_index) = value;
     }
-    
+
     #ifdef VIENNACL_WITH_EIGEN
+    /** @brief Generic filler routine for setting an entry of a matrix to a particular value. Special case for Eigen sparse matrices. */
     template <typename T, int options, typename SCALARTYPE>
     inline void fill(Eigen::SparseMatrix<T, options> & m,
                      std::size_t row_index,
@@ -59,12 +59,12 @@ namespace viennacl
                     )
     {
       m.insert(row_index, col_index) = value;
-    }    
+    }
     #endif
 
- 
+
   } //namespace traits
 } //namespace viennacl
-    
+
 
 #endif

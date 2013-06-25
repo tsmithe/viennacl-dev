@@ -12,7 +12,7 @@
                             -----------------
 
    Project Head:    Karl Rupp                   rupp@iue.tuwien.ac.at
-               
+
    (A list of authors and contributors can be found in the PDF manual)
 
    License:         MIT (X11), see file LICENSE in the base directory
@@ -41,10 +41,10 @@ namespace viennacl
 {
   namespace linalg
   {
-    
+
     namespace detail
     {
-      
+
       template<typename SparseMatrixType, typename SCALARTYPE, unsigned int VEC_ALIGNMENT>
       typename viennacl::enable_if< viennacl::is_any_sparse_matrix<SparseMatrixType>::value >::type
       row_info(SparseMatrixType const & mat,
@@ -70,34 +70,13 @@ namespace viennacl
             throw "not implemented";
         }
       }
-    
+
     }
-    
-    
-    
+
+
+
     // A * x
-    /** @brief Returns a proxy class that represents matrix-vector multiplication with any sparse matrix type
-    *
-    * This is used for the convenience expression result = prod(mat, vec);
-    *
-    * @param mat    The matrix
-    * @param vec    The vector
-    */
-    template<typename SparseMatrixType, class SCALARTYPE, unsigned int ALIGNMENT>
-    typename viennacl::enable_if< viennacl::is_any_sparse_matrix<SparseMatrixType>::value,
-                                  vector_expression<const SparseMatrixType,
-                                                    const vector<SCALARTYPE, ALIGNMENT>, 
-                                                    op_prod >
-                                 >::type
-    prod_impl(const SparseMatrixType & mat, 
-              const vector<SCALARTYPE, ALIGNMENT> & vec)
-    {
-      return vector_expression<const SparseMatrixType,
-                               const vector<SCALARTYPE, ALIGNMENT>, 
-                               op_prod >(mat, vec);
-    }
-    
-    
+
     /** @brief Carries out matrix-vector multiplication involving a sparse matrix type
     *
     * Implementation of the convenience expression result = prod(mat, vec);
@@ -106,11 +85,11 @@ namespace viennacl
     * @param vec    The vector
     * @param result The result vector
     */
-    template<typename SparseMatrixType, class ScalarType, unsigned int ALIGNMENT>
+    template<typename SparseMatrixType, class ScalarType>
     typename viennacl::enable_if< viennacl::is_any_sparse_matrix<SparseMatrixType>::value>::type
-    prod_impl(const SparseMatrixType & mat, 
-              const viennacl::vector<ScalarType, ALIGNMENT> & vec,
-                    viennacl::vector<ScalarType, ALIGNMENT> & result)
+    prod_impl(const SparseMatrixType & mat,
+              const viennacl::vector_base<ScalarType> & vec,
+                    viennacl::vector_base<ScalarType> & result)
     {
       assert( (mat.size1() == result.size()) && bool("Size check failed for compressed matrix-vector product: size1(mat) != size(result)"));
       assert( (mat.size2() == vec.size())    && bool("Size check failed for compressed matrix-vector product: size2(mat) != size(x)"));
@@ -134,18 +113,18 @@ namespace viennacl
           throw "not implemented";
       }
     }
-    
-    
+
+
     /** @brief Carries out triangular inplace solves
     *
     * @param mat    The matrix
     * @param vec    The vector
     * @param tag    The solver tag (lower_tag, unit_lower_tag, unit_upper_tag, or upper_tag)
     */
-    template<typename SparseMatrixType, class ScalarType, unsigned int ALIGNMENT, typename SOLVERTAG>
+    template<typename SparseMatrixType, class ScalarType, typename SOLVERTAG>
     typename viennacl::enable_if< viennacl::is_any_sparse_matrix<SparseMatrixType>::value>::type
-    inplace_solve(const SparseMatrixType & mat, 
-                  viennacl::vector<ScalarType, ALIGNMENT> & vec,
+    inplace_solve(const SparseMatrixType & mat,
+                  viennacl::vector_base<ScalarType> & vec,
                   SOLVERTAG tag)
     {
       assert( (mat.size1() == mat.size2()) && bool("Size check failed for triangular solve on compressed matrix: size1(mat) != size2(mat)"));
@@ -170,18 +149,18 @@ namespace viennacl
           throw "not implemented";
       }
     }
-    
-    
+
+
     /** @brief Carries out transposed triangular inplace solves
     *
     * @param mat    The matrix
     * @param vec    The vector
     * @param tag    The solver tag (lower_tag, unit_lower_tag, unit_upper_tag, or upper_tag)
     */
-    template<typename SparseMatrixType, class ScalarType, unsigned int ALIGNMENT, typename SOLVERTAG>
+    template<typename SparseMatrixType, class ScalarType, typename SOLVERTAG>
     typename viennacl::enable_if< viennacl::is_any_sparse_matrix<SparseMatrixType>::value>::type
-    inplace_solve(const matrix_expression<const SparseMatrixType, const SparseMatrixType, op_trans> & mat, 
-                  viennacl::vector<ScalarType, ALIGNMENT> & vec,
+    inplace_solve(const matrix_expression<const SparseMatrixType, const SparseMatrixType, op_trans> & mat,
+                  viennacl::vector_base<ScalarType> & vec,
                   SOLVERTAG tag)
     {
       assert( (mat.size1() == mat.size2()) && bool("Size check failed for triangular solve on transposed compressed matrix: size1(mat) != size2(mat)"));
@@ -206,18 +185,18 @@ namespace viennacl
           throw "not implemented";
       }
     }
-    
 
-    
+
+
     namespace detail
     {
-      
-      template<typename SparseMatrixType, class ScalarType, unsigned int ALIGNMENT, typename SOLVERTAG>
+
+      template<typename SparseMatrixType, class ScalarType, typename SOLVERTAG>
       typename viennacl::enable_if< viennacl::is_any_sparse_matrix<SparseMatrixType>::value>::type
-      block_inplace_solve(const matrix_expression<const SparseMatrixType, const SparseMatrixType, op_trans> & mat, 
+      block_inplace_solve(const matrix_expression<const SparseMatrixType, const SparseMatrixType, op_trans> & mat,
                           viennacl::backend::mem_handle const & block_index_array, std::size_t num_blocks,
-                          viennacl::vector<ScalarType> const & mat_diagonal,
-                          viennacl::vector<ScalarType, ALIGNMENT> & vec,
+                          viennacl::vector_base<ScalarType> const & mat_diagonal,
+                          viennacl::vector_base<ScalarType> & vec,
                           SOLVERTAG tag)
       {
         assert( (mat.size1() == mat.size2()) && bool("Size check failed for triangular solve on transposed compressed matrix: size1(mat) != size2(mat)"));
@@ -242,11 +221,11 @@ namespace viennacl
             throw "not implemented";
         }
       }
-      
-      
+
+
     }
-    
-    
+
+
 
   } //namespace linalg
 
@@ -261,82 +240,20 @@ namespace viennacl
     return matrix_expression< const M1, const M1, op_trans>(mat, mat);
   }
 
-
-  /** @brief Implementation of the operation v1 = A * v2, where A is a sparse matrix
-  *
-  * @param proxy  An expression template proxy class.
-  */
-  template <typename SCALARTYPE, unsigned int ALIGNMENT>
-  template <typename SparseMatrixType>
-  typename viennacl::enable_if< viennacl::is_any_sparse_matrix<SparseMatrixType>::value,
-                                viennacl::vector<SCALARTYPE, ALIGNMENT> & >::type
-  viennacl::vector<SCALARTYPE, ALIGNMENT>::operator=(const viennacl::vector_expression< const SparseMatrixType,
-                                                                                        const viennacl::vector<SCALARTYPE, ALIGNMENT>,
-                                                                                        viennacl::op_prod> & proxy) 
-  {
-    // check for the special case x = A * x
-    if (viennacl::traits::handle(proxy.rhs()) == viennacl::traits::handle(*this))
-    {
-      viennacl::vector<SCALARTYPE, ALIGNMENT> temp(proxy.lhs().size1());
-      viennacl::linalg::prod_impl(proxy.lhs(), proxy.rhs(), temp);
-      *this = temp;
-      return *this;
-    }
-
-    viennacl::linalg::prod_impl(proxy.lhs(), proxy.rhs(), *this);
-    return *this;
-  }
-
-  //v += A * x
-  /** @brief Implementation of the operation v1 += A * v2, where A is a matrix
-  *
-  * @param result The result vector v1
-  * @param proxy  An expression template proxy class.
-  */
-  template <typename SCALARTYPE, unsigned int ALIGNMENT, typename SparseMatrixType>
-  typename viennacl::enable_if< viennacl::is_any_sparse_matrix<SparseMatrixType>::value,
-                                viennacl::vector<SCALARTYPE, ALIGNMENT> & >::type
-  operator+=(viennacl::vector<SCALARTYPE, ALIGNMENT> & result,
-              const viennacl::vector_expression< const SparseMatrixType, const viennacl::vector<SCALARTYPE, ALIGNMENT>, viennacl::op_prod> & proxy) 
-  {
-    vector<SCALARTYPE, ALIGNMENT> temp(proxy.lhs().size1());
-    viennacl::linalg::prod_impl(proxy.lhs(), proxy.rhs(), temp);
-    result += temp;
-    return result;
-  }
-
-  /** @brief Implementation of the operation v1 -= A * v2, where A is a matrix
-  *
-  * @param result The result vector v1
-  * @param proxy  An expression template proxy class.
-  */
-  template <typename SCALARTYPE, unsigned int ALIGNMENT, typename SparseMatrixType>
-  typename viennacl::enable_if< viennacl::is_any_sparse_matrix<SparseMatrixType>::value,
-                                viennacl::vector<SCALARTYPE, ALIGNMENT> & >::type
-  operator-=(viennacl::vector<SCALARTYPE, ALIGNMENT> & result,
-              const viennacl::vector_expression< const SparseMatrixType, const viennacl::vector<SCALARTYPE, ALIGNMENT>, viennacl::op_prod> & proxy) 
-  {
-    vector<SCALARTYPE, ALIGNMENT> temp(proxy.lhs().size1());
-    viennacl::linalg::prod_impl(proxy.lhs(), proxy.rhs(), temp);
-    result -= temp;
-    return result;
-  }
-  
-  
   //free functions:
   /** @brief Implementation of the operation 'result = v1 + A * v2', where A is a matrix
   *
   * @param result The vector the result is written to.
   * @param proxy  An expression template proxy class holding v1, A, and v2.
   */
-  template <typename SCALARTYPE, unsigned int ALIGNMENT, typename SparseMatrixType>
+  template <typename SCALARTYPE, typename SparseMatrixType>
   typename viennacl::enable_if< viennacl::is_any_sparse_matrix<SparseMatrixType>::value,
-                                viennacl::vector<SCALARTYPE, ALIGNMENT> >::type
-  operator+(viennacl::vector<SCALARTYPE, ALIGNMENT> & result,
-            const viennacl::vector_expression< const SparseMatrixType, const viennacl::vector<SCALARTYPE, ALIGNMENT>, viennacl::op_prod> & proxy) 
+                                viennacl::vector<SCALARTYPE> >::type
+  operator+(viennacl::vector_base<SCALARTYPE> & result,
+            const viennacl::vector_expression< const SparseMatrixType, const viennacl::vector_base<SCALARTYPE>, viennacl::op_prod> & proxy)
   {
     assert(proxy.lhs().size1() == result.size() && bool("Dimensions for addition of sparse matrix-vector product to vector don't match!"));
-    vector<SCALARTYPE, ALIGNMENT> temp(proxy.lhs().size1());
+    vector<SCALARTYPE> temp(proxy.lhs().size1());
     viennacl::linalg::prod_impl(proxy.lhs(), proxy.rhs(), temp);
     result += temp;
     return result;
@@ -347,14 +264,14 @@ namespace viennacl
   * @param result The vector the result is written to.
   * @param proxy  An expression template proxy class.
   */
-  template <typename SCALARTYPE, unsigned int ALIGNMENT, typename SparseMatrixType>
+  template <typename SCALARTYPE, typename SparseMatrixType>
   typename viennacl::enable_if< viennacl::is_any_sparse_matrix<SparseMatrixType>::value,
-                                viennacl::vector<SCALARTYPE, ALIGNMENT> >::type
-  operator-(viennacl::vector<SCALARTYPE, ALIGNMENT> & result,
-            const viennacl::vector_expression< const SparseMatrixType, const viennacl::vector<SCALARTYPE, ALIGNMENT>, viennacl::op_prod> & proxy) 
+                                viennacl::vector<SCALARTYPE> >::type
+  operator-(viennacl::vector_base<SCALARTYPE> & result,
+            const viennacl::vector_expression< const SparseMatrixType, const viennacl::vector_base<SCALARTYPE>, viennacl::op_prod> & proxy)
   {
     assert(proxy.lhs().size1() == result.size() && bool("Dimensions for addition of sparse matrix-vector product to vector don't match!"));
-    vector<SCALARTYPE, ALIGNMENT> temp(proxy.lhs().size1());
+    vector<SCALARTYPE> temp(proxy.lhs().size1());
     viennacl::linalg::prod_impl(proxy.lhs(), proxy.rhs(), temp);
     result += temp;
     return result;
