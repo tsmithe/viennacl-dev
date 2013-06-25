@@ -71,7 +71,7 @@ if(BUILD_PYVIENNACL)
   find_package(PythonInterp REQUIRED)
   find_package(PythonLibs REQUIRED)
   find_package(Numpy REQUIRED)
-  find_package(Boost REQUIRED COMPONENTS python-py33)
+  find_package(Boost REQUIRED COMPONENTS filesystem system thread python-py33)
 endif()
 
 # Compile options

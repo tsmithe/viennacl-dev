@@ -53,12 +53,13 @@ list vcl_vector_expression_to_list(E const& v)
 
   list l;
 
-  typename E::VectorType r(v);
+  //typename E::VectorType r(v);
+  E r(v);
   cpu_vector_type c(v.size());
   copy(r.begin(), r.end(), c.begin());
 
   for (unsigned int i = 0; i < v.size(); ++i)
-    l.append((typename E::VectorType::value_type::value_type)c[i]);
+    l.append((typename E::value_type::value_type)c[i]);
   
   return l;
 }
@@ -109,7 +110,7 @@ BOOST_PYTHON_MODULE(_viennacl)
 
   class_<vcl_vector_add_type>("vector_expression", no_init)
     .def("__add__", vcl_add<vcl_vector_type, vcl_vector_add_type const&, vcl_vector_type const&>)
-    .def("get_value", &vcl_vector_expression_to_ndarray<vcl_vector_add_type>)
+    .def("get_value", &vcl_vector_expression_to_ndarray<vcl_vector_type>)
     ;
 
   class_<vcl_vector_type>("vector")

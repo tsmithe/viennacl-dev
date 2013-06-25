@@ -6,3 +6,4 @@
 build
 !build/README
 GSoC/*tex
+pyviennacl-puzzle.pdf

@@ -38,7 +38,7 @@ file(RELATIVE_PATH CONF_REL_INCLUDE_DIR "${INSTALL_CMAKE_DIR}"
 
 option(ENABLE_CUDA "Use the CUDA backend" OFF)
 
-option(BUILD_EXAMPLES "Build example programs" ON)
+option(BUILD_EXAMPLES "Build example programs" OFF)
 
 option(ENABLE_OPENCL "Use the OpenCL backend" ON)
 
@@ -65,7 +65,7 @@ cmake_dependent_option(ENABLE_EIGEN "Enable examples that use Eigen" OFF
 cmake_dependent_option(ENABLE_MTL4 "Enable examples that use MTL4" OFF
    BUILD_EXAMPLES OFF)
 
-option(ENABLE_PEDANTIC_FLAGS "Enable pedantic compiler flags" ON)
+option(ENABLE_PEDANTIC_FLAGS "Enable pedantic compiler flags" OFF)
 
 mark_as_advanced(BOOSTPATH ENABLE_VIENNAPROFILER ENABLE_UBLAS ENABLE_EIGEN
    ENABLE_MTL4 ENABLE_PEDANTIC_FLAGS)
