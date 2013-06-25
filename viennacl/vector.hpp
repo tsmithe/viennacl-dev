@@ -1882,30 +1882,6 @@ namespace viennacl
           }
       };
 
-      // ===== BEGIN TEMPORARY TEST
-
-      template <typename T, typename RHS>
-      struct op_executor<vector_base<T>, op_inplace_add, RHS>
-      {
-	static void apply(vector_base<T> & lhs, RHS const & rhs)
-	{
-	  lhs += rhs;
-	}
-      };
-
-      // x = y
-      template <typename T, typename RHS>
-      struct op_executor<vector_base<T>, op_assign, RHS>
-      {
-        static void apply(vector_base<T> & lhs, vector_base<T> const & rhs)
-        {
-          viennacl::linalg::av(lhs, rhs, T(1), 1, false, false);
-        }
-      };
-
-      // ===== END TEMPORARY TEST
-
-
       // generic x = vec_expr1 + vec_expr2:
       template <typename T, typename LHS, typename RHS>
       struct op_executor<vector_base<T>, op_assign, vector_expression<const LHS, const RHS, op_add> >
