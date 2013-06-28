@@ -307,15 +307,16 @@ namespace viennacl
 
           const char * options = build_options_.c_str();
           err = clBuildProgram(temp, 0, NULL, options, NULL, NULL);
-          #if defined(VIENNACL_DEBUG_ALL) || defined(VIENNACL_DEBUG_BUILD)
+          if (err != CL_SUCCESS)
+          {
             char buffer[8192];
             cl_build_status status;
             clGetProgramBuildInfo(temp, devices_[0].id(), CL_PROGRAM_BUILD_STATUS, sizeof(cl_build_status), &status, NULL);
             clGetProgramBuildInfo(temp, devices_[0].id(), CL_PROGRAM_BUILD_LOG, sizeof(char)*8192, &buffer, NULL);
             std::cout << "Build Scalar: Err = " << err << " Status = " << status << std::endl;
             std::cout << "Log: " << buffer << std::endl;
-            //std::cout << "Sources: " << source << std::endl;
-          #endif
+            std::cout << "Sources: " << source << std::endl;
+          }
           VIENNACL_ERR_CHECK(err);
 
           programs_.push_back(viennacl::ocl::program(temp, *this, prog_name));
@@ -338,6 +339,19 @@ namespace viennacl
           }
 
           return prog;
+        }
+
+        /** @brief Delete the program with the provided name */
+        void delete_program(std::string const & name){
+          for (ProgramContainer::iterator it = programs_.begin();
+                it != programs_.end();
+                ++it)
+          {
+            if (it->name() == name){
+              programs_.erase(it);
+              return;
+            }
+          }
         }
 
         /** @brief Returns the program with the provided name */
