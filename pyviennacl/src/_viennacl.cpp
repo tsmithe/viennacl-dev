@@ -21,6 +21,8 @@ namespace bp = boost::python;
 namespace np = boost::numpy;
 namespace ublas = boost::numeric::ublas;
 
+typedef void* NoneT;
+
 typedef vcl::scalar<double> vcl_scalar_t;
 typedef double              cpu_scalar_t;
 
@@ -31,8 +33,6 @@ typedef vcl::matrix<cpu_scalar_t,
 		    vcl::row_major> vcl_matrix_t;
 typedef ublas::matrix<cpu_scalar_t,
 		  ublas::row_major> cpu_matrix_t;
-
-typedef void* NoneT;
 
 enum op_t {
   op_add,
@@ -56,10 +56,6 @@ enum op_t {
   op_prod,
   op_solve
 };
-
-/*******************************
-  Arithmetic wrapper functions
- *******************************/
 
 template <class ReturnT,
 	  class Operand1T, class Operand2T,
@@ -142,375 +138,6 @@ struct pyvcl_op
   }
 };
 
-
-template <class ReturnT,
-	  class Operand1T, class Operand2T,
-	  class Operand3T, class Operand4T,
-	  int PyObjs>
-struct pyvcl_worker<ReturnT,
-		    Operand1T, Operand2T,
-		    Operand3T, Operand4T,
-		    op_add, PyObjs>
-{
-  static ReturnT do_op(pyvcl_op<ReturnT, 
-		       Operand1T, Operand2T,
-		       Operand3T, Operand4T,
-		       op_add, PyObjs>& o)
-  {
-    return o.operand1 + o.operand2;
-  }
-};
-  
-template <class ReturnT,
-	  class Operand1T, class Operand2T,
-	  class Operand3T, class Operand4T,
-	  int PyObjs>
-struct pyvcl_worker<ReturnT, 
-		    Operand1T, Operand2T,
-		    Operand3T, Operand4T,
-		    op_sub, PyObjs>
-{
-  static ReturnT do_op(pyvcl_op<ReturnT, 
-		       Operand1T, Operand2T,
-		       Operand3T, Operand4T,
-		       op_sub, PyObjs>& o)
-  {
-    return o.operand1 - o.operand2;
-  }
-};
-
-template <class ReturnT,
-	  class Operand1T, class Operand2T,
-	  class Operand3T, class Operand4T,
-	  int PyObjs>
-struct pyvcl_worker<ReturnT, 
-		    Operand1T, Operand2T,
-		    Operand3T, Operand4T,
-		    op_mul, PyObjs>
-{
-  static ReturnT do_op(pyvcl_op<ReturnT, 
-		       Operand1T, Operand2T,
-		       Operand3T, Operand4T,
-		       op_mul, PyObjs>& o)
-  {
-    return o.operand1 * o.operand2;
-  }
-};
-
-template <class ReturnT,
-	  class Operand1T, class Operand2T,
-	  class Operand3T, class Operand4T,
-	  int PyObjs>
-struct pyvcl_worker<ReturnT, 
-		    Operand1T, Operand2T,
-		    Operand3T, Operand4T,
-		    op_div, PyObjs>
-{
-  static ReturnT do_op(pyvcl_op<ReturnT, 
-		       Operand1T, Operand2T,
-		       Operand3T, Operand4T,
-		       op_div, PyObjs>& o)
-  {
-    return o.operand1 / o.operand2;
-  }
-};
-
-
-template <class ReturnT,
-	  class Operand1T, class Operand2T,
-	  class Operand3T, class Operand4T,
-	  int PyObjs>
-struct pyvcl_worker<ReturnT, 
-		    Operand1T, Operand2T,
-		    Operand3T, Operand4T,		    
-		    op_inner_prod, PyObjs>
-{
-  static ReturnT do_op(pyvcl_op<ReturnT, 
-		       Operand1T, Operand2T,
-		       Operand3T, Operand4T,
-		       op_inner_prod, PyObjs>& o)
-  {
-    return vcl::linalg::inner_prod(o.operand1, o.operand2);
-  }
-};
-
-template <class ReturnT,
-	  class Operand1T, class Operand2T,
-	  class Operand3T, class Operand4T,
-	  int PyObjs>
-struct pyvcl_worker<ReturnT, 
-		    Operand1T, Operand2T,
-		    Operand3T, Operand4T,		    
-		    op_outer_prod, PyObjs>
-{
-  static ReturnT do_op(pyvcl_op<ReturnT, 
-		       Operand1T, Operand2T,
-		       Operand3T, Operand4T,
-		       op_outer_prod, PyObjs>& o)
-  {
-    return vcl::linalg::outer_prod(o.operand1, o.operand2);
-  }
-};
-
-template <class ReturnT,
-	  class Operand1T, class Operand2T,
-	  class Operand3T, class Operand4T,
-	  int PyObjs>
-struct pyvcl_worker<ReturnT, 
-		    Operand1T, Operand2T,
-		    Operand3T, Operand4T,
-		    op_element_prod, PyObjs>
-{
-  static ReturnT do_op(pyvcl_op<ReturnT, 
-		       Operand1T, Operand2T,
-		       Operand3T, Operand4T,
-		       op_element_prod, PyObjs>& o)
-  {
-    return vcl::linalg::element_prod(o.operand1, o.operand2);
-  }
-};
-
-template <class ReturnT,
-	  class Operand1T, class Operand2T,
-	  class Operand3T, class Operand4T,
-	  int PyObjs>
-struct pyvcl_worker<ReturnT, 
-		    Operand1T, Operand2T,
-		    Operand3T, Operand4T,
-		    op_element_div, PyObjs>
-{
-  static ReturnT do_op(pyvcl_op<ReturnT, 
-		       Operand1T, Operand2T,
-		       Operand3T, Operand4T,
-		       op_element_div, PyObjs>& o)
-  {
-    return vcl::linalg::element_div(o.operand1, o.operand2);
-  }
-};
-
-template <class ReturnT,
-	  class Operand1T, class Operand2T,
-	  class Operand3T, class Operand4T,
-	  int PyObjs>
-struct pyvcl_worker<ReturnT, 
-		    Operand1T, Operand2T,
-		    Operand3T, Operand4T,
-		    op_iadd, PyObjs>
-{
-  static ReturnT do_op(pyvcl_op<ReturnT, 
-		       Operand1T, Operand2T,
-		       Operand3T, Operand4T,
-		       op_iadd, PyObjs>& o)
-  {
-    o.operand1 += o.operand2;
-    return o.operand1;
-  }
-};
-
-template <class ReturnT,
-	  class Operand1T, class Operand2T,
-	  class Operand3T, class Operand4T,
-	  int PyObjs>
-struct pyvcl_worker<ReturnT, 
-		    Operand1T, Operand2T,
-		    Operand3T, Operand4T,
-		    op_isub, PyObjs>
-{
-  static ReturnT do_op(pyvcl_op<ReturnT, 
-		       Operand1T, Operand2T,
-		       Operand3T, Operand4T,
-		       op_isub, PyObjs>& o)
-  {
-    o.operand1 -= o.operand2;
-    return o.operand1;
-  }
-};
-
-template <class ReturnT,
-	  class Operand1T, class Operand2T,
-	  class Operand3T, class Operand4T,
-	  int PyObjs>
-struct pyvcl_worker<ReturnT, 
-		    Operand1T, Operand2T,
-		    Operand3T, Operand4T,
-		    op_imul, PyObjs>
-{
-  static ReturnT do_op(pyvcl_op<ReturnT, 
-		       Operand1T, Operand2T,
-		       Operand3T, Operand4T,
-		       op_imul, PyObjs>& o)
-  {
-    o.operand1 *= o.operand2;
-    return o.operand1;
-  }
-};
-
-template <class ReturnT,
-	  class Operand1T, class Operand2T,
-	  class Operand3T, class Operand4T,
-	  int PyObjs>
-struct pyvcl_worker<ReturnT, 
-		    Operand1T, Operand2T,
-		    Operand3T, Operand4T,
-		    op_idiv, PyObjs>
-{
-  static ReturnT do_op(pyvcl_op<ReturnT, 
-		       Operand1T, Operand2T,
-		       Operand3T, Operand4T,
-		       op_idiv, PyObjs>& o)
-  {
-    o.operand1 /= o.operand2;
-    return o.operand1;
-  }
-};
-
-template <class ReturnT,
-	  class Operand1T, class Operand2T,
-	  class Operand3T, class Operand4T,
-	  int PyObjs>
-struct pyvcl_worker<ReturnT, 
-		    Operand1T, Operand2T,
-		    Operand3T, Operand4T,
-		    op_norm_1, PyObjs>
-{
-  static ReturnT do_op(pyvcl_op<ReturnT, 
-		       Operand1T, Operand2T,
-		       Operand3T, Operand4T,
-		       op_norm_1, PyObjs>& o)
-  {
-    return vcl::linalg::norm_1(o.operand1);
-  }
-};
-
-template <class ReturnT,
-	  class Operand1T, class Operand2T,
-	  class Operand3T, class Operand4T,
-	  int PyObjs>
-struct pyvcl_worker<ReturnT, 
-		    Operand1T, Operand2T,
-		    Operand3T, Operand4T,
-		    op_norm_2, PyObjs>
-{
-  static ReturnT do_op(pyvcl_op<ReturnT, 
-		       Operand1T, Operand2T,
-		       Operand3T, Operand4T,
-		       op_norm_2, PyObjs>& o)
-  {
-    return vcl::linalg::norm_2(o.operand1);
-  }
-};
-
-template <class ReturnT,
-	  class Operand1T, class Operand2T,
-	  class Operand3T, class Operand4T,
-	  int PyObjs>
-struct pyvcl_worker<ReturnT, 
-		    Operand1T, Operand2T,
-		    Operand3T, Operand4T,
-		    op_norm_inf, PyObjs>
-{
-  static ReturnT do_op(pyvcl_op<ReturnT,
-		       Operand1T, Operand2T,
-		       Operand3T, Operand4T,
-		       op_norm_inf, PyObjs>& o)
-  {
-    return vcl::linalg::norm_inf(o.operand1);
-  }
-};
-
-template <class ReturnT,
-	  class Operand1T, class Operand2T,
-	  class Operand3T, class Operand4T,
-	  int PyObjs>
-struct pyvcl_worker<ReturnT, 
-		    Operand1T, Operand2T,
-		    Operand3T, Operand4T,
-		    op_index_norm_inf, PyObjs>
-{
-  static ReturnT do_op(pyvcl_op<ReturnT, 
-		       Operand1T, Operand2T,
-		       Operand3T, Operand4T,		       
-		       op_index_norm_inf, PyObjs>& o)
-  {
-    return vcl::linalg::index_norm_inf(o.operand1);
-  }
-};
-
-template <class ReturnT,
-	  class Operand1T, class Operand2T,
-	  class Operand3T, class Operand4T,
-	  int PyObjs>
-struct pyvcl_worker<ReturnT, 
-		    Operand1T, Operand2T,
-		    Operand3T, Operand4T,
-		    op_plane_rotation, PyObjs>
-{
-  static ReturnT do_op(pyvcl_op<ReturnT, 
-		       Operand1T, Operand2T,
-		       Operand3T, Operand4T,		       
-		       op_plane_rotation, PyObjs>& o)
-  {
-    vcl::linalg::plane_rotation(o.operand1, o.operand2,
-				o.operand3, o.operand4);
-    return bp::object();
-  }
-};
-
-template <class ReturnT,
-	  class Operand1T, class Operand2T,
-	  class Operand3T, class Operand4T,
-	  int PyObjs>
-struct pyvcl_worker<ReturnT, 
-		    Operand1T, Operand2T,
-		    Operand3T, Operand4T,
-		    op_trans, PyObjs>
-{
-  static ReturnT do_op(pyvcl_op<ReturnT, 
-		       Operand1T, Operand2T,
-		       Operand3T, Operand4T,		       
-		       op_trans, PyObjs>& o)
-  {
-    return vcl::trans(o.operand1);
-  }
-};
-
-template <class ReturnT,
-	  class Operand1T, class Operand2T,
-	  class Operand3T, class Operand4T,
-	  int PyObjs>
-struct pyvcl_worker<ReturnT, 
-		    Operand1T, Operand2T,
-		    Operand3T, Operand4T,
-		    op_prod, PyObjs>
-{
-  static ReturnT do_op(pyvcl_op<ReturnT, 
-		       Operand1T, Operand2T,
-		       Operand3T, Operand4T,		       
-		       op_prod, PyObjs>& o)
-  {
-    return vcl::linalg::prod(o.operand1, o.operand2);
-  }
-};
-
-template <class ReturnT,
-	  class Operand1T, class Operand2T,
-	  class Operand3T, class Operand4T,
-	  int PyObjs>
-struct pyvcl_worker<ReturnT, 
-		    Operand1T, Operand2T,
-		    Operand3T, Operand4T,
-		    op_solve, PyObjs>
-{
-  static ReturnT do_op(pyvcl_op<ReturnT, 
-		       Operand1T, Operand2T,
-		       Operand3T, Operand4T,		       
-		       op_solve, PyObjs>& o)
-  {
-    return vcl::linalg::solve(o.operand1, o.operand2,
-			      o.operand3);
-  }
-};
-
 // Worker functions
 
 template <class ReturnT,
@@ -522,10 +149,7 @@ ReturnT pyvcl_do_1ary_op(Operand1T a)
 	   Operand1T, NoneT,
 	   NoneT, NoneT,
 	   op, PyObjs>
-    o = pyvcl_op<ReturnT,
-		 Operand1T, NoneT,
-		 NoneT, NoneT,
-		 op, PyObjs>(a, NULL, NULL, NULL);
+    o (a, NULL, NULL, NULL);
   return o.do_op();
 }
 
@@ -538,10 +162,7 @@ ReturnT pyvcl_do_2ary_op(Operand1T a, Operand2T b)
 	   Operand1T, Operand2T,
 	   NoneT, NoneT,
 	   op, PyObjs>
-    o(a,b,NULL,NULL);/* = pyvcl_op<ReturnT,
-		 Operand1T, Operand2T,
-		 NoneT, NoneT,
-		 op, PyObjs>(a, b, NULL, NULL);*/
+    o (a, b, NULL, NULL);
   return o.do_op();
 }
 
@@ -555,10 +176,7 @@ ReturnT pyvcl_do_3ary_op(Operand1T a, Operand2T b, Operand3T c)
 	   Operand1T, Operand2T,
 	   Operand3T, NoneT,
 	   op, PyObjs>
-    o = pyvcl_op<ReturnT,
-		 Operand1T, Operand2T,
-		 Operand3T, NoneT,
-		 op, PyObjs>(a, b, c, NULL);
+    o (a, b, c, NULL);
   return o.do_op();
 }
 
@@ -573,13 +191,121 @@ ReturnT pyvcl_do_4ary_op(Operand1T a, Operand2T b,
 	     Operand1T, Operand2T,
 	     Operand3T, Operand4T,
 	     op, PyObjs>
-      o = pyvcl_op<ReturnT,
-		 Operand1T, Operand2T,
-		 Operand3T, Operand4T,
-		 op, PyObjs>(a, b, c, d);
+      o (a, b, c, d);
   return o.do_op();
 }
 
+#define OP_TEMPLATE template <class ReturnT, \
+                              class Operand1T, class Operand2T, \
+                              class Operand3T, class Operand4T, \
+                              int PyObjs>
+#define PYVCL_WORKER_STRUCT(OP) OP_TEMPLATE \
+                              struct pyvcl_worker<ReturnT, \
+                              Operand1T, Operand2T, \
+                              Operand3T, Operand4T, \
+                              OP, PyObjs>
+#define DO_OP_FUNC(OP) PYVCL_WORKER_STRUCT(OP) { \
+                              static ReturnT do_op(pyvcl_op<ReturnT, \
+                              Operand1T, Operand2T, \
+                              Operand3T, Operand4T, \
+                              OP, PyObjs>& o)
+
+
+/*******************************
+  Arithmetic wrapper functions
+ *******************************/
+  
+DO_OP_FUNC(op_add) { return o.operand1 + o.operand2; } };
+DO_OP_FUNC(op_sub) { return o.operand1 - o.operand2; } };
+DO_OP_FUNC(op_mul) { return o.operand1 * o.operand2; } };
+DO_OP_FUNC(op_div) { return o.operand1 / o.operand2; } };
+
+DO_OP_FUNC(op_inner_prod)
+{
+  return vcl::linalg::inner_prod(o.operand1, o.operand2);
+} };
+
+DO_OP_FUNC(op_outer_prod)
+{
+  return vcl::linalg::outer_prod(o.operand1, o.operand2);
+} };
+
+DO_OP_FUNC(op_element_prod)
+{
+  return vcl::linalg::element_prod(o.operand1, o.operand2);
+} };
+
+DO_OP_FUNC(op_element_div)
+{
+  return vcl::linalg::element_div(o.operand1, o.operand2);
+} };
+
+DO_OP_FUNC(op_iadd)
+{
+  o.operand1 += o.operand2;
+  return o.operand1;
+} };
+
+DO_OP_FUNC(op_isub)
+{
+  o.operand1 -= o.operand2;
+  return o.operand1;
+} };
+
+DO_OP_FUNC(op_imul)
+{
+  o.operand1 *= o.operand2;
+  return o.operand1;
+} };
+
+DO_OP_FUNC(op_idiv)
+{
+  o.operand1 /= o.operand2;
+  return o.operand1;
+} };
+
+DO_OP_FUNC(op_norm_1)
+{
+  return vcl::linalg::norm_1(o.operand1);
+} };
+
+DO_OP_FUNC(op_norm_2)
+{
+  return vcl::linalg::norm_2(o.operand1);
+} };
+
+DO_OP_FUNC(op_norm_inf)
+{
+  return vcl::linalg::norm_inf(o.operand1);
+} };
+
+DO_OP_FUNC(op_index_norm_inf)
+{
+  return vcl::linalg::index_norm_inf(o.operand1);
+} };
+
+DO_OP_FUNC(op_plane_rotation)
+{
+  vcl::linalg::plane_rotation(o.operand1, o.operand2,
+			      o.operand3, o.operand4);
+  return bp::object();
+} };
+
+DO_OP_FUNC(op_trans)
+{
+  return vcl::trans(o.operand1);
+} };
+
+DO_OP_FUNC(op_prod)
+{
+  return vcl::linalg::prod(o.operand1, o.operand2);
+} };
+
+DO_OP_FUNC(op_solve)
+{
+  return vcl::linalg::solve(o.operand1, o.operand2,
+			    o.operand3);
+} };
 
 /*******************************
   Type conversion functions
