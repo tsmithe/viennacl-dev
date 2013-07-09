@@ -57,6 +57,7 @@ enum op_t {
   op_solve
 };
 
+// Generic operation dispatch class -- see specialisations below
 template <class ReturnT,
 	  class Operand1T, class Operand2T,
 	  class Operand3T, class Operand4T,
@@ -66,6 +67,10 @@ struct pyvcl_worker
   static ReturnT do_op(void* o) {}
 };
 
+// This class wraps operations in a type-independent way up to 4 operands.
+// It's mainly used to simplify and consolidate calling conventions in the 
+// main module code far below, but it also includes a small amount of logic
+// for the extraction of C++ types from Python objects where necessary.
 template <class ReturnT,
 	  class Operand1T, class Operand2T,
 	  class Operand3T, class Operand4T,
@@ -138,7 +143,9 @@ struct pyvcl_op
   }
 };
 
-// Worker functions
+// Convenient operation dispatch functions.
+// These functions make setting up and calling the pyvcl_op class much
+// simpler for the specific 1-, 2-, 3- and 4-operand cases.
 
 template <class ReturnT,
 	  class Operand1T,
@@ -195,6 +202,13 @@ ReturnT pyvcl_do_4ary_op(Operand1T a, Operand2T b,
   return o.do_op();
 }
 
+
+/*****************************
+  Operation wrapper functions
+ *****************************/
+
+// These macros define specialisations of the pyvcl_worker class
+// which is used to dispatch viennacl operations.
 #define OP_TEMPLATE template <class ReturnT, \
                               class Operand1T, class Operand2T, \
                               class Operand3T, class Operand4T, \
@@ -210,10 +224,7 @@ ReturnT pyvcl_do_4ary_op(Operand1T a, Operand2T b,
                               Operand3T, Operand4T, \
                               OP, PyObjs>& o)
 
-
-/*******************************
-  Arithmetic wrapper functions
- *******************************/
+// And the actual operations follow below.
   
 DO_OP_FUNC(op_add) { return o.operand1 + o.operand2; } };
 DO_OP_FUNC(op_sub) { return o.operand1 - o.operand2; } };
@@ -480,7 +491,6 @@ BOOST_PYTHON_MODULE(_viennacl)
     .def("__add__", pyvcl_do_2ary_op<vcl_scalar_t,
 	 vcl_scalar_t&, vcl_scalar_t&,
 	 op_add, 0>)
-    //.def("__add__", pyvcl_do_2ary_op<vcl_scalar_t, vcl_scalar_t&, cpu_scalar_t&, op_add, 1>)
 
     .def("__sub__", pyvcl_do_2ary_op<vcl_scalar_t,
 	 cpu_scalar_t&, vcl_scalar_t&,
@@ -488,7 +498,6 @@ BOOST_PYTHON_MODULE(_viennacl)
     .def("__sub__", pyvcl_do_2ary_op<vcl_scalar_t,
 	 vcl_scalar_t&, vcl_scalar_t&,
 	 op_sub, 0>)
-    //.def("__sub__", pyvcl_do_2ary_op<vcl_scalar_t, vcl_scalar_t, cpu_scalar_t, op_sub, 1>)
 
     .def("__mul__", pyvcl_do_2ary_op<vcl_scalar_t,
 	 cpu_scalar_t&, vcl_scalar_t&,
@@ -496,7 +505,6 @@ BOOST_PYTHON_MODULE(_viennacl)
     .def("__mul__", pyvcl_do_2ary_op<vcl_scalar_t,
 	 vcl_scalar_t&, vcl_scalar_t&,
 	 op_mul, 0>)
-    //.def("__mul__", pyvcl_do_2ary_op<vcl_scalar_t, vcl_scalar_t, cpu_scalar_t, op_mul, 1>)
 
     .def("__truediv__", pyvcl_do_2ary_op<vcl_scalar_t,
 	 cpu_scalar_t&, vcl_scalar_t&,
@@ -504,12 +512,6 @@ BOOST_PYTHON_MODULE(_viennacl)
     .def("__truediv__", pyvcl_do_2ary_op<vcl_scalar_t,
 	 vcl_scalar_t&, vcl_scalar_t&,
 	 op_div, 0>)
-    //.def("__truediv__", pyvcl_do_2ary_op<vcl_scalar_t, vcl_scalar_t&, cpu_scalar_t&, op_div, 1>)
-
-    //.def("__floordiv__", ...)
-    //.def("__pow__", ...)
-    //.def("__ifloordiv__", ...)
-    //.def("__ipow__", ...)
 
     // Scalar-vector operations
     .def("__mul__", pyvcl_do_2ary_op<vcl_vector_t,
@@ -521,22 +523,6 @@ BOOST_PYTHON_MODULE(_viennacl)
 	 vcl_scalar_t&, vcl_matrix_t&,
 	 op_mul, 0>)
 
-    /*
-
-      TODO:
-      + assignment to/from Python float
-      + comparison operators
-      + addition, multiplication, exponentiation, subtraction
-      + division (quotient and integer quotient), modulus, divmod
-      + truncation, rounding, floor, ceil
-      + as_integer_ratio
-      + is_integer
-      + hex/fromhex
-
-      Which of these should be implemented here?
-      Which in the Python wrapper?
-
-     */
     ;
 
   // --------------------------------------------------
@@ -564,13 +550,10 @@ BOOST_PYTHON_MODULE(_viennacl)
     .def("__mul__", pyvcl_do_2ary_op<vcl_vector_t,
 	 vcl_vector_t&, vcl_scalar_t&,
 	 op_mul, 0>)
-    //.def("__mul__", vcl_op_obj_l<vcl_vector_t, cpu_scalar_t, vcl_vector_t const&>, op_mul)
-    //.def("__mul__", vcl_op_obj_r<vcl_vector_t, cpu_scalar_t, vcl_vector_t const&>, op_mul)
 
     .def("__truediv__", pyvcl_do_2ary_op<vcl_vector_t,
 	 vcl_vector_t&, vcl_scalar_t&,
 	 op_div, 0>)
-    
 
     // In-place operations
     .def("__iadd__", pyvcl_do_2ary_op<vcl_vector_t,
@@ -628,13 +611,6 @@ BOOST_PYTHON_MODULE(_viennacl)
     .def("outer_prod", pyvcl_do_2ary_op<vcl_matrix_t,
 	 vcl_vector_t&, vcl_vector_t&,
 	 op_outer_prod, 0>)
-    /*
-
-      TODO:
-      + clear, resize, size, internal_size, swap, empty, handle
-      + BLAS level 1 basic arithmetic operations
-
-     */
     ;
 
   bp::def("plane_rotation", pyvcl_do_4ary_op<bp::object,
