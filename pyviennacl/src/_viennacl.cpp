@@ -4,12 +4,14 @@
 #define VIENNACL_WITH_UBLAS
 #define VIENNACL_WITH_OPENCL
 #define VIENNACL_WITH_PYTHON
-#include <viennacl/vector.hpp>
+#include <viennacl/linalg/direct_solve.hpp>
 #include <viennacl/linalg/inner_prod.hpp>
 #include <viennacl/linalg/norm_1.hpp>
 #include <viennacl/linalg/norm_2.hpp>
 #include <viennacl/linalg/norm_inf.hpp>
+#include <viennacl/linalg/prod.hpp>
 #include <viennacl/matrix.hpp>
+#include <viennacl/vector.hpp>
 #include <cstdint>
 #include <iostream>
 #include <typeinfo>
@@ -42,13 +44,17 @@ enum op_t {
   op_imul,
   op_idiv,
   op_inner_prod,
+  op_outer_prod,
   op_element_prod,
   op_element_div,
   op_norm_1,
   op_norm_2,
   op_norm_inf,
   op_index_norm_inf,
-  op_plane_rotation
+  op_plane_rotation,
+  op_trans,
+  op_prod,
+  op_solve
 };
 
 /*******************************
@@ -225,6 +231,24 @@ struct pyvcl_worker<ReturnT,
 		       op_inner_prod, PyObjs>& o)
   {
     return vcl::linalg::inner_prod(o.operand1, o.operand2);
+  }
+};
+
+template <class ReturnT,
+	  class Operand1T, class Operand2T,
+	  class Operand3T, class Operand4T,
+	  int PyObjs>
+struct pyvcl_worker<ReturnT, 
+		    Operand1T, Operand2T,
+		    Operand3T, Operand4T,		    
+		    op_outer_prod, PyObjs>
+{
+  static ReturnT do_op(pyvcl_op<ReturnT, 
+		       Operand1T, Operand2T,
+		       Operand3T, Operand4T,
+		       op_outer_prod, PyObjs>& o)
+  {
+    return vcl::linalg::outer_prod(o.operand1, o.operand2);
   }
 };
 
@@ -432,6 +456,60 @@ struct pyvcl_worker<ReturnT,
   }
 };
 
+template <class ReturnT,
+	  class Operand1T, class Operand2T,
+	  class Operand3T, class Operand4T,
+	  int PyObjs>
+struct pyvcl_worker<ReturnT, 
+		    Operand1T, Operand2T,
+		    Operand3T, Operand4T,
+		    op_trans, PyObjs>
+{
+  static ReturnT do_op(pyvcl_op<ReturnT, 
+		       Operand1T, Operand2T,
+		       Operand3T, Operand4T,		       
+		       op_trans, PyObjs>& o)
+  {
+    return vcl::trans(o.operand1);
+  }
+};
+
+template <class ReturnT,
+	  class Operand1T, class Operand2T,
+	  class Operand3T, class Operand4T,
+	  int PyObjs>
+struct pyvcl_worker<ReturnT, 
+		    Operand1T, Operand2T,
+		    Operand3T, Operand4T,
+		    op_prod, PyObjs>
+{
+  static ReturnT do_op(pyvcl_op<ReturnT, 
+		       Operand1T, Operand2T,
+		       Operand3T, Operand4T,		       
+		       op_prod, PyObjs>& o)
+  {
+    return vcl::linalg::prod(o.operand1, o.operand2);
+  }
+};
+
+template <class ReturnT,
+	  class Operand1T, class Operand2T,
+	  class Operand3T, class Operand4T,
+	  int PyObjs>
+struct pyvcl_worker<ReturnT, 
+		    Operand1T, Operand2T,
+		    Operand3T, Operand4T,
+		    op_solve, PyObjs>
+{
+  static ReturnT do_op(pyvcl_op<ReturnT, 
+		       Operand1T, Operand2T,
+		       Operand3T, Operand4T,		       
+		       op_solve, PyObjs>& o)
+  {
+    return vcl::linalg::solve(o.operand1, o.operand2,
+			      o.operand3);
+  }
+};
 
 // Worker functions
 
@@ -564,65 +642,35 @@ vcl_vector_t vector_from_list(bp::list const& l)
   return vector_from_ndarray(np::from_object(l, np::dtype::get_builtin<cpu_scalar_t>()));
 }
 
-vcl_vector_t new_scalar_vector(int length, double value) {
-  return static_cast<vcl_vector_t>(vcl::scalar_vector<cpu_scalar_t>(length, value));
+vcl_vector_t new_scalar_vector(uint32_t length, cpu_scalar_t value) {
+  return static_cast<vcl_vector_t>
+    (vcl::scalar_vector<cpu_scalar_t>(length, value));
 }
 
 // Dense matrix
+
+vcl_matrix_t new_scalar_matrix(uint32_t n, uint32_t m, cpu_scalar_t value) {
+  return static_cast<vcl_matrix_t>
+    (vcl::scalar_matrix<cpu_scalar_t>(n, m, value));
+}
 
 template<class ScalarT>
 class ndarray_wrapper
 {
   np::ndarray& array; // Reference to the wrapped ndarray
 
-  /*
-  uint32_t dimensions; // Number of dimensions
-  uint32_t* shape; // Array of dimension sizes
-  */
-
 public:
   ndarray_wrapper(np::ndarray a)
     : array(a)
-  {
-    /*
-    dimensions = array.get_nd();
-    shape = (uint32_t*) array.get_shape();
-    */
-  }
+  { }
 
-  // Why not add a constructor from vcl_matrix_t?
+  uint32_t size1() const { return array.shape(0); }
 
-  uint32_t size1() const
-  {
-    return ((uint32_t*)array.get_shape())[0];
-  }
-
-  uint32_t size2() const
-  {
-    return ((uint32_t*)array.get_shape())[1];
-  }
+  uint32_t size2() const { return array.shape(1); }
 
   ScalarT operator()(uint32_t row, uint32_t col) const
   {
-    // For now, we assume row-major layout
-
-    auto d = [&](uint32_t j) // Dimension offset
-      { 
-	return sizeof(ScalarT)*((uint32_t*)array.get_shape())[j];
-      };
-
-    auto s = [&](uint32_t k) // Stride offset
-      {
-	k++;
-	uint32_t val = d(k);
-	k++;
-	for (; k < array.get_nd(); k++)
-	  val *= d(k);
-	return val;
-      };
-
-    // I think this is going to lead to a seg-fault...
-    return bp::extract<ScalarT>(array[(row*s(0))+(col*sizeof(ScalarT))]);
+    return bp::extract<ScalarT>(array[row][col]);
   } 
 
 };
@@ -631,10 +679,9 @@ np::ndarray vcl_matrix_to_ndarray(vcl_matrix_t const& m)
 {
   // Could generalise this for future tensor support, and work it into
   // the wrapper class above..
+
   uint32_t rows = m.size1();
   uint32_t cols = m.size2();
-  np::dtype dt = np::dtype::get_builtin<cpu_scalar_t>();
-  bp::tuple shape = bp::make_tuple(rows, cols);
 
   // A less indirect method here would be to use vcl::backend::memory_read
   // to fill a chunk of memory that can be read as an np::ndarray..
@@ -642,8 +689,17 @@ np::ndarray vcl_matrix_to_ndarray(vcl_matrix_t const& m)
   cpu_matrix_t cpu_m(rows, cols);
 
   vcl::copy(m, cpu_m);
+ 
+  np::dtype dt = np::dtype::get_builtin<cpu_scalar_t>();
+  bp::tuple shape = bp::make_tuple(rows, cols);
 
   np::ndarray array = np::empty(shape, dt);
+
+  for (uint32_t i = 0; i < rows; ++i) {
+    for (uint32_t j = 0; j < cols; ++j) {
+      array[i][j] = cpu_m(i, j);
+    }
+  }
 
   return array;
 }
@@ -658,8 +714,6 @@ vcl_matrix_t matrix_from_ndarray(np::ndarray const& array)
   }
   
   ndarray_wrapper<cpu_scalar_t> wrapper(array);
-
-  std::cout << wrapper.size1() << "," << wrapper.size2() << std::endl;
 
   vcl_matrix_t mat(wrapper.size1(), wrapper.size2());
 
@@ -736,6 +790,11 @@ BOOST_PYTHON_MODULE(_viennacl)
 	 vcl_scalar_t&, vcl_vector_t&,
 	 op_mul, 0>)
 
+    // Scalar-matrix operations
+    .def("__mul__", pyvcl_do_2ary_op<vcl_matrix_t,
+	 vcl_scalar_t&, vcl_matrix_t&,
+	 op_mul, 0>)
+
     /*
 
       TODO:
@@ -761,6 +820,11 @@ BOOST_PYTHON_MODULE(_viennacl)
   bp::class_<vcl_vector_t>("vector")
      .def(bp::init<int>())
      .def(bp::init<vcl_vector_t>())
+    .def("get_value", &vcl_vector_to_ndarray)
+    .def("clear", &vcl_vector_t::clear)
+    //.def("resize", &vcl_vector_t::resize)
+    .add_property("size", &vcl_vector_t::size)
+    .add_property("internal_size", &vcl_vector_t::internal_size)
 
     // Basic arithmetic operations
     .def("__add__", pyvcl_do_2ary_op<vcl_vector_t,
@@ -821,12 +885,23 @@ BOOST_PYTHON_MODULE(_viennacl)
 	 vcl_vector_t&, vcl_vector_t&,
 	 op_element_div, 0>)
 
-    .add_property("norm_1", pyvcl_do_1ary_op<vcl_scalar_t, vcl_vector_t&, op_norm_1, 0>)
-    .add_property("norm_2", pyvcl_do_1ary_op<vcl_scalar_t, vcl_vector_t&, op_norm_2, 0>)
-    .add_property("norm_inf", pyvcl_do_1ary_op<vcl_scalar_t, vcl_vector_t&, op_norm_inf, 0>)
-    .add_property("index_norm_inf", pyvcl_do_1ary_op<vcl_scalar_t, vcl_vector_t&, op_index_norm_inf, 0>)
+    .add_property("norm_1", pyvcl_do_1ary_op<vcl_scalar_t,
+		  vcl_vector_t&,
+		  op_norm_1, 0>)
+    .add_property("norm_2", pyvcl_do_1ary_op<vcl_scalar_t,
+		  vcl_vector_t&,
+		  op_norm_2, 0>)
+    .add_property("norm_inf", pyvcl_do_1ary_op<vcl_scalar_t,
+		  vcl_vector_t&,
+		  op_norm_inf, 0>)
+    .add_property("index_norm_inf", pyvcl_do_1ary_op<vcl_scalar_t,
+		  vcl_vector_t&,
+		  op_index_norm_inf, 0>)
 
-    .def("get_value", &vcl_vector_to_ndarray)
+    // BLAS 2
+    .def("outer_prod", pyvcl_do_2ary_op<vcl_matrix_t,
+	 vcl_vector_t&, vcl_vector_t&,
+	 op_outer_prod, 0>)
     /*
 
       TODO:
@@ -836,9 +911,8 @@ BOOST_PYTHON_MODULE(_viennacl)
      */
     ;
 
-  // This doesn't seem to work entirely correctly...
   bp::def("plane_rotation", pyvcl_do_4ary_op<bp::object,
-	  vcl_vector_t, vcl_vector_t,
+	  vcl_vector_t&, vcl_vector_t&,
 	  cpu_scalar_t, cpu_scalar_t,
 	  op_plane_rotation, 0>);
 
@@ -850,20 +924,108 @@ BOOST_PYTHON_MODULE(_viennacl)
 
   // --------------------------------------------------
 
-  /*
+  bp::class_<vcl::linalg::lower_tag>("lower_tag");
+  bp::class_<vcl::linalg::unit_lower_tag>("unit_lower_tag");
+  bp::class_<vcl::linalg::upper_tag>("upper_tag");
+  bp::class_<vcl::linalg::unit_upper_tag>("unit_upper_tag");
 
-    TODO:
-    + dense matrix type
-    + IMPROVE WRAPPER CLASS AND FIX "STRIDE ARITHMETIC"
-
-  */
+  // *** Dense matrix type ***
 
   bp::class_<vcl_matrix_t>("matrix")
     .def(bp::init<vcl_matrix_t>())
-    .def("get_value", &vcl_matrix_to_ndarray);
+    .def(bp::init<int, int>())
+
+    .def("get_value", &vcl_matrix_to_ndarray)
+    .def("clear", &vcl_matrix_t::clear)
+    //.def("resize", &vcl_matrix_t::resize)
+
+    .add_property("size1", &vcl_matrix_t::size1)
+    .add_property("internal_size1", &vcl_matrix_t::internal_size1)
+    .add_property("size2", &vcl_matrix_t::size2)
+    .add_property("internal_size2", &vcl_matrix_t::internal_size2)
+
+    .add_property("trans", pyvcl_do_1ary_op<vcl_matrix_t,
+		  vcl_matrix_t&,
+		  op_trans, 0>)
+
+    .def("__add__", pyvcl_do_2ary_op<vcl_matrix_t,
+	 vcl_matrix_t&, vcl_matrix_t&,
+	 op_add, 0>)
+
+    .def("__sub__", pyvcl_do_2ary_op<vcl_matrix_t,
+	 vcl_matrix_t&, vcl_matrix_t&,
+	 op_sub, 0>)
+
+    .def("__mul__", pyvcl_do_2ary_op<vcl_matrix_t,
+	 vcl_matrix_t&, vcl_scalar_t&,
+	 op_mul, 0>)
+
+    .def("__truediv__", pyvcl_do_2ary_op<vcl_matrix_t,
+	 vcl_matrix_t&, vcl_scalar_t&,
+	 op_div, 0>)
+
+    .def("__iadd__", pyvcl_do_2ary_op<vcl_matrix_t,
+	 vcl_matrix_t&, vcl_matrix_t&,
+	 op_iadd, 0>)
+
+    .def("__isub__", pyvcl_do_2ary_op<vcl_matrix_t,
+	 vcl_matrix_t&, vcl_matrix_t&,
+	 op_isub, 0>)
+
+    .def("__imul__", pyvcl_do_2ary_op<vcl_matrix_t,
+	 vcl_matrix_t&, vcl_scalar_t&,
+	 op_imul, 0>)
+
+    .def("__itruediv__", pyvcl_do_2ary_op<vcl_matrix_t,
+	 vcl_matrix_t&, vcl_scalar_t&,
+	 op_idiv, 0>)
+
+    .def("prod", pyvcl_do_2ary_op<vcl_vector_t,
+	 vcl_matrix_t, vcl_vector_t,
+	 op_prod, 0>)
+    .def("prod", pyvcl_do_2ary_op<vcl_matrix_t,
+	 vcl_matrix_t, vcl_matrix_t,
+	 op_prod, 0>)
+
+    .def("solve", pyvcl_do_3ary_op<vcl_vector_t,
+	 vcl_matrix_t, vcl_vector_t,
+	 vcl::linalg::lower_tag,
+	 op_solve, 0>)
+    .def("solve", pyvcl_do_3ary_op<vcl_vector_t,
+	 vcl_matrix_t, vcl_vector_t,
+	 vcl::linalg::unit_lower_tag,
+	 op_solve, 0>)
+    .def("solve", pyvcl_do_3ary_op<vcl_vector_t,
+	 vcl_matrix_t, vcl_vector_t,
+	 vcl::linalg::upper_tag,
+	 op_solve, 0>)
+    .def("solve", pyvcl_do_3ary_op<vcl_vector_t,
+	 vcl_matrix_t, vcl_vector_t,
+	 vcl::linalg::unit_upper_tag,
+	 op_solve, 0>)
+
+    .def("solve", pyvcl_do_3ary_op<vcl_matrix_t,
+	 vcl_matrix_t, vcl_matrix_t,
+	 vcl::linalg::lower_tag,
+	 op_solve, 0>)
+    .def("solve", pyvcl_do_3ary_op<vcl_matrix_t,
+	 vcl_matrix_t, vcl_matrix_t,
+	 vcl::linalg::unit_lower_tag,
+	 op_solve, 0>)
+    .def("solve", pyvcl_do_3ary_op<vcl_matrix_t,
+	 vcl_matrix_t, vcl_matrix_t,
+	 vcl::linalg::upper_tag,
+	 op_solve, 0>)
+    .def("solve", pyvcl_do_3ary_op<vcl_matrix_t,
+	 vcl_matrix_t, vcl_matrix_t,
+	 vcl::linalg::unit_upper_tag,
+	 op_solve, 0>)
+    ;
            
   // *** Matrix helper functions **
+
   bp::def("matrix_from_ndarray", matrix_from_ndarray);
+  bp::def("scalar_matrix", new_scalar_matrix);
 
 }
 
