@@ -15,6 +15,7 @@
 #include <viennacl/linalg/norm_2.hpp>
 #include <viennacl/linalg/norm_inf.hpp>
 #include <viennacl/linalg/prod.hpp>
+#include <viennacl/compressed_matrix.hpp>
 #include <viennacl/matrix.hpp>
 #include <viennacl/vector.hpp>
 
@@ -37,6 +38,14 @@ typedef ublas::matrix<cpu_scalar_t,
 		  ublas::row_major> cpu_matrix_t;
 
 typedef std::vector< std::map< uint32_t, cpu_scalar_t> > cpu_sparse_matrix_t;
+
+
+typedef vcl::compressed_matrix<cpu_scalar_t> vcl_compressed_matrix_t;
+/*typedef vcl::coordinate_matrix<cpu_scalar_t> vcl_coordinate_matrix_t;
+
+typedef vcl::ell_matrix<cpu_scalar_t> vcl_ell_matrix_t;
+typedef vcl::hyb_matrix<cpu_scalar_t> vcl_hyb_matrix_t;
+*/
 
 enum op_t {
   op_add,
@@ -448,7 +457,7 @@ np::ndarray vcl_matrix_to_ndarray(vcl_matrix_t const& m)
   return array;
 }
 
-/** @brief Creates the vector from the supplied ndarray */
+/** @brief Creates the matrix from the supplied ndarray */
 vcl_matrix_t matrix_from_ndarray(np::ndarray const& array)
 {
   int d = array.get_nd();
@@ -499,29 +508,63 @@ public:
     cpu_sparse_matrix = cpu_sparse_matrix_t(rows);
   }
 
+  cpu_sparse_matrix_wrapper(np::ndarray const& array)
+  {
+
+    // Doing things this way means we need at least 2x the amount of memory
+    // required to store the data for the ndarray, just in order to construct
+    // a sparse array on the compute device (which may itself take up
+    // substantially less memory than the original densely stored ndarray..)
+    // Ultimately, it would be better to wrap the ndarray with the features
+    // required by vcl::copy -- but this is a good first go, in that it is
+    // a straightforward implementation, and is functional enough to use
+    // and for which to write regression tests.
+
+    int d = array.get_nd();
+    if (d != 2) {
+      PyErr_SetString(PyExc_TypeError, "Can only create a matrix from a 2-D array!");
+      bp::throw_error_already_set();
+    }
+    
+    uint32_t n = array.shape(0);
+    uint32_t m = array.shape(1);
+    
+    cpu_sparse_matrix = cpu_sparse_matrix_t(n);
+    rows = n;
+    
+    for (uint32_t i = 0; i < n; ++i) {
+      for (uint32_t j = 0; j < m; ++j) {
+	cpu_scalar_t val = bp::extract<cpu_scalar_t>(array[i][j]);
+	if (val != 0) {
+	  cpu_sparse_matrix[i][j] = val;
+	  places.append(bp::make_tuple(i, j));
+	}
+      }
+    }
+    
+  }
+
   uint32_t nnz()
   {
     
-    if (bp::len(places) > 0) {
+    uint32_t i = 0;  
 
-      uint32_t i = 0;  
-
-      do {
+    while (i < bp::len(places)) {
 	
-	bp::tuple item = bp::extract<bp::tuple>(places[i]);
-	uint32_t n = bp::extract<uint32_t>(item[0]);
-	uint32_t m = bp::extract<uint32_t>(item[1]);
-	
-	if (cpu_sparse_matrix[n][m] == 0)
-	  places.remove(item);
-	else
-	  ++i;
+      bp::tuple item = bp::extract<bp::tuple>(places[i]);
+      uint32_t n = bp::extract<uint32_t>(item[0]);
+      uint32_t m = bp::extract<uint32_t>(item[1]);
 
-      } while (i < bp::len(places));
+      // We want to shift along the list. Conceptually, removing an item
+      // has the same effect (for the "tape head") as increasing the index..
+      if (cpu_sparse_matrix[n][m] == 0)
+	places.remove(item);
+      else
+	++i;
+
+    } 
       
-      return bp::len(places);
-
-    } else { return 0; }
+    return bp::len(places);
 
   }
 
@@ -544,7 +587,7 @@ public:
     // the absolute maximum abscissa), whereas this returns a position-absolute
     // figure (ie, the absolute maximum value of the ordinate).
     //
-    // I probably should decide on a consistence scheme at some point.
+    // I probably should decide on a consistent scheme at some point.
     return rows;
   }
 
@@ -566,7 +609,7 @@ public:
     if (n >= rows)
       resize(n+1);
 
-    // I want to keep track of which places are filled.
+    // We want to keep track of which places are filled.
     // If you access an unfilled location, then this increments the place list.
     // But the nnz() function checks for zeros at places referenced in that
     // list, so such increments don't matter, except for time wasted.
@@ -577,23 +620,25 @@ public:
     return cpu_sparse_matrix[n][m];
   }
 
+  bp::object set(uint32_t n, uint32_t m, cpu_scalar_t val) 
+  {
+    (*this)(n, m) = val;
+    return bp::object();
+  }
+
+  // Need this because bp cannot deal with operator()
+  cpu_scalar_t get(uint32_t n, uint32_t m)
+  {
+    return (*this)(n, m);
+  }
+
 };
 
-bp::object cpu_sparse_matrix_setter(cpu_sparse_matrix_wrapper& w,
-				    uint32_t n,
-				    uint32_t m,
-				    cpu_scalar_t val) 
-{
-  w(n, m) = val;
-  return bp::object();
-}
 
-cpu_scalar_t cpu_sparse_matrix_getter(cpu_sparse_matrix_wrapper& w,
-				      uint32_t n,
-				      uint32_t m)
-{
-  return w(n, m);
-}
+/*
+*/
+
+// cpu_sparse_matrix_from_ndarray
 
 /*******************************
   Python module initialisation
@@ -868,16 +913,32 @@ BOOST_PYTHON_MODULE(_viennacl)
 
   // *** Sparse matrix types ***
 
-  bp::class_<cpu_sparse_matrix_wrapper>("cpu_sparse_matrix_wrapper")
+  bp::class_<cpu_sparse_matrix_wrapper>("cpu_sparse_matrix")
     .def(bp::init<>())
     .def(bp::init<uint32_t>())
     .def(bp::init<cpu_sparse_matrix_wrapper>())
-    .def("set", cpu_sparse_matrix_setter)
-    .def("get", cpu_sparse_matrix_getter)
-    .def("nnz", &cpu_sparse_matrix_wrapper::nnz)
-    .def("size1", &cpu_sparse_matrix_wrapper::size1)
-    .def("size2", &cpu_sparse_matrix_wrapper::size2)
+    .def(bp::init<np::ndarray>())
+    .add_property("nnz", &cpu_sparse_matrix_wrapper::nnz)
+    .add_property("size1", &cpu_sparse_matrix_wrapper::size1)
+    .add_property("size2", &cpu_sparse_matrix_wrapper::size2)
+    .def("set", &cpu_sparse_matrix_wrapper::set)
+    .def("get", &cpu_sparse_matrix_wrapper::get)
     ;
+
+  bp::class_<vcl_compressed_matrix_t>("compressed_matrix")
+    ;
+
+  // *** Sparse matrix helper functions ***
+
+  // ...
+
+  /*
+
+    TODO:
+    + cpu_sparse_matrix.as_ndarray
+    + vcl sparse matrix types
+
+   */
 
 }
 
