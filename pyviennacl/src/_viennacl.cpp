@@ -1,6 +1,11 @@
+#include <cstdint>
+#include <iostream>
+#include <typeinfo>
+
 #include <boost/python.hpp>
 #include <boost/numpy.hpp>
 #include <boost/numeric/ublas/matrix.hpp>
+
 #define VIENNACL_WITH_UBLAS
 #define VIENNACL_WITH_OPENCL
 #define VIENNACL_WITH_PYTHON
@@ -12,9 +17,6 @@
 #include <viennacl/linalg/prod.hpp>
 #include <viennacl/matrix.hpp>
 #include <viennacl/vector.hpp>
-#include <cstdint>
-#include <iostream>
-#include <typeinfo>
 
 namespace vcl = viennacl;
 namespace bp = boost::python;
@@ -33,6 +35,8 @@ typedef vcl::matrix<cpu_scalar_t,
 		    vcl::row_major> vcl_matrix_t;
 typedef ublas::matrix<cpu_scalar_t,
 		  ublas::row_major> cpu_matrix_t;
+
+typedef std::vector< std::map< uint32_t, cpu_scalar_t> > cpu_sparse_matrix_t;
 
 enum op_t {
   op_add,
@@ -94,12 +98,14 @@ struct pyvcl_op
     
     /*
       
-      The value of PyObjs determines which operands need to be extracted from
-      Python objects, by coding the operand "position" in binary.
+      The value of the template variable PyObjs determines which operands
+      need to be extracted from Python objects, by coding the operand
+      "position" in binary. This is the object-extraction logic alluded to
+      in the comments above.
       
-      So, given PyObjs == 7 == 0111b, and given that we number operands from
-      left to right, the following operands need extraction: operand2,
-      operand3, and operand4.
+      So, given (as an example) PyObjs == 7 == 0111b, and given that we 
+      number operands from left to right, the following operands need
+      extraction: operand2, operand3, and operand4.
       
     */
     
@@ -209,6 +215,7 @@ ReturnT pyvcl_do_4ary_op(Operand1T a, Operand2T b,
 
 // These macros define specialisations of the pyvcl_worker class
 // which is used to dispatch viennacl operations.
+
 #define OP_TEMPLATE template <class ReturnT, \
                               class Operand1T, class Operand2T, \
                               class Operand3T, class Operand4T, \
@@ -459,6 +466,134 @@ vcl_matrix_t matrix_from_ndarray(np::ndarray const& array)
   return mat;
 }
 
+// Sparse matrix
+
+class cpu_sparse_matrix_wrapper
+{
+  uint32_t rows;
+
+  // TODO: This is just a quick first implementation. Later, I may well want 
+  // TODO: a version that doesn't depend on boost.python types, which are
+  // TODO: somewhat untested relative to STL... (though they work well enough!)
+
+  bp::list places;
+
+public:
+   cpu_sparse_matrix_t cpu_sparse_matrix;
+
+  cpu_sparse_matrix_wrapper()
+  {
+    rows = 1;
+    cpu_sparse_matrix = cpu_sparse_matrix_t(1);
+  }
+
+  cpu_sparse_matrix_wrapper(cpu_sparse_matrix_wrapper const& w)
+  {
+    rows = w.size1();
+    cpu_sparse_matrix = w.cpu_sparse_matrix;
+  }
+
+  cpu_sparse_matrix_wrapper(uint32_t _rows)
+    : rows(_rows)
+  {
+    cpu_sparse_matrix = cpu_sparse_matrix_t(rows);
+  }
+
+  uint32_t nnz()
+  {
+    
+    if (bp::len(places) > 0) {
+
+      uint32_t i = 0;  
+
+      do {
+	
+	bp::tuple item = bp::extract<bp::tuple>(places[i]);
+	uint32_t n = bp::extract<uint32_t>(item[0]);
+	uint32_t m = bp::extract<uint32_t>(item[1]);
+	
+	if (cpu_sparse_matrix[n][m] == 0)
+	  places.remove(item);
+	else
+	  ++i;
+
+      } while (i < bp::len(places));
+      
+      return bp::len(places);
+
+    } else { return 0; }
+
+  }
+
+  uint32_t resize(uint32_t new_rows)
+  {
+    if (new_rows == rows)
+      return rows;
+
+    cpu_sparse_matrix.resize(new_rows);
+
+    rows = new_rows;
+
+    return rows;
+  }
+
+  uint32_t size1() const
+  {
+    // At the moment, this is inconsistent with size2() below. size2() returns
+    // a position-relative figure (ie, the number of columns filled, not just
+    // the absolute maximum abscissa), whereas this returns a position-absolute
+    // figure (ie, the absolute maximum value of the ordinate).
+    //
+    // I probably should decide on a consistence scheme at some point.
+    return rows;
+  }
+
+  uint32_t size2() const
+  {
+    uint32_t cols = 0;
+    cpu_sparse_matrix_t::const_iterator iter = cpu_sparse_matrix.begin();
+
+    for (uint32_t i = 0; iter < cpu_sparse_matrix.end(); ++i, ++iter) {
+      if (cols < (*iter).size())
+	cols = (*iter).size();
+    }
+
+    return cols;      
+  }
+
+  cpu_scalar_t& operator()(uint32_t n, uint32_t m)
+  {
+    if (n >= rows)
+      resize(n+1);
+
+    // I want to keep track of which places are filled.
+    // If you access an unfilled location, then this increments the place list.
+    // But the nnz() function checks for zeros at places referenced in that
+    // list, so such increments don't matter, except for time wasted.
+    bp::tuple loc = bp::make_tuple(n, m);
+    if (not places.count(loc))
+      places.append(loc);
+
+    return cpu_sparse_matrix[n][m];
+  }
+
+};
+
+bp::object cpu_sparse_matrix_setter(cpu_sparse_matrix_wrapper& w,
+				    uint32_t n,
+				    uint32_t m,
+				    cpu_scalar_t val) 
+{
+  w(n, m) = val;
+  return bp::object();
+}
+
+cpu_scalar_t cpu_sparse_matrix_getter(cpu_sparse_matrix_wrapper& w,
+				      uint32_t n,
+				      uint32_t m)
+{
+  return w(n, m);
+}
 
 /*******************************
   Python module initialisation
@@ -724,10 +859,25 @@ BOOST_PYTHON_MODULE(_viennacl)
 	 op_solve, 0>)
     ;
            
-  // *** Matrix helper functions **
+  // *** Dense matrix helper functions ***
 
   bp::def("matrix_from_ndarray", matrix_from_ndarray);
   bp::def("scalar_matrix", new_scalar_matrix);
+
+  // --------------------------------------------------
+
+  // *** Sparse matrix types ***
+
+  bp::class_<cpu_sparse_matrix_wrapper>("cpu_sparse_matrix_wrapper")
+    .def(bp::init<>())
+    .def(bp::init<uint32_t>())
+    .def(bp::init<cpu_sparse_matrix_wrapper>())
+    .def("set", cpu_sparse_matrix_setter)
+    .def("get", cpu_sparse_matrix_getter)
+    .def("nnz", &cpu_sparse_matrix_wrapper::nnz)
+    .def("size1", &cpu_sparse_matrix_wrapper::size1)
+    .def("size2", &cpu_sparse_matrix_wrapper::size2)
+    ;
 
 }
 

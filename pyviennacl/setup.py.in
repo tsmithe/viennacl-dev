@@ -2,7 +2,7 @@ from distutils.core import setup, Extension
 
 include_dirs = '${INCLUDE_DIRS}'.split(";")
 libraries = [ 'boost_python-py33', 'boost_numpy', 'OpenCL' ]
-library_dirs = ['${PROJECT_BINARY_DIR}/lib']
+library_dirs = ['${PROJECT_BINARY_DIR}/lib','/usr/lib/nvidia-319']
 
 if __name__=="__main__":
     setup( name="pyviennacl",
