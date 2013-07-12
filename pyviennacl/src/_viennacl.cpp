@@ -18,6 +18,7 @@
 #include <viennacl/linalg/norm_2.hpp>
 #include <viennacl/linalg/norm_inf.hpp>
 #include <viennacl/linalg/prod.hpp>
+#include <viennacl/linalg/sparse_matrix_operations.hpp>
 #include <viennacl/compressed_matrix.hpp>
 //#include <viennacl/coordinate_matrix.hpp>
 #include <viennacl/ell_matrix.hpp>
@@ -49,13 +50,15 @@ typedef ublas::matrix<cpu_scalar_t,
 
 typedef ublas::compressed_vector<cpu_scalar_t> cpu_sparse_vector_t;
 
-/* SEEMS TO HAVE SOME TYPE-AMBIGUITY BUG RIGHT NOW
+/* Would like to use this, since it's faster than a uBLAS compressed matrix, 
+   but it seems to give some sort of type-ambiguity error right now..
 typedef ublas::generalized_vector_of_vector<cpu_scalar_t,
 					    ublas::row_major,
 					    ublas::vector<cpu_sparse_vector_t> >
 cpu_sparse_matrix_t;
 */
 
+// Originally used a vector-map implementation, but that's not always defined
 typedef ublas::compressed_matrix<cpu_scalar_t,
 				 ublas::row_major> cpu_sparse_matrix_t;
 
@@ -85,7 +88,8 @@ enum op_t {
   op_plane_rotation,
   op_trans,
   op_prod,
-  op_solve
+  op_solve,
+  op_inplace_solve
 };
 
 // Generic operation dispatch class -- see specialisations below
@@ -102,6 +106,11 @@ struct pyvcl_worker
 // It's mainly used to simplify and consolidate calling conventions in the 
 // main module code far below, but it also includes a small amount of logic
 // for the extraction of C++ types from Python objects where necessary.
+//
+// Ultimately, I may well do away with this, and interface with the kernel
+// scheduler directly. But this is a useful start to have, in order to get
+// a working prototype.
+//
 template <class ReturnT,
 	  class Operand1T, class Operand2T,
 	  class Operand3T, class Operand4T,
@@ -349,7 +358,14 @@ DO_OP_FUNC(op_prod)
 DO_OP_FUNC(op_solve)
 {
   return vcl::linalg::solve(o.operand1, o.operand2,
-			    o.operand3);
+				    o.operand3);
+} };
+
+DO_OP_FUNC(op_inplace_solve)
+{
+  vcl::linalg::inplace_solve(o.operand1, o.operand2,
+			     o.operand3);
+  return o.operand1;
 } };
 
 /*******************************
@@ -1011,28 +1027,25 @@ BOOST_PYTHON_MODULE(_viennacl)
     .def("prod", pyvcl_do_2ary_op<vcl_vector_t,
 	 vcl_compressed_matrix_t, vcl_vector_t,
 	 op_prod, 0>)
-    /*.def("prod", pyvcl_do_2ary_op<vcl_compressed_matrix_t,
-	 vcl_matrix_t, vcl_compressed_matrix_t,
-	 op_prod, 0>)*/
 
-    /*.def("solve", pyvcl_do_3ary_op<vcl_vector_t,
-	 vcl_compressed_matrix_t, vcl_vector_t,
+    .def("inplace_solve", pyvcl_do_3ary_op<vcl_compressed_matrix_t,
+	 vcl_compressed_matrix_t&, vcl_vector_t&,
+	 vcl::linalg::lower_tag,
+	 op_inplace_solve, 0>)
+    .def("inplace_solve", pyvcl_do_3ary_op<vcl_compressed_matrix_t,
+	 vcl_compressed_matrix_t&, vcl_vector_t&,
 	 vcl::linalg::unit_lower_tag,
-	 op_solve, 0>)*/
-    /*.def("solve", pyvcl_do_3ary_op<vcl_vector_t,
-	 vcl_matrix_t, vcl_vector_t,
-	 vcl::linalg::unit_lower_tag,
-	 op_solve, 0>)
-    .def("solve", pyvcl_do_3ary_op<vcl_vector_t,
-	 vcl_matrix_t, vcl_vector_t,
-	 vcl::linalg::upper_tag,
-	 op_solve, 0>)
-    .def("solve", pyvcl_do_3ary_op<vcl_vector_t,
-	 vcl_matrix_t, vcl_vector_t,
+	 op_inplace_solve, 0>)
+    .def("inplace_solve", pyvcl_do_3ary_op<vcl_compressed_matrix_t,
+	 vcl_compressed_matrix_t&, vcl_vector_t&,
 	 vcl::linalg::unit_upper_tag,
-	 op_solve, 0>)
+	 op_inplace_solve, 0>)
+    .def("inplace_solve", pyvcl_do_3ary_op<vcl_compressed_matrix_t,
+	 vcl_compressed_matrix_t&, vcl_vector_t&,
+	 vcl::linalg::upper_tag,
+	 op_inplace_solve, 0>)
 
-    .def("solve", pyvcl_do_3ary_op<vcl_matrix_t,
+    /*.def("solve", pyvcl_do_3ary_op<vcl_matrix_t,
 	 vcl_matrix_t, vcl_matrix_t,
 	 vcl::linalg::lower_tag,
 	 op_solve, 0>)
