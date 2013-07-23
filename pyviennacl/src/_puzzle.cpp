@@ -64,7 +64,10 @@ list run_test_add(unsigned int max_size, unsigned int iterations)
 
     printf("%d\t\t%g\t%g\n", n, a, b);
     bench.append(make_tuple<unsigned int, double, double>(n, a, b));
+
   }
+
+  viennacl::backend::finish();
  
   return bench;
 
@@ -212,8 +215,11 @@ list run_test_transfer(unsigned int max_size, unsigned int iterations)
 
     printf("%d\t\t%g\n", n, a);
     bench.append(make_tuple<unsigned int, double>(n, a));
+
   }
  
+  viennacl::backend::finish();
+
   return bench;
 
 }

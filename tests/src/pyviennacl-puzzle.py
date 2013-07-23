@@ -16,7 +16,8 @@ import numpy, time
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
-def run_test_add(v, max_size=2147483648, iterations=10000, per_entry=False):
+def run_test_add(v, max_size=1048577, iterations=10000,
+                 per_entry=False, scheduler=False):
     """
     Benchmarks vector addition using pyviennacl.
 
@@ -37,49 +38,105 @@ def run_test_add(v, max_size=2147483648, iterations=10000, per_entry=False):
     bench = []
     n = 2;
 
+    v.backend_finish()
+
     while n <= max_size:
         a = 0.0
 
-        try:
-            y1 = v.vector(n, 3.142)
-            y2 = v.vector(n, 2.718)
-        except:
-            y1 = v.scalar_vector(n, 3.142)
-            y2 = v.scalar_vector(n, 2.718)
+        y1 = v.vector(n, 3.142)
+        y2 = v.vector(n, 2.718)
         
-        # Startup calculations
-        x1 = y1+y2;
-        x2 = y1+y2+y1+y2;
-        try:
-            print("\t\t\t\t\t\t%g" % x1.value[1])
-            print("\t\t\t\t\t\t%g" % x2.value[1])
-        except:
-            print("\t\t\t\t\t\t%g" % x1.get_value()[1])
-            print("\t\t\t\t\t\t%g" % x2.get_value()[1])
+        if scheduler:
+            x1 = y1+y2;
+            x2 = v.vector(n)
+
+            node1 = v.statement_node(
+                v.operation_node_type_family.OPERATION_BINARY_TYPE_FAMILY,
+                v.operation_node_type.OPERATION_BINARY_ASSIGN_TYPE,
+                v.statement_node_type_family.VECTOR_TYPE_FAMILY,
+                v.statement_node_type.VECTOR_DOUBLE_TYPE,
+                v.statement_node_type_family.COMPOSITE_OPERATION_FAMILY,
+                v.statement_node_type.COMPOSITE_OPERATION_TYPE)
+            node1.set_lhs_vector_double(x2)
+            node1.set_rhs_node_index(1)
+            
+            node2 = v.statement_node(
+                v.operation_node_type_family.OPERATION_BINARY_TYPE_FAMILY,
+                v.operation_node_type.OPERATION_BINARY_ADD_TYPE,
+                v.statement_node_type_family.VECTOR_TYPE_FAMILY,
+                v.statement_node_type.VECTOR_DOUBLE_TYPE,
+                v.statement_node_type_family.VECTOR_TYPE_FAMILY,
+                v.statement_node_type.VECTOR_DOUBLE_TYPE)
+            node2.set_lhs_vector_double(y1)
+            node2.set_rhs_vector_double(y2)
+
+            s = v.statement()
+            s.insert_at_begin(node2)
+            s.insert_at_begin(node1)
+
+            # Startup calculation
+            s.execute()
+
+        else:
+            # Startup calculations
+            x1 = y1+y2;
+            x2 = y1+y2+y1+y2;
+
+        print(n)
+        
+        print("\t\t\t\t\t\t%g" % x1.as_ndarray()[1])
+        print("\t\t\t\t\t\t%g" % x2.as_ndarray()[1])
         v.backend_finish()
 
         t1 = time.time()
         for m in range(iterations):
             x1 = y1 + y2
-        v.backend_finish()
+            v.backend_finish()
         t2 = time.time()
         a = t2 - t1
-        try:
-            print("\t\t\t\t\t\t%g" % x1.value[1])
-        except:
-            print("\t\t\t\t\t\t%g" % x1.get_value()[1])
+        print("\t\t\t\t\t\t%g" % x1.as_ndarray()[1])
         v.backend_finish()
 
-        t1 = time.time()
-        for m in range(iterations):
-            x2 = y1 + y2 + y1 + y2
-        v.backend_finish()
-        t2 = time.time()
-        b = t2 - t1
-        try:
-            print("\t\t\t\t\t\t%g" % x2.value[1])
-        except:
-            print("\t\t\t\t\t\t%g" % x2.get_value()[1])
+        if scheduler:
+            t1 = time.time()
+            for m in range(iterations):
+                node1 = v.statement_node(
+                    v.operation_node_type_family.OPERATION_BINARY_TYPE_FAMILY,
+                    v.operation_node_type.OPERATION_BINARY_ASSIGN_TYPE,
+                    v.statement_node_type_family.VECTOR_TYPE_FAMILY,
+                    v.statement_node_type.VECTOR_DOUBLE_TYPE,
+                    v.statement_node_type_family.COMPOSITE_OPERATION_FAMILY,
+                    v.statement_node_type.COMPOSITE_OPERATION_TYPE)
+                node1.set_lhs_vector_double(x2)
+                node1.set_rhs_node_index(1)
+                
+                node2 = v.statement_node(
+                    v.operation_node_type_family.OPERATION_BINARY_TYPE_FAMILY,
+                    v.operation_node_type.OPERATION_BINARY_ADD_TYPE,
+                    v.statement_node_type_family.VECTOR_TYPE_FAMILY,
+                    v.statement_node_type.VECTOR_DOUBLE_TYPE,
+                    v.statement_node_type_family.VECTOR_TYPE_FAMILY,
+                    v.statement_node_type.VECTOR_DOUBLE_TYPE)
+                node2.set_lhs_vector_double(y1)
+                node2.set_rhs_vector_double(y2)
+                
+                s = v.statement()
+                s.insert_at_begin(node2)
+                s.insert_at_begin(node1)
+
+                s.execute()
+                v.backend_finish()
+            t2 = time.time()
+            b = t2 - t1
+            pass
+        else:
+            t1 = time.time()
+            for m in range(iterations):
+                x2 = y1 + y2 + y1 + y2
+                v.backend_finish()
+            t2 = time.time()
+            b = t2 - t1
+        print("\t\t\t\t\t\t%g" % x2.as_ndarray()[1])
 
         a /= iterations
         b /= iterations
@@ -90,127 +147,6 @@ def run_test_add(v, max_size=2147483648, iterations=10000, per_entry=False):
         
         print("{:d}\t\t{:.6g}\t{:.6g}".format(n, a, b))
         bench.append((n, a, b))
-        n *= 2
-        
-    return bench
-
-def run_test_mul(v, max_size=2147483648, iterations=10000):
-    """
-    Benchmarks vector scaling using pyviennacl.
-
-    v is the implementation of pyviennacl to use.
-    max_size is the maximum vector size to benchmark.
-    iterations is the number of times to perform each test.
-
-    Executes (x1 = y1 * 2.0) for vector sizes from 1 to max_size, with
-    a logarithmic (base 2) step size. Runs each test `iterations'
-    times, taking the mean.
-
-    Prints the average execution times on each step.
-
-    Returns a list of tuples (n, a) where n in the vector size, a is
-    the average time taken for (x1 = y1 * 2.0)
-    """
-
-    bench = []
-    n = 2;
-
-    while n <= max_size:
-        a = 0.0
-
-        try:
-            y1 = v.vector(n, 3.142)
-        except:
-            y1 = v.scalar_vector(n, 3.142)
-        
-        # Startup calculations
-        x1 = y1 * 2.0;
-        try:
-            print("\t\t\t\t\t\t%g" % x1.value[1])
-            print("\t\t\t\t\t\t%g" % y1.value[1])
-        except:
-            print("\t\t\t\t\t\t%g" % x1.get_value()[1])
-            print("\t\t\t\t\t\t%g" % y1.get_value()[1])
-        v.backend_finish()
-
-        t1 = time.time()
-        for m in range(iterations):
-            x1 = y1 * 2.0;
-        v.backend_finish()
-        t2 = time.time()
-        a = t2 - t1
-        try:
-            print("\t\t\t\t\t\t%g" % x1.value[1])
-        except:
-            print("\t\t\t\t\t\t%g" % x1.get_value()[1])
-        v.backend_finish()
-
-        a /= iterations
-        
-        print("{:d}\t\t{:.6g}".format(n, a))
-        bench.append((n, a))
-        n *= 2
-        
-    return bench
-
-def run_test_iadd(v, max_size=2147483648, iterations=10000):
-    """
-    Benchmarks in-place vector addition using pyviennacl.
-
-    v is the implementation of pyviennacl to use.
-    max_size is the maximum vector size to benchmark.
-    iterations is the number of times to perform each test.
-
-    Executes (x1 += y1) for vector sizes from 1 to max_size, with a
-    logarithmic (base 2) step size. Runs each test `iterations' times,
-    taking the mean.
-
-    Prints the average execution times on each step.
-
-    Returns a list of tuples (n, a) where n in the vector size, and a
-    is the average time taken for (x1 += y1).
-    """
-
-    bench = []
-    n = 2;
-
-    while n <= max_size:
-        a = 0.0
-        b = 0.0
-
-        try:
-            x1 = v.vector(n, 3.142)
-            y1 = v.vector(n, 2.718)
-        except:
-            x1 = v.scalar_vector(n, 3.142)
-            y1 = v.scalar_vector(n, 2.718)
-        
-        # Startup calculations
-        x1 += y1;
-        try:
-            print("\t\t\t\t\t\t%g" % x1.value[1])
-            print("\t\t\t\t\t\t%g" % y1.value[1])
-        except:
-            print("\t\t\t\t\t\t%g" % x1.get_value()[1])
-            print("\t\t\t\t\t\t%g" % y1.get_value()[1])
-        v.backend_finish()
-
-        t1 = time.time()
-        for m in range(iterations):
-            x1 += y1
-        v.backend_finish()
-        t2 = time.time()
-        a = t2 - t1
-        try:
-            print("\t\t\t\t\t\t%g" % x1.value[1])
-        except:
-            print("\t\t\t\t\t\t%g" % x1.get_value()[1])
-        v.backend_finish()
-
-        a /= iterations
-        
-        print("{:d}\t\t{:.6g}".format(n, a))
-        bench.append((n, a))
         n *= 2
         
     return bench
@@ -235,6 +171,7 @@ def plot_test(bench, title=None, test=1, ylocs=[1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e
         sub.plot(x, x1, label="x1 = y1 + y2")
         sub.plot(x, x2, label="x2 = y1 + y2 + y1 + y2")
     elif test == 2:
+
         sub.plot(x, x1, label="x1 += y1")
     elif test == 3:
         sub.plot(x, x1, label="x1 = y1 * 2.0")
@@ -257,22 +194,19 @@ def plot_test(bench, title=None, test=1, ylocs=[1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e
     return fig
 
 if __name__ == "__main__":
-    max_size = 2**20
+    max_size = 2**17
     iterations = 10**3
     figures = []
     fail = 0
     
 #    try:
-    print("Using pure C++...")
-    from pyviennacl import _puzzle as p 
-    print("Testing copy...")
-    figures.append(plot_test(p.run_test_transfer(max_size, iterations), "Implementation (copy): _puzzle.cpp", 4))
-    print("Testing +...")
-    figures.append(plot_test(p.run_test_add(max_size, iterations), "Implementation (+): _puzzle.cpp", 1))
-    print("Testing +=..")
-    figures.append(plot_test(p.run_test_iadd(max_size, iterations), "Implementation (+=): _puzzle.cpp", 2))
-    print("Testing *...")
-    figures.append(plot_test(p.run_test_mul(max_size, iterations), "Implementation (*): _puzzle.cpp", 3))
+    #print("Using pure C++...")
+    #from pyviennacl import _puzzle as p 
+    #print("Testing copy...")
+    #figures.append(plot_test(p.run_test_transfer(max_size, iterations), "Implementation (copy): _puzzle.cpp", 4))
+    #print("Testing +...")
+    #figures.append(plot_test(p.run_test_add(max_size, iterations), "Implementation (+): _puzzle.cpp", 1))
+    #del p
 #    except:
 #        fail = 1
         
@@ -280,11 +214,11 @@ if __name__ == "__main__":
     print("Using _viennacl....")
     from pyviennacl import _viennacl as v
     print("Testing +...")
-    figures.append(plot_test(run_test_add(v, max_size, iterations), "Implementation (+): _viennacl.cpp", 1))
-    print("Testing +=...")
-    figures.append(plot_test(run_test_iadd(v, max_size, iterations), "Implementation (+=): _viennacl.cpp", 2))
-    print("Testing *...")
-    figures.append(plot_test(run_test_mul(v, max_size, iterations), "Implementation (*): _viennacl.cpp", 3))
+    run_test_add(v, max_size, iterations, scheduler=False)
+    figures.append(plot_test(run_test_add(v, max_size, iterations, scheduler=False), "Implementation (+): _viennacl.cpp", 1))
+    print("Testing +...")
+    #run_test_add(v, max_size, iterations, scheduler=True)
+    figures.append(plot_test(run_test_add(v, max_size, iterations, scheduler=True), "Implementation (+): _viennacl.cpp", 1))
 #    except:
 #        fail = 1
 #    
