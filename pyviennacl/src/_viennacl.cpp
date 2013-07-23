@@ -1,4 +1,5 @@
-#include <cstdint>
+#include <stdint.h>
+
 #include <iostream>
 #include <typeinfo>
 
@@ -11,7 +12,7 @@
 
 #define VIENNACL_WITH_UBLAS
 #define VIENNACL_WITH_OPENCL
-#define VIENNACL_WITH_PYTHON
+//#define VIENNACL_WITH_PYTHON
 #include <viennacl/linalg/direct_solve.hpp>
 #include <viennacl/linalg/inner_prod.hpp>
 #include <viennacl/linalg/norm_1.hpp>
@@ -402,7 +403,7 @@ np::ndarray vcl_vector_to_ndarray(vcl_vector_t const& v)
   return np::from_object(vcl_vector_to_list(v), np::dtype::get_builtin<cpu_scalar_t>());
 }
 
-std::shared_ptr<vcl_vector_t>
+boost::shared_ptr<vcl_vector_t>
 vector_init_ndarray(np::ndarray const& array)
 {
   int d = array.get_nd();
@@ -421,22 +422,22 @@ vector_init_ndarray(np::ndarray const& array)
   
   vcl::fast_copy(cpu_vector.begin(), cpu_vector.end(), v->begin());
 
-  return std::shared_ptr<vcl_vector_t>(v);
+  return boost::shared_ptr<vcl_vector_t>(v);
 }
 
 /** @brief Creates the vector from the supplied Python list */
-std::shared_ptr<vcl_vector_t>
+boost::shared_ptr<vcl_vector_t>
 vector_init_list(bp::list const& l)
 {
   return vector_init_ndarray(np::from_object(l, np::dtype::get_builtin<cpu_scalar_t>()));
 }
 
-std::shared_ptr<vcl_vector_t>
+boost::shared_ptr<vcl_vector_t>
 vector_init_scalar(uint32_t length, cpu_scalar_t value) {
   ublas::scalar_vector<cpu_scalar_t> s_v(length, value);
   vcl_vector_t* v = new vcl_vector_t(length);
   vcl::copy(s_v.begin(), s_v.end(), v->begin());
-  return std::shared_ptr<vcl_vector_t>(v);
+  return boost::shared_ptr<vcl_vector_t>(v);
 }
 
 // Dense matrix
@@ -462,16 +463,16 @@ public:
 
 };
 
-std::shared_ptr<vcl_matrix_t>
+boost::shared_ptr<vcl_matrix_t>
 matrix_init_scalar(uint32_t n, uint32_t m, cpu_scalar_t value) {
   ublas::scalar_matrix<cpu_scalar_t> s_m(n, m, value);
   vcl_matrix_t* mat = new vcl_matrix_t(n, m);
   vcl::copy(s_m, (*mat));
-  return std::shared_ptr<vcl_matrix_t>(mat);
+  return boost::shared_ptr<vcl_matrix_t>(mat);
 }
 
 /** @brief Creates the matrix from the supplied ndarray */
-std::shared_ptr<vcl_matrix_t>
+boost::shared_ptr<vcl_matrix_t>
 matrix_init_ndarray(np::ndarray const& array)
 {
   int d = array.get_nd();
@@ -486,7 +487,7 @@ matrix_init_ndarray(np::ndarray const& array)
 
   vcl::copy(wrapper, (*mat));
   
-  return std::shared_ptr<vcl_matrix_t>(mat);
+  return boost::shared_ptr<vcl_matrix_t>(mat);
 }
 
 np::ndarray vcl_matrix_to_ndarray(vcl_matrix_t const& m)
@@ -964,7 +965,7 @@ BOOST_PYTHON_MODULE(_viennacl)
 
   // *** Vector type ***
   
-  bp::class_<vcl_vector_t, std::shared_ptr<vcl_vector_t> >("vector")
+  bp::class_<vcl_vector_t, boost::shared_ptr<vcl_vector_t> >("vector")
     .def(bp::init<int>())
     .def(bp::init<vcl_vector_t>())
     .def("__init__", bp::make_constructor(vector_init_ndarray))
@@ -1065,7 +1066,7 @@ BOOST_PYTHON_MODULE(_viennacl)
 
   // *** Dense matrix type ***
 
-  bp::class_<vcl_matrix_t, std::shared_ptr<vcl_matrix_t> >("matrix")
+  bp::class_<vcl_matrix_t, boost::shared_ptr<vcl_matrix_t> >("matrix")
     .def(bp::init<vcl_matrix_t>())
     .def(bp::init<uint32_t, uint32_t>())
     .def("__init__", bp::make_constructor(matrix_init_ndarray))
@@ -1257,128 +1258,128 @@ BOOST_PYTHON_MODULE(_viennacl)
 
   // Scheduler interface (first attempt)
 
-#define _VALUE(NS, V) .value( #V, NS :: V )
+#define VALUE(NS, V) .value( #V, NS :: V )
 
   bp::enum_<vcl::scheduler::operation_node_type_family>
     ("operation_node_type_family")
-    _VALUE(vcl::scheduler, OPERATION_UNARY_TYPE_FAMILY)
-    _VALUE(vcl::scheduler, OPERATION_BINARY_TYPE_FAMILY)
+    VALUE(vcl::scheduler, OPERATION_UNARY_TYPE_FAMILY)
+    VALUE(vcl::scheduler, OPERATION_BINARY_TYPE_FAMILY)
     ;
 
   bp::enum_<vcl::scheduler::operation_node_type>("operation_node_type")
     // unary expression
-    _VALUE(vcl::scheduler, OPERATION_UNARY_ABS_TYPE)
-    _VALUE(vcl::scheduler, OPERATION_UNARY_ACOS_TYPE)
-    _VALUE(vcl::scheduler, OPERATION_UNARY_ASIN_TYPE)
-    _VALUE(vcl::scheduler, OPERATION_UNARY_ATAN_TYPE)
-    _VALUE(vcl::scheduler, OPERATION_UNARY_CEIL_TYPE)
-    _VALUE(vcl::scheduler, OPERATION_UNARY_COS_TYPE)
-    _VALUE(vcl::scheduler, OPERATION_UNARY_COSH_TYPE)
-    _VALUE(vcl::scheduler, OPERATION_UNARY_EXP_TYPE)
-    _VALUE(vcl::scheduler, OPERATION_UNARY_FABS_TYPE)
-    _VALUE(vcl::scheduler, OPERATION_UNARY_FLOOR_TYPE)
-    _VALUE(vcl::scheduler, OPERATION_UNARY_LOG_TYPE)
-    _VALUE(vcl::scheduler, OPERATION_UNARY_LOG10_TYPE)
-    _VALUE(vcl::scheduler, OPERATION_UNARY_SIN_TYPE)
-    _VALUE(vcl::scheduler, OPERATION_UNARY_SINH_TYPE)
-    _VALUE(vcl::scheduler, OPERATION_UNARY_SQRT_TYPE)
-    _VALUE(vcl::scheduler, OPERATION_UNARY_TAN_TYPE)
-    _VALUE(vcl::scheduler, OPERATION_UNARY_TANH_TYPE)
-    _VALUE(vcl::scheduler, OPERATION_UNARY_NORM_1_TYPE)
-    _VALUE(vcl::scheduler, OPERATION_UNARY_NORM_2_TYPE)
-    _VALUE(vcl::scheduler, OPERATION_UNARY_NORM_INF_TYPE)
+    VALUE(vcl::scheduler, OPERATION_UNARY_ABS_TYPE)
+    VALUE(vcl::scheduler, OPERATION_UNARY_ACOS_TYPE)
+    VALUE(vcl::scheduler, OPERATION_UNARY_ASIN_TYPE)
+    VALUE(vcl::scheduler, OPERATION_UNARY_ATAN_TYPE)
+    VALUE(vcl::scheduler, OPERATION_UNARY_CEIL_TYPE)
+    VALUE(vcl::scheduler, OPERATION_UNARY_COS_TYPE)
+    VALUE(vcl::scheduler, OPERATION_UNARY_COSH_TYPE)
+    VALUE(vcl::scheduler, OPERATION_UNARY_EXP_TYPE)
+    VALUE(vcl::scheduler, OPERATION_UNARY_FABS_TYPE)
+    VALUE(vcl::scheduler, OPERATION_UNARY_FLOOR_TYPE)
+    VALUE(vcl::scheduler, OPERATION_UNARY_LOG_TYPE)
+    VALUE(vcl::scheduler, OPERATION_UNARY_LOG10_TYPE)
+    VALUE(vcl::scheduler, OPERATION_UNARY_SIN_TYPE)
+    VALUE(vcl::scheduler, OPERATION_UNARY_SINH_TYPE)
+    VALUE(vcl::scheduler, OPERATION_UNARY_SQRT_TYPE)
+    VALUE(vcl::scheduler, OPERATION_UNARY_TAN_TYPE)
+    VALUE(vcl::scheduler, OPERATION_UNARY_TANH_TYPE)
+    VALUE(vcl::scheduler, OPERATION_UNARY_NORM_1_TYPE)
+    VALUE(vcl::scheduler, OPERATION_UNARY_NORM_2_TYPE)
+    VALUE(vcl::scheduler, OPERATION_UNARY_NORM_INF_TYPE)
     
     // binary expression
-    _VALUE(vcl::scheduler, OPERATION_BINARY_ASSIGN_TYPE)
-    _VALUE(vcl::scheduler, OPERATION_BINARY_INPLACE_ADD_TYPE)
-    _VALUE(vcl::scheduler, OPERATION_BINARY_INPLACE_SUB_TYPE)
-    _VALUE(vcl::scheduler, OPERATION_BINARY_ADD_TYPE)
-    _VALUE(vcl::scheduler, OPERATION_BINARY_SUB_TYPE)
-    _VALUE(vcl::scheduler, OPERATION_BINARY_MAT_VEC_PROD_TYPE)
-    _VALUE(vcl::scheduler, OPERATION_BINARY_MAT_MAT_PROD_TYPE)
-    _VALUE(vcl::scheduler, OPERATION_BINARY_MULT_TYPE)// scalar*vector/matrix
-    _VALUE(vcl::scheduler, OPERATION_BINARY_ELEMENT_MULT_TYPE)
-    _VALUE(vcl::scheduler, OPERATION_BINARY_ELEMENT_DIV_TYPE)
-    _VALUE(vcl::scheduler, OPERATION_BINARY_INNER_PROD_TYPE)
+    VALUE(vcl::scheduler, OPERATION_BINARY_ASSIGN_TYPE)
+    VALUE(vcl::scheduler, OPERATION_BINARY_INPLACE_ADD_TYPE)
+    VALUE(vcl::scheduler, OPERATION_BINARY_INPLACE_SUB_TYPE)
+    VALUE(vcl::scheduler, OPERATION_BINARY_ADD_TYPE)
+    VALUE(vcl::scheduler, OPERATION_BINARY_SUB_TYPE)
+    VALUE(vcl::scheduler, OPERATION_BINARY_MAT_VEC_PROD_TYPE)
+    VALUE(vcl::scheduler, OPERATION_BINARY_MAT_MAT_PROD_TYPE)
+    VALUE(vcl::scheduler, OPERATION_BINARY_MULT_TYPE)// scalar*vector/matrix
+    VALUE(vcl::scheduler, OPERATION_BINARY_ELEMENT_MULT_TYPE)
+    VALUE(vcl::scheduler, OPERATION_BINARY_ELEMENT_DIV_TYPE)
+    VALUE(vcl::scheduler, OPERATION_BINARY_INNER_PROD_TYPE)
     ;
 
   bp::enum_<vcl::scheduler::statement_node_type_family>
     ("statement_node_type_family")
-    _VALUE(vcl::scheduler, COMPOSITE_OPERATION_FAMILY)
-    _VALUE(vcl::scheduler, HOST_SCALAR_TYPE_FAMILY)
-    _VALUE(vcl::scheduler, SCALAR_TYPE_FAMILY)
-    _VALUE(vcl::scheduler, VECTOR_TYPE_FAMILY)
-    _VALUE(vcl::scheduler, MATRIX_ROW_TYPE_FAMILY)
-    _VALUE(vcl::scheduler, MATRIX_COL_TYPE_FAMILY)
+    VALUE(vcl::scheduler, COMPOSITE_OPERATION_FAMILY)
+    VALUE(vcl::scheduler, HOST_SCALAR_TYPE_FAMILY)
+    VALUE(vcl::scheduler, SCALAR_TYPE_FAMILY)
+    VALUE(vcl::scheduler, VECTOR_TYPE_FAMILY)
+    VALUE(vcl::scheduler, MATRIX_ROW_TYPE_FAMILY)
+    VALUE(vcl::scheduler, MATRIX_COL_TYPE_FAMILY)
     ;
 
   bp::enum_<vcl::scheduler::statement_node_type>("statement_node_type")
-    _VALUE(vcl::scheduler, COMPOSITE_OPERATION_TYPE)
+    VALUE(vcl::scheduler, COMPOSITE_OPERATION_TYPE)
 
     // host scalars:
-    // _VALUE(vcl::scheduler, HOST_SCALAR_CHAR_TYPE)
-    // _VALUE(vcl::scheduler, HOST_SCALAR_UCHAR_TYPE)
-    // _VALUE(vcl::scheduler, HOST_SCALAR_SHORT_TYPE)
-    // _VALUE(vcl::scheduler, HOST_SCALAR_USHORT_TYPE)
-    _VALUE(vcl::scheduler, HOST_SCALAR_INT_TYPE)
-    _VALUE(vcl::scheduler, HOST_SCALAR_UINT_TYPE)
-    _VALUE(vcl::scheduler, HOST_SCALAR_LONG_TYPE)
-    _VALUE(vcl::scheduler, HOST_SCALAR_ULONG_TYPE)
-    // _VALUE(vcl::scheduler, HOST_SCALAR_HALF_TYPE)
-    // _VALUE(vcl::scheduler, HOST_SCALAR_FLOAT_TYPE)
-    _VALUE(vcl::scheduler, HOST_SCALAR_DOUBLE_TYPE)
+    // VALUE(vcl::scheduler, HOST_SCALAR_CHAR_TYPE)
+    // VALUE(vcl::scheduler, HOST_SCALAR_UCHAR_TYPE)
+    // VALUE(vcl::scheduler, HOST_SCALAR_SHORT_TYPE)
+    // VALUE(vcl::scheduler, HOST_SCALAR_USHORT_TYPE)
+    VALUE(vcl::scheduler, HOST_SCALAR_INT_TYPE)
+    VALUE(vcl::scheduler, HOST_SCALAR_UINT_TYPE)
+    VALUE(vcl::scheduler, HOST_SCALAR_LONG_TYPE)
+    VALUE(vcl::scheduler, HOST_SCALAR_ULONG_TYPE)
+    // VALUE(vcl::scheduler, HOST_SCALAR_HALF_TYPE)
+    // VALUE(vcl::scheduler, HOST_SCALAR_FLOAT_TYPE)
+    VALUE(vcl::scheduler, HOST_SCALAR_DOUBLE_TYPE)
     
     // device scalars:
-    // _VALUE(vcl::scheduler, SCALAR_CHAR_TYPE)
-    // _VALUE(vcl::scheduler, SCALAR_UCHAR_TYPE)
-    // _VALUE(vcl::scheduler, SCALAR_SHORT_TYPE)
-    // _VALUE(vcl::scheduler, SCALAR_USHORT_TYPE)
-    _VALUE(vcl::scheduler, SCALAR_INT_TYPE)
-    _VALUE(vcl::scheduler, SCALAR_UINT_TYPE)
-    _VALUE(vcl::scheduler, SCALAR_LONG_TYPE)
-    _VALUE(vcl::scheduler, SCALAR_ULONG_TYPE)
-    // _VALUE(vcl::scheduler, SCALAR_HALF_TYPE)
-    // _VALUE(vcl::scheduler, SCALAR_FLOAT_TYPE)
-    _VALUE(vcl::scheduler, SCALAR_DOUBLE_TYPE)
+    // VALUE(vcl::scheduler, SCALAR_CHAR_TYPE)
+    // VALUE(vcl::scheduler, SCALAR_UCHAR_TYPE)
+    // VALUE(vcl::scheduler, SCALAR_SHORT_TYPE)
+    // VALUE(vcl::scheduler, SCALAR_USHORT_TYPE)
+    VALUE(vcl::scheduler, SCALAR_INT_TYPE)
+    VALUE(vcl::scheduler, SCALAR_UINT_TYPE)
+    VALUE(vcl::scheduler, SCALAR_LONG_TYPE)
+    VALUE(vcl::scheduler, SCALAR_ULONG_TYPE)
+    // VALUE(vcl::scheduler, SCALAR_HALF_TYPE)
+    // VALUE(vcl::scheduler, SCALAR_FLOAT_TYPE)
+    VALUE(vcl::scheduler, SCALAR_DOUBLE_TYPE)
     
     // vector:
-    // _VALUE(vcl::scheduler, VECTOR_CHAR_TYPE)
-    // _VALUE(vcl::scheduler, VECTOR_UCHAR_TYPE)
-    //_VALUE(vcl::scheduler, VECTOR_SHORT_TYPE)
-    // _VALUE(vcl::scheduler, VECTOR_USHORT_TYPE)
-    _VALUE(vcl::scheduler, VECTOR_INT_TYPE)
-    _VALUE(vcl::scheduler, VECTOR_UINT_TYPE)
-    _VALUE(vcl::scheduler, VECTOR_LONG_TYPE)
-    _VALUE(vcl::scheduler, VECTOR_ULONG_TYPE)
-    // _VALUE(vcl::scheduler, VECTOR_HALF_TYPE)
-    // _VALUE(vcl::scheduler, VECTOR_FLOAT_TYPE)
-    _VALUE(vcl::scheduler, VECTOR_DOUBLE_TYPE)
+    // VALUE(vcl::scheduler, VECTOR_CHAR_TYPE)
+    // VALUE(vcl::scheduler, VECTOR_UCHAR_TYPE)
+    // VALUE(vcl::scheduler, VECTOR_SHORT_TYPE)
+    // VALUE(vcl::scheduler, VECTOR_USHORT_TYPE)
+    VALUE(vcl::scheduler, VECTOR_INT_TYPE)
+    VALUE(vcl::scheduler, VECTOR_UINT_TYPE)
+    VALUE(vcl::scheduler, VECTOR_LONG_TYPE)
+    VALUE(vcl::scheduler, VECTOR_ULONG_TYPE)
+    // VALUE(vcl::scheduler, VECTOR_HALF_TYPE)
+    // VALUE(vcl::scheduler, VECTOR_FLOAT_TYPE)
+    VALUE(vcl::scheduler, VECTOR_DOUBLE_TYPE)
     
     // matrix, row major:
-    // _VALUE(vcl::scheduler, MATRIX_ROW_CHAR_TYPE)
-    // _VALUE(vcl::scheduler, MATRIX_ROW_UCHAR_TYPE)
-    // _VALUE(vcl::scheduler, MATRIX_ROW_SHORT_TYPE)
-    // _VALUE(vcl::scheduler, MATRIX_ROW_USHORT_TYPE)
-    _VALUE(vcl::scheduler, MATRIX_ROW_INT_TYPE)
-    _VALUE(vcl::scheduler, MATRIX_ROW_UINT_TYPE)
-    _VALUE(vcl::scheduler, MATRIX_ROW_LONG_TYPE)
-    _VALUE(vcl::scheduler, MATRIX_ROW_ULONG_TYPE)
-    // _VALUE(vcl::scheduler, MATRIX_ROW_HALF_TYPE)
-    // _VALUE(vcl::scheduler, MATRIX_ROW_FLOAT_TYPE)
-     _VALUE(vcl::scheduler, MATRIX_ROW_DOUBLE_TYPE)
+    // VALUE(vcl::scheduler, MATRIX_ROW_CHAR_TYPE)
+    // VALUE(vcl::scheduler, MATRIX_ROW_UCHAR_TYPE)
+    // VALUE(vcl::scheduler, MATRIX_ROW_SHORT_TYPE)
+    // VALUE(vcl::scheduler, MATRIX_ROW_USHORT_TYPE)
+    VALUE(vcl::scheduler, MATRIX_ROW_INT_TYPE)
+    VALUE(vcl::scheduler, MATRIX_ROW_UINT_TYPE)
+    VALUE(vcl::scheduler, MATRIX_ROW_LONG_TYPE)
+    VALUE(vcl::scheduler, MATRIX_ROW_ULONG_TYPE)
+    // VALUE(vcl::scheduler, MATRIX_ROW_HALF_TYPE)
+    // VALUE(vcl::scheduler, MATRIX_ROW_FLOAT_TYPE)
+     VALUE(vcl::scheduler, MATRIX_ROW_DOUBLE_TYPE)
     
     // matrix, row major:
-    // _VALUE(vcl::scheduler, MATRIX_COL_CHAR_TYPE)
-    // _VALUE(vcl::scheduler, MATRIX_COL_UCHAR_TYPE)
-    // _VALUE(vcl::scheduler, MATRIX_COL_SHORT_TYPE)
-    // _VALUE(vcl::scheduler, MATRIX_COL_USHORT_TYPE)
-    _VALUE(vcl::scheduler, MATRIX_COL_INT_TYPE)
-    _VALUE(vcl::scheduler, MATRIX_COL_UINT_TYPE)
-    _VALUE(vcl::scheduler, MATRIX_COL_LONG_TYPE)
-    _VALUE(vcl::scheduler, MATRIX_COL_ULONG_TYPE)
-    // _VALUE(vcl::scheduler, MATRIX_COL_HALF_TYPE)
-    // _VALUE(vcl::scheduler, MATRIX_COL_FLOAT_TYPE)
-    _VALUE(vcl::scheduler, MATRIX_COL_DOUBLE_TYPE)
+    // VALUE(vcl::scheduler, MATRIX_COL_CHAR_TYPE)
+    // VALUE(vcl::scheduler, MATRIX_COL_UCHAR_TYPE)
+    // VALUE(vcl::scheduler, MATRIX_COL_SHORT_TYPE)
+    // VALUE(vcl::scheduler, MATRIX_COL_USHORT_TYPE)
+    VALUE(vcl::scheduler, MATRIX_COL_INT_TYPE)
+    VALUE(vcl::scheduler, MATRIX_COL_UINT_TYPE)
+    VALUE(vcl::scheduler, MATRIX_COL_LONG_TYPE)
+    VALUE(vcl::scheduler, MATRIX_COL_ULONG_TYPE)
+    // VALUE(vcl::scheduler, MATRIX_COL_HALF_TYPE)
+    // VALUE(vcl::scheduler, MATRIX_COL_FLOAT_TYPE)
+    VALUE(vcl::scheduler, MATRIX_COL_DOUBLE_TYPE)
     ;
 
   typedef vcl::scheduler::statement_node vcl_node_t;
