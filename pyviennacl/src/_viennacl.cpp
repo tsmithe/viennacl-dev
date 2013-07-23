@@ -25,6 +25,7 @@
 #include <viennacl/hyb_matrix.hpp>
 #include <viennacl/matrix.hpp>
 #include <viennacl/vector.hpp>
+#include <viennacl/scheduler/execute.hpp>
 
 namespace vcl = viennacl;
 namespace bp = boost::python;
@@ -713,13 +714,193 @@ public:
 
 };
 
+/************************************************
+        Scheduler / generator interface  
+ ************************************************/
+
+/*
+
+  Want to wrap the expression node class viennacl::scheduler::statement_node.
+  The expression tree is a connected graph of nodes of this class.
+
+  In principle, the nodes of the graph do not need to occupy a contiguous
+  region of memory. We ought to be able just to construct nodes arbitrarily
+  and use pointers. This would also make it very easy to modify the
+  expression graph post hoc.
+
+  Currently, though, this behaviour is restricted: the nodes must form the
+  elements of a vector, and references are given not as pointers but as
+  indices on that vector. As far as I can tell, this is an implementation
+  detail, and should be open to generalisation.
+
+  So, for now, we also need a function to create such a vector, returning type
+   viennacl::scheduler::statement::container_type.
+
+  Then, wrap viennacl::scheduler::statement such that the CTOR takes a graph
+  or vector of nodes to a statement instance.
+
+  Lastly for now, need to wrap viennacl::scheduler::execute(...), in order
+  to do any work.
+
+*/
+
+class statement_node_wrapper {
+
+  vcl::scheduler::statement::value_type _node;
+
+public:
+
+  statement_node_wrapper(const statement_node_wrapper& node)
+    : _node(node._node)
+  { }
+
+  statement_node_wrapper(vcl::scheduler::statement_node node)
+    : _node(node)
+  { }
+
+  statement_node_wrapper(vcl::scheduler::operation_node_type_family op_family,
+			 vcl::scheduler::operation_node_type op_type,
+			 vcl::scheduler::statement_node_type_family lhs_family,
+			 vcl::scheduler::statement_node_type lhs_type,
+			 vcl::scheduler::statement_node_type_family rhs_family,
+			 vcl::scheduler::statement_node_type rhs_type)
+  {
+    _node.op_family_ = op_family;
+    _node.op_type_ = op_type;
+    _node.lhs_type_family_ = lhs_family;
+    _node.lhs_type_ = lhs_type;
+    _node.rhs_type_family_ = rhs_family;
+    _node.rhs_type_ = rhs_type;
+  }
+
+  /*
+  vcl::scheduler::statement_node& get_vcl_statement_node()
+  {
+    return _node;
+  }
+  */
+
+  vcl::scheduler::statement_node get_vcl_statement_node() const
+  {
+    return _node;
+  }
+
+  void set_lhs_node_index(std::size_t i)
+  {
+    _node.lhs_.node_index_ = i;
+  }
+
+  void set_rhs_node_index(std::size_t i)
+  {
+    _node.rhs_.node_index_ = i;
+  }
+
+#define CONCAT(...) __VA_ARGS__
+
+#define SET_LHS(T, I) void set_lhs_ ## I (T I) { _node.lhs_.I ## _ = I; }
+#define SET_RHS(T, I) void set_rhs_ ## I (T I) { _node.rhs_.I ## _ = I; }
+#define SET_LHS_RHS(T, I) \
+  SET_LHS(CONCAT(T), I)	  \
+  SET_RHS(CONCAT(T), I)
+
+  SET_LHS_RHS(char,              host_char)
+  SET_LHS_RHS(unsigned char,     host_uchar)
+  SET_LHS_RHS(short,             host_short)
+  SET_LHS_RHS(unsigned short,    host_ushort)
+  SET_LHS_RHS(int,               host_int)
+  SET_LHS_RHS(unsigned int,      host_uint)
+  SET_LHS_RHS(long,              host_long)
+  SET_LHS_RHS(unsigned long,     host_ulong)
+  SET_LHS_RHS(float,             host_float)
+  SET_LHS_RHS(double,            host_double)
+
+  SET_LHS_RHS(vcl::scalar<double>*, scalar_double)
+  SET_LHS_RHS(vcl::vector<double>*, vector_double)
+  SET_LHS_RHS(vcl::matrix<double>*, matrix_row_double)
+  
+  SET_LHS_RHS(CONCAT(vcl::matrix_base<double, viennacl::column_major>*),
+    matrix_col_double)
+
+};
+#undef SET_LHS
+#undef SET_RHS
+#undef SET_LHS_PTR
+#undef SET_RHS_PTR
+#undef SET_LHS_RHS
+#undef SET_LHS_RHS_PTR
+
+class statement_wrapper {
+  typedef vcl::scheduler::statement::container_type nodes_container_t;
+
+  typedef nodes_container_t::iterator nodes_iterator;
+  typedef nodes_container_t::const_iterator nodes_const_iterator;
+  
+  nodes_container_t vcl_expression_nodes;
+
+public:
+
+  statement_wrapper() {
+    vcl_expression_nodes = nodes_container_t(0);
+  }
+
+  void execute() {
+    vcl::scheduler::statement tmp_statement(vcl_expression_nodes);
+    vcl::scheduler::execute(tmp_statement);
+  }
+
+  std::size_t size() const {
+    return vcl_expression_nodes.size();
+  }
+
+  void clear() {
+    vcl_expression_nodes.clear();
+  }
+  
+  statement_node_wrapper get_node(std::size_t offset) const {
+    return statement_node_wrapper(vcl_expression_nodes[offset]);
+  }
+
+  void erase_node(std::size_t offset)
+  {
+    nodes_iterator it = vcl_expression_nodes.begin();
+    vcl_expression_nodes.erase(it+offset);
+  }
+
+  void insert_at_index(std::size_t offset,
+		       const statement_node_wrapper& node)
+  {
+    nodes_iterator it = vcl_expression_nodes.begin();
+    vcl_expression_nodes.insert(it+offset, node.get_vcl_statement_node());
+  }
+
+  void insert_at_begin(const statement_node_wrapper& node)
+  {
+    nodes_iterator it = vcl_expression_nodes.begin();
+    vcl_expression_nodes.insert(it, node.get_vcl_statement_node());
+  }
+
+  void insert_at_end(const statement_node_wrapper& node)
+  {
+    vcl_expression_nodes.push_back(node.get_vcl_statement_node());
+  }
+
+};
+
 
 /*******************************
   Python module initialisation
  *******************************/
 
+void translate(char* e)
+{
+    // Use the Python 'C' API to set up an exception object
+    PyErr_SetString(PyExc_RuntimeError, e);
+}
+
 BOOST_PYTHON_MODULE(_viennacl)
 {
+
+  bp::register_exception_translator<char*>(&translate);
 
   np::initialize();
 
@@ -1074,6 +1255,187 @@ BOOST_PYTHON_MODULE(_viennacl)
     ;
   */
 
+  // Scheduler interface (first attempt)
 
+#define _VALUE(NS, V) .value( #V, NS :: V )
+
+  bp::enum_<vcl::scheduler::operation_node_type_family>
+    ("operation_node_type_family")
+    _VALUE(vcl::scheduler, OPERATION_UNARY_TYPE_FAMILY)
+    _VALUE(vcl::scheduler, OPERATION_BINARY_TYPE_FAMILY)
+    ;
+
+  bp::enum_<vcl::scheduler::operation_node_type>("operation_node_type")
+    // unary expression
+    _VALUE(vcl::scheduler, OPERATION_UNARY_ABS_TYPE)
+    _VALUE(vcl::scheduler, OPERATION_UNARY_ACOS_TYPE)
+    _VALUE(vcl::scheduler, OPERATION_UNARY_ASIN_TYPE)
+    _VALUE(vcl::scheduler, OPERATION_UNARY_ATAN_TYPE)
+    _VALUE(vcl::scheduler, OPERATION_UNARY_CEIL_TYPE)
+    _VALUE(vcl::scheduler, OPERATION_UNARY_COS_TYPE)
+    _VALUE(vcl::scheduler, OPERATION_UNARY_COSH_TYPE)
+    _VALUE(vcl::scheduler, OPERATION_UNARY_EXP_TYPE)
+    _VALUE(vcl::scheduler, OPERATION_UNARY_FABS_TYPE)
+    _VALUE(vcl::scheduler, OPERATION_UNARY_FLOOR_TYPE)
+    _VALUE(vcl::scheduler, OPERATION_UNARY_LOG_TYPE)
+    _VALUE(vcl::scheduler, OPERATION_UNARY_LOG10_TYPE)
+    _VALUE(vcl::scheduler, OPERATION_UNARY_SIN_TYPE)
+    _VALUE(vcl::scheduler, OPERATION_UNARY_SINH_TYPE)
+    _VALUE(vcl::scheduler, OPERATION_UNARY_SQRT_TYPE)
+    _VALUE(vcl::scheduler, OPERATION_UNARY_TAN_TYPE)
+    _VALUE(vcl::scheduler, OPERATION_UNARY_TANH_TYPE)
+    
+    // binary expression
+    _VALUE(vcl::scheduler, OPERATION_BINARY_ASSIGN_TYPE)
+    _VALUE(vcl::scheduler, OPERATION_BINARY_INPLACE_ADD_TYPE)
+    _VALUE(vcl::scheduler, OPERATION_BINARY_INPLACE_SUB_TYPE)
+    _VALUE(vcl::scheduler, OPERATION_BINARY_ADD_TYPE)
+    _VALUE(vcl::scheduler, OPERATION_BINARY_SUB_TYPE)
+    _VALUE(vcl::scheduler, OPERATION_BINARY_PROD_TYPE)
+    _VALUE(vcl::scheduler, OPERATION_BINARY_MULT_TYPE)// scalar*vector/matrix
+    _VALUE(vcl::scheduler, OPERATION_BINARY_ELEMENT_MULT_TYPE)
+    _VALUE(vcl::scheduler, OPERATION_BINARY_ELEMENT_DIV_TYPE)
+    ;
+
+  bp::enum_<vcl::scheduler::statement_node_type_family>
+    ("statement_node_type_family")
+    _VALUE(vcl::scheduler, COMPOSITE_OPERATION_FAMILY)
+    _VALUE(vcl::scheduler, HOST_SCALAR_TYPE_FAMILY)
+    _VALUE(vcl::scheduler, SCALAR_TYPE_FAMILY)
+    _VALUE(vcl::scheduler, VECTOR_TYPE_FAMILY)
+    _VALUE(vcl::scheduler, MATRIX_ROW_TYPE_FAMILY)
+    _VALUE(vcl::scheduler, MATRIX_COL_TYPE_FAMILY)
+    ;
+
+  bp::enum_<vcl::scheduler::statement_node_type>("statement_node_type")
+    _VALUE(vcl::scheduler, COMPOSITE_OPERATION_TYPE)
+
+    // host scalars:
+    _VALUE(vcl::scheduler, HOST_SCALAR_CHAR_TYPE)
+    _VALUE(vcl::scheduler, HOST_SCALAR_UCHAR_TYPE)
+    _VALUE(vcl::scheduler, HOST_SCALAR_SHORT_TYPE)
+    _VALUE(vcl::scheduler, HOST_SCALAR_USHORT_TYPE)
+    _VALUE(vcl::scheduler, HOST_SCALAR_INT_TYPE)
+    _VALUE(vcl::scheduler, HOST_SCALAR_UINT_TYPE)
+    _VALUE(vcl::scheduler, HOST_SCALAR_LONG_TYPE)
+    _VALUE(vcl::scheduler, HOST_SCALAR_ULONG_TYPE)
+    _VALUE(vcl::scheduler, HOST_SCALAR_HALF_TYPE)
+    _VALUE(vcl::scheduler, HOST_SCALAR_FLOAT_TYPE)
+    _VALUE(vcl::scheduler, HOST_SCALAR_DOUBLE_TYPE)
+    
+    // device scalars:
+    _VALUE(vcl::scheduler, SCALAR_CHAR_TYPE)
+    _VALUE(vcl::scheduler, SCALAR_UCHAR_TYPE)
+    _VALUE(vcl::scheduler, SCALAR_SHORT_TYPE)
+    _VALUE(vcl::scheduler, SCALAR_USHORT_TYPE)
+    _VALUE(vcl::scheduler, SCALAR_INT_TYPE)
+    _VALUE(vcl::scheduler, SCALAR_UINT_TYPE)
+    _VALUE(vcl::scheduler, SCALAR_LONG_TYPE)
+    _VALUE(vcl::scheduler, SCALAR_ULONG_TYPE)
+    _VALUE(vcl::scheduler, SCALAR_HALF_TYPE)
+    _VALUE(vcl::scheduler, SCALAR_FLOAT_TYPE)
+    _VALUE(vcl::scheduler, SCALAR_DOUBLE_TYPE)
+    
+    // vector:
+    _VALUE(vcl::scheduler, VECTOR_CHAR_TYPE)
+    _VALUE(vcl::scheduler, VECTOR_UCHAR_TYPE)
+    _VALUE(vcl::scheduler, VECTOR_SHORT_TYPE)
+    _VALUE(vcl::scheduler, VECTOR_USHORT_TYPE)
+    _VALUE(vcl::scheduler, VECTOR_INT_TYPE)
+    _VALUE(vcl::scheduler, VECTOR_UINT_TYPE)
+    _VALUE(vcl::scheduler, VECTOR_LONG_TYPE)
+    _VALUE(vcl::scheduler, VECTOR_ULONG_TYPE)
+    _VALUE(vcl::scheduler, VECTOR_HALF_TYPE)
+    _VALUE(vcl::scheduler, VECTOR_FLOAT_TYPE)
+    _VALUE(vcl::scheduler, VECTOR_DOUBLE_TYPE)
+    
+    // matrix, row major:
+    _VALUE(vcl::scheduler, MATRIX_ROW_CHAR_TYPE)
+    _VALUE(vcl::scheduler, MATRIX_ROW_UCHAR_TYPE)
+    _VALUE(vcl::scheduler, MATRIX_ROW_SHORT_TYPE)
+    _VALUE(vcl::scheduler, MATRIX_ROW_USHORT_TYPE)
+    _VALUE(vcl::scheduler, MATRIX_ROW_INT_TYPE)
+    _VALUE(vcl::scheduler, MATRIX_ROW_UINT_TYPE)
+    _VALUE(vcl::scheduler, MATRIX_ROW_LONG_TYPE)
+    _VALUE(vcl::scheduler, MATRIX_ROW_ULONG_TYPE)
+    _VALUE(vcl::scheduler, MATRIX_ROW_HALF_TYPE)
+    _VALUE(vcl::scheduler, MATRIX_ROW_FLOAT_TYPE)
+    _VALUE(vcl::scheduler, MATRIX_ROW_DOUBLE_TYPE)
+    
+    // matrix, row major:
+    _VALUE(vcl::scheduler, MATRIX_COL_CHAR_TYPE)
+    _VALUE(vcl::scheduler, MATRIX_COL_UCHAR_TYPE)
+    _VALUE(vcl::scheduler, MATRIX_COL_SHORT_TYPE)
+    _VALUE(vcl::scheduler, MATRIX_COL_USHORT_TYPE)
+    _VALUE(vcl::scheduler, MATRIX_COL_INT_TYPE)
+    _VALUE(vcl::scheduler, MATRIX_COL_UINT_TYPE)
+    _VALUE(vcl::scheduler, MATRIX_COL_LONG_TYPE)
+    _VALUE(vcl::scheduler, MATRIX_COL_ULONG_TYPE)
+    _VALUE(vcl::scheduler, MATRIX_COL_HALF_TYPE)
+    _VALUE(vcl::scheduler, MATRIX_COL_FLOAT_TYPE)
+    _VALUE(vcl::scheduler, MATRIX_COL_DOUBLE_TYPE)
+    ;
+
+  typedef vcl::scheduler::statement_node vcl_node_t;
+
+  bp::class_<vcl_node_t>("vcl_statement_node")
+    .def_readonly("lhs_type_family", &vcl_node_t::lhs_type_family_)
+    .def_readonly("lhs_type", &vcl_node_t::lhs_type_)
+    .def_readonly("rhs_type_family", &vcl_node_t::rhs_type_family_)
+    .def_readonly("rhs_type", &vcl_node_t::rhs_type_)
+    .def_readonly("op_family", &vcl_node_t::op_family_)
+    .def_readonly("op_type", &vcl_node_t::op_type_)
+    ;
+
+#define STRINGIFY(S) #S
+#define SET_LHS(I) \
+  .def(STRINGIFY(set_lhs_ ## I), &statement_node_wrapper::set_lhs_ ## I)
+#define SET_RHS(I) \
+  .def(STRINGIFY(set_rhs_ ## I), &statement_node_wrapper::set_rhs_ ## I)
+#define SET_LHS_RHS(I) SET_LHS(I) SET_RHS(I)
+
+  bp::class_<statement_node_wrapper>("statement_node",
+				     bp::init<statement_node_wrapper>())
+    .def(bp::init<vcl::scheduler::operation_node_type_family,
+	 vcl::scheduler::operation_node_type,
+	 vcl::scheduler::statement_node_type_family,
+	 vcl::scheduler::statement_node_type,
+	 vcl::scheduler::statement_node_type_family,
+	 vcl::scheduler::statement_node_type>())
+    SET_LHS_RHS(node_index)
+    SET_LHS_RHS(host_char)
+    SET_LHS_RHS(host_uchar)
+    SET_LHS_RHS(host_short)
+    SET_LHS_RHS(host_ushort)
+    SET_LHS_RHS(host_int)
+    SET_LHS_RHS(host_uint)
+    SET_LHS_RHS(host_long)
+    SET_LHS_RHS(host_ulong)
+    SET_LHS_RHS(host_float)
+    SET_LHS_RHS(host_double)
+    SET_LHS_RHS(scalar_double)
+    SET_LHS_RHS(vector_double)
+    SET_LHS_RHS(matrix_row_double)
+    SET_LHS_RHS(matrix_col_double)
+    .add_property("vcl_statement_node",
+	 bp::make_function(&statement_node_wrapper::get_vcl_statement_node,
+			   bp::return_value_policy<bp::return_by_value>()))
+    ;
+
+#undef SET_LHS
+#undef SET_RHS
+#undef SET_LHS_RHS
+
+  bp::class_<statement_wrapper>("statement")
+    .add_property("size", &statement_wrapper::size)
+    .def("execute", &statement_wrapper::execute)
+    .def("clear", &statement_wrapper::clear)
+    .def("erase_node", &statement_wrapper::erase_node)
+    .def("get_node", &statement_wrapper::get_node)
+    .def("insert_at_index", &statement_wrapper::insert_at_index)
+    .def("insert_at_begin", &statement_wrapper::insert_at_begin)
+    .def("insert_at_end", &statement_wrapper::insert_at_end)
+    ;
+    
 }
 
