@@ -87,7 +87,11 @@ namespace viennacl
       typedef vcl_size_t         size_type;
       typedef SCALARTYPE const & const_reference;
 
-      scalar_vector(size_type s, SCALARTYPE val) : size_(s), value_(val) {}
+      scalar_vector(size_type s, SCALARTYPE val) : size_(s), value_(val)
+#ifdef VIENNACL_WITH_OPENCL
+                                                  , ctx_(&viennacl::ocl::current_context())
+#endif
+      {}
 
 #ifdef VIENNACL_WITH_OPENCL
       scalar_vector(size_type s, SCALARTYPE val, viennacl::ocl::context const & ctx) : size_(s), value_(val), ctx_(&ctx) {}
@@ -337,7 +341,7 @@ namespace viennacl
       typedef vector_base<SCALARTYPE>         self_type;
 
     public:
-      typedef scalar<typename viennacl::tools::CHECK_SCALAR_TEMPLATE_ARGUMENT<SCALARTYPE>::ResultType>   value_type;
+      typedef scalar<SCALARTYPE>                                value_type;
       typedef SCALARTYPE                                        cpu_value_type;
       typedef backend::mem_handle                               handle_type;
       typedef SizeType                                        size_type;
@@ -411,7 +415,7 @@ namespace viennacl
       }
 
       template <typename LHS, typename RHS, typename OP>
-      explicit vector_base(vector_expression<const LHS, const RHS, OP> const & proxy) : size_(proxy.size()), start_(0), stride_(1)
+      explicit vector_base(vector_expression<const LHS, const RHS, OP> const & proxy) : size_(viennacl::traits::size(proxy)), start_(0), stride_(1)
       {
         elements_.switch_active_handle_id(viennacl::traits::active_handle_id(proxy));
         if (size_ > 0)
@@ -742,10 +746,10 @@ namespace viennacl
 
       /** @brief Scales the vector by a CPU scalar 'alpha' and returns an expression template
       */
-      vector_expression< const self_type, const SCALARTYPE, op_mult>
+      vector_expression< const self_type, const SCALARTYPE, op_div>
       operator / (SCALARTYPE value) const
       {
-        return vector_expression< const self_type, const SCALARTYPE, op_mult>(*this, SCALARTYPE(1.0) / value);
+        return vector_expression< const self_type, const SCALARTYPE, op_div>(*this, value);
       }
 
 
@@ -981,7 +985,7 @@ namespace viennacl
 #endif
 
     template <typename LHS, typename RHS, typename OP>
-    vector(vector_expression<const LHS, const RHS, OP> const & proxy) : base_type(proxy.size(), viennacl::traits::active_handle_id(proxy))
+    vector(vector_expression<const LHS, const RHS, OP> const & proxy) : base_type(viennacl::traits::size(proxy), viennacl::traits::active_handle_id(proxy))
     {
       self_type::operator=(proxy);
     }
@@ -1027,13 +1031,6 @@ namespace viennacl
     using base_type::operator+=;
     using base_type::operator-=;
 
-    /** @brief Sign flip for the vector. Emulated to be equivalent to -1.0 * vector */
-    vector_expression<const vector_base<SCALARTYPE>, const SCALARTYPE, op_mult> operator-() const
-    {
-      return vector_expression<const vector_base<SCALARTYPE>, const SCALARTYPE, op_mult>(*this, SCALARTYPE(-1.0));
-    }
-
-
     //enlarge or reduce allocated memory and set unused memory to zero
     /** @brief Resizes the allocated memory for the vector. Pads the memory to be a multiple of 'ALIGNMENT'
     *
@@ -1067,6 +1064,150 @@ namespace viennacl
 
   }; //vector
 
+  template <typename ScalarT>
+  class vector_tuple
+  {
+    typedef vector_base<ScalarT>   VectorType;
+
+  public:
+      // 2 vectors
+
+      vector_tuple(VectorType const & v0, VectorType const & v1) : const_vectors_(2), non_const_vectors_()
+      {
+        const_vectors_[0] = &v0;
+        const_vectors_[1] = &v1;
+      }
+      vector_tuple(VectorType       & v0, VectorType       & v1) : const_vectors_(2), non_const_vectors_(2)
+      {
+        const_vectors_[0] = &v0; non_const_vectors_[0] = &v0;
+        const_vectors_[1] = &v1; non_const_vectors_[1] = &v1;
+      }
+
+      // 3 vectors
+
+      vector_tuple(VectorType const & v0, VectorType const & v1, VectorType const & v2) : const_vectors_(3), non_const_vectors_()
+      {
+        const_vectors_[0] = &v0;
+        const_vectors_[1] = &v1;
+        const_vectors_[2] = &v2;
+      }
+      vector_tuple(VectorType       & v0, VectorType       & v1, VectorType       & v2) : const_vectors_(3), non_const_vectors_(3)
+      {
+        const_vectors_[0] = &v0; non_const_vectors_[0] = &v0;
+        const_vectors_[1] = &v1; non_const_vectors_[1] = &v1;
+        const_vectors_[2] = &v2; non_const_vectors_[2] = &v2;
+      }
+
+      // 4 vectors
+
+      vector_tuple(VectorType const & v0, VectorType const & v1, VectorType const & v2, VectorType const & v3) : const_vectors_(4), non_const_vectors_()
+      {
+        const_vectors_[0] = &v0;
+        const_vectors_[1] = &v1;
+        const_vectors_[2] = &v2;
+        const_vectors_[3] = &v3;
+      }
+      vector_tuple(VectorType       & v0, VectorType       & v1, VectorType       & v2, VectorType       & v3) : const_vectors_(4), non_const_vectors_(4)
+      {
+        const_vectors_[0] = &v0; non_const_vectors_[0] = &v0;
+        const_vectors_[1] = &v1; non_const_vectors_[1] = &v1;
+        const_vectors_[2] = &v2; non_const_vectors_[2] = &v2;
+        const_vectors_[3] = &v3; non_const_vectors_[3] = &v3;
+      }
+
+      // add more overloads here
+
+      // generic interface:
+
+      vector_tuple(std::vector<VectorType const *> const & vecs) : const_vectors_(vecs.size()), non_const_vectors_()
+      {
+        for (std::size_t i=0; i<vecs.size(); ++i)
+          const_vectors_[i] = vecs[i];
+      }
+
+      vector_tuple(std::vector<VectorType *> const & vecs) : const_vectors_(vecs.size()), non_const_vectors_(vecs.size())
+      {
+        for (std::size_t i=0; i<vecs.size(); ++i)
+        {
+              const_vectors_[i] = vecs[i];
+          non_const_vectors_[i] = vecs[i];
+        }
+      }
+
+      std::size_t size()       const { return non_const_vectors_.size(); }
+      std::size_t const_size() const { return     const_vectors_.size(); }
+
+      VectorType       &       at(std::size_t i) const { return *(non_const_vectors_.at(i)); }
+      VectorType const & const_at(std::size_t i) const { return     *(const_vectors_.at(i)); }
+
+  private:
+    std::vector<VectorType const *>   const_vectors_;
+    std::vector<VectorType *>         non_const_vectors_;
+  };
+
+  // 2 args
+  template <typename ScalarT>
+  vector_tuple<ScalarT> tie(vector_base<ScalarT> const & v0, vector_base<ScalarT> const & v1) { return vector_tuple<ScalarT>(v0, v1); }
+
+  template <typename ScalarT>
+  vector_tuple<ScalarT> tie(vector_base<ScalarT>       & v0, vector_base<ScalarT>       & v1) { return vector_tuple<ScalarT>(v0, v1); }
+
+  // 3 args
+  template <typename ScalarT>
+  vector_tuple<ScalarT> tie(vector_base<ScalarT> const & v0, vector_base<ScalarT> const & v1, vector_base<ScalarT> const & v2) { return vector_tuple<ScalarT>(v0, v1, v2); }
+
+  template <typename ScalarT>
+  vector_tuple<ScalarT> tie(vector_base<ScalarT>       & v0, vector_base<ScalarT>       & v1, vector_base<ScalarT>       & v2) { return vector_tuple<ScalarT>(v0, v1, v2); }
+
+  // 4 args
+  template <typename ScalarT>
+  vector_tuple<ScalarT> tie(vector_base<ScalarT> const & v0, vector_base<ScalarT> const & v1, vector_base<ScalarT> const & v2, vector_base<ScalarT> const & v3)
+  {
+    return vector_tuple<ScalarT>(v0, v1, v2, v3);
+  }
+
+  template <typename ScalarT>
+  vector_tuple<ScalarT> tie(vector_base<ScalarT>       & v0, vector_base<ScalarT>       & v1, vector_base<ScalarT>       & v2, vector_base<ScalarT>       & v3)
+  {
+    return vector_tuple<ScalarT>(v0, v1, v2, v3);
+  }
+
+  // 5 args
+  template <typename ScalarT>
+  vector_tuple<ScalarT> tie(vector_base<ScalarT> const & v0,
+                            vector_base<ScalarT> const & v1,
+                            vector_base<ScalarT> const & v2,
+                            vector_base<ScalarT> const & v3,
+                            vector_base<ScalarT> const & v4)
+  {
+    typedef vector_base<ScalarT> const *       VectorPointerType;
+    std::vector<VectorPointerType> vec(5);
+    vec[0] = &v0;
+    vec[1] = &v1;
+    vec[2] = &v2;
+    vec[3] = &v3;
+    vec[4] = &v4;
+    return vector_tuple<ScalarT>(vec);
+  }
+
+  template <typename ScalarT>
+  vector_tuple<ScalarT> tie(vector_base<ScalarT> & v0,
+                            vector_base<ScalarT> & v1,
+                            vector_base<ScalarT> & v2,
+                            vector_base<ScalarT> & v3,
+                            vector_base<ScalarT> & v4)
+  {
+    typedef vector_base<ScalarT> *       VectorPointerType;
+    std::vector<VectorPointerType> vec(5);
+    vec[0] = &v0;
+    vec[1] = &v1;
+    vec[2] = &v2;
+    vec[3] = &v3;
+    vec[4] = &v4;
+    return vector_tuple<ScalarT>(vec);
+  }
+
+  // TODO: Add more arguments to tie() here. Maybe use some preprocessor magic to accomplish this.
 
   //
   //////////////////// Copy from GPU to CPU //////////////////////////////////
@@ -1635,7 +1776,19 @@ namespace viennacl
     return vector_expression< const vector_base<T>, const S1, op_mult>(vec, value);
   }
 
-  /** @brief Scales the vector by a GPU scalar 'alpha' and returns an expression template
+  /** @brief Operator overload for the expression alpha * v1, where alpha is a host scalar (possibly integer)
+  *
+  * @param value   The host scalar (float or double)
+  * @param vec     A ViennaCL vector
+  */
+  template <typename T>
+  vector_expression< const vector_base<T>, const T, op_mult>
+  operator * (T const & value, vector_base<T> const & vec)
+  {
+    return vector_expression< const vector_base<T>, const T, op_mult>(vec, value);
+  }
+
+  /** @brief Scales the vector by a scalar 'alpha' and returns an expression template
   */
   template <typename T, typename S1>
   typename viennacl::enable_if< viennacl::is_any_scalar<S1>::value,
@@ -1643,6 +1796,13 @@ namespace viennacl
   operator * (vector_base<T> const & vec, S1 const & value)
   {
     return vector_expression< const vector_base<T>, const S1, op_mult>(vec, value);
+  }
+
+  template <typename T>
+  vector_expression< const vector_base<T>, const T, op_mult>
+  operator * (vector_base<T> const & vec, T const & value)
+  {
+    return vector_expression< const vector_base<T>, const T, op_mult>(vec, value);
   }
 
   /** @brief Operator overload for the multiplication of a vector expression with a scalar from the right, e.g. (beta * vec1) * alpha. Here, beta * vec1 is wrapped into a vector_expression and then multiplied with alpha from the right.
@@ -1672,7 +1832,6 @@ namespace viennacl
   {
     return viennacl::vector_expression<const vector_expression<LHS, RHS, OP>, const S1, op_mult>(proxy, val);
   }
-
 
   //
   // operator /
@@ -1721,6 +1880,16 @@ namespace viennacl
         static void apply(vector_base<T> & lhs, vector_base<T> const & rhs)
         {
           viennacl::linalg::av(lhs, rhs, T(1), 1, false, false);
+        }
+      };
+
+      // x = inner_prod(z, {y0, y1, ...})
+      template <typename T>
+      struct op_executor<vector_base<T>, op_assign, vector_expression<const vector_base<T>, const vector_tuple<T>, op_inner_prod> >
+      {
+        static void apply(vector_base<T> & lhs, vector_expression<const vector_base<T>, const vector_tuple<T>, op_inner_prod> const & rhs)
+        {
+          viennacl::linalg::inner_prod_impl(rhs.lhs(), rhs.rhs(), lhs);
         }
       };
 

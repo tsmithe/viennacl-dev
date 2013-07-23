@@ -6,7 +6,7 @@ include_directories(${Boost_INCLUDE_DIRS})
 #             global_variables
 #             matrix-vector matrix
 #             scalar scheduler_matrix scheduler_vector sparse
-#             vector)
+#             vector vector-int vector_multi_inner_prod)
 #   add_executable(${PROG}-test-cpu src/${PROG}.cpp)
 #   add_test(${PROG}-cpu ${PROG}-test-cpu)
 #endforeach(PROG)
@@ -18,7 +18,7 @@ include_directories(${Boost_INCLUDE_DIRS})
 #               global_variables
 #               matrix-vector matrix nmf qr-method
 #               scalar sparse structured-matrices svd
-#               vector)
+#               vector vector-int vector_multi_inner_prod)
 #     add_executable(${PROG}-test-opencl src/${PROG}.cpp)
 #     target_link_libraries(${PROG}-test-opencl ${OPENCL_LIBRARIES})
 #     add_test(${PROG}-opencl ${PROG}-test-opencl)
@@ -40,7 +40,7 @@ if (ENABLE_CUDA)
                global_variables
                matrix-vector matrix
                scalar sparse
-               vector)
+               vector vector-int vector_multi_inner_prod)
      cuda_add_executable(${PROG}-test-cuda src/${PROG}.cu)
      add_test(${PROG}-cuda ${PROG}-test-cuda)
   endforeach(PROG)
