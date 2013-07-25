@@ -747,16 +747,16 @@ public:
 
 class statement_node_wrapper {
 
-  vcl::scheduler::statement::value_type _node;
+  vcl::scheduler::statement::value_type vcl_node;
 
 public:
 
   statement_node_wrapper(const statement_node_wrapper& node)
-    : _node(node._node)
+    : vcl_node(node.vcl_node)
   { }
 
   statement_node_wrapper(vcl::scheduler::statement_node node)
-    : _node(node)
+    : vcl_node(node)
   { }
 
   statement_node_wrapper(vcl::scheduler::operation_node_type_family op_family,
@@ -766,40 +766,40 @@ public:
 			 vcl::scheduler::statement_node_type_family rhs_family,
 			 vcl::scheduler::statement_node_type rhs_type)
   {
-    _node.op_family_ = op_family;
-    _node.op_type_ = op_type;
-    _node.lhs_type_family_ = lhs_family;
-    _node.lhs_type_ = lhs_type;
-    _node.rhs_type_family_ = rhs_family;
-    _node.rhs_type_ = rhs_type;
+    vcl_node.op_family = op_family;
+    vcl_node.op_type = op_type;
+    vcl_node.lhs_type_family = lhs_family;
+    vcl_node.lhs_type = lhs_type;
+    vcl_node.rhs_type_family = rhs_family;
+    vcl_node.rhs_type = rhs_type;
   }
 
   /*
   vcl::scheduler::statement_node& get_vcl_statement_node()
   {
-    return _node;
+    return vcl_node;
   }
   */
 
   vcl::scheduler::statement_node get_vcl_statement_node() const
   {
-    return _node;
+    return vcl_node;
   }
 
   void set_lhs_node_index(std::size_t i)
   {
-    _node.lhs_.node_index_ = i;
+    vcl_node.lhs.node_index = i;
   }
 
   void set_rhs_node_index(std::size_t i)
   {
-    _node.rhs_.node_index_ = i;
+    vcl_node.rhs.node_index = i;
   }
 
 #define CONCAT(...) __VA_ARGS__
 
-#define SET_LHS(T, I) void set_lhs_ ## I (T I) { _node.lhs_.I ## _ = I; }
-#define SET_RHS(T, I) void set_rhs_ ## I (T I) { _node.rhs_.I ## _ = I; }
+#define SET_LHS(T, I) void set_lhs_ ## I (T I) { vcl_node.lhs.I  = I; }
+#define SET_RHS(T, I) void set_rhs_ ## I (T I) { vcl_node.rhs.I  = I; }
 #define SET_LHS_RHS(T, I) \
   SET_LHS(CONCAT(T), I)	  \
   SET_RHS(CONCAT(T), I)
@@ -892,16 +892,22 @@ public:
   Python module initialisation
  *******************************/
 
-void translate(char* e)
+/*
+void translate_scheduler_exception(vcl::scheduler::statement_not_supported_exception e)
 {
-    // Use the Python 'C' API to set up an exception object
-    PyErr_SetString(PyExc_RuntimeError, e);
+  // Use the Python 'C' API to set up an exception object
+  PyErr_SetString(PyExc_RuntimeError, e.what());
 }
+*/
 
 BOOST_PYTHON_MODULE(_viennacl)
 {
 
-  bp::register_exception_translator<char*>(&translate);
+  /*
+  bp::register_exception_translator
+    <vcl::scheduler::statement_not_supported_exception>
+    (&translate_scheduler_exception);
+  */
 
   np::initialize();
 
@@ -1385,12 +1391,12 @@ BOOST_PYTHON_MODULE(_viennacl)
   typedef vcl::scheduler::statement_node vcl_node_t;
 
   bp::class_<vcl_node_t>("vcl_statement_node")
-    .def_readonly("lhs_type_family", &vcl_node_t::lhs_type_family_)
-    .def_readonly("lhs_type", &vcl_node_t::lhs_type_)
-    .def_readonly("rhs_type_family", &vcl_node_t::rhs_type_family_)
-    .def_readonly("rhs_type", &vcl_node_t::rhs_type_)
-    .def_readonly("op_family", &vcl_node_t::op_family_)
-    .def_readonly("op_type", &vcl_node_t::op_type_)
+    .def_readonly("lhs_type_family", &vcl_node_t::lhs_type_family)
+    .def_readonly("lhs_type", &vcl_node_t::lhs_type)
+    .def_readonly("rhs_type_family", &vcl_node_t::rhs_type_family)
+    .def_readonly("rhs_type", &vcl_node_t::rhs_type)
+    .def_readonly("op_family", &vcl_node_t::op_family)
+    .def_readonly("op_type", &vcl_node_t::op_type)
     ;
 
 #define STRINGIFY(S) #S
