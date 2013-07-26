@@ -42,6 +42,71 @@ Leaf instances are the data interface for the expression tree
 
 """
 
+class Node:
+    """
+    Node base class -- includes shared logic for construction/execution
+    """
+
+    def __init__():
+        pass
+
+    def execute():
+        pass
+
+class Add(Node):
+    """
+    Derived node class for addition
+    """
+
+    def __init__():
+        pass
+
+class Assign(Node):
+    """
+    Derived node class for assignment
+    """
+
+    def __init__():
+        pass
+
+class Leaf:
+    """
+    Leaf base class -- generic constructors/converters..
+    """
+
+    def __init__():
+        pass
+
+    def as_ndarray():
+        pass
+
+class Vector(Leaf):
+    def __init__():
+        """
+        Initialise a vcl vector -- classmethods (factories) for different types
+        """
+        pass
+
+    @classmethod
+    def scalar_vector():
+        """
+        
+        """
+        pass
+
+class Statement:
+    def __init__():
+        """
+        Take an expression tree to a statement
+        """
+        pass
+
+    def execute():
+        """
+        Execute the statement -- don't do anything else!
+        """
+        pass
+
 def backend_finish():
     return _viennacl.backend_finish()
 
