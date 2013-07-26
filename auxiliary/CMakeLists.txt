@@ -198,6 +198,8 @@ set(COMPRESSED_MATRIX_SRCS
    compressed_matrix/align1/unit_lu_forward.cl
    compressed_matrix/align1/vec_mul.cl
    compressed_matrix/align1/vec_mul_cpu.cl
+   compressed_matrix/align1/d_mat_mul.cl
+   compressed_matrix/align1/d_tr_mat_mul.cl
    compressed_matrix/align4/vec_mul.cl
    compressed_matrix/align8/vec_mul.cl)
 
@@ -343,6 +345,7 @@ foreach(f IN LISTS COMPRESSED_MATRIX_SRCS COORDINATE_MATRIX_SRCS ELL_MATRIX_SRCS
    list(APPEND CL_SRCS "${CMAKE_CURRENT_BINARY_DIR}/${f}")
 endforeach()
 list(APPEND CL_SRCS ${MATRIX_PROD_SRCS} ${MATRIX_SOLVE_SRCS})
+list(APPEND CL_SRCS ${MATRIX_ELEMENT_SRCS})
 
 configure_file(converter.cpp ${CMAKE_CURRENT_BINARY_DIR}/converter.cpp @ONLY)
 add_executable(converter ${CMAKE_CURRENT_BINARY_DIR}/converter.cpp)
