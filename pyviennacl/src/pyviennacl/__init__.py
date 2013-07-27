@@ -147,6 +147,9 @@ class Vector(Leaf):
     def __add__(self, rhs):
         return Add(self, rhs)
 
+    def __sub__(self, rhs):
+        return Sub(self, rhs)
+
 
 class Add(Node):
     """
@@ -163,6 +166,29 @@ class Add(Node):
 
     def __add__(self, rhs):
         return Add(self, rhs)
+
+    def __sub__(self, rhs):
+        return Sub(self, rhs)
+
+
+class Sub(Node):
+    """
+    Derived node class for addition
+    """
+    result_types = {
+        (_viennacl.statement_node_type.VECTOR_DOUBLE_TYPE,
+         _viennacl.statement_node_type.VECTOR_DOUBLE_TYPE): Vector
+    }
+
+    def _init_node(self):
+        self.operation_node_type = _viennacl.operation_node_type.OPERATION_BINARY_SUB_TYPE
+        self._vcl_node_factory()
+
+    def __add__(self, rhs):
+        return Add(self, rhs)
+
+    def __sub__(self, rhs):
+        return Sub(self, rhs)
 
 
 class Assign(Node):
@@ -190,6 +216,23 @@ def get_result_type(node):
 
     raise RuntimeError("Only Node, Leaf and Statement instances have result types!")
 
+
+def get_vector_result_size(node):
+    """
+    This is just a stop-gap solution until I have a better way...
+    """
+    size = 0
+    for op in node.operands:
+        if isinstance(op, Node):
+            s = get_vector_result_size(op)
+            if (s > size):
+                size = s
+        else:
+            if (op.size > size):
+                size = op.size
+    return size
+            
+
 class Statement:
     def __init__(self, node):
         """
@@ -204,7 +247,7 @@ class Statement:
         if isinstance(node, Assign):
             self.result = node.operands[0]
         else:
-            self.result = get_result_type(node)(10)
+            self.result = get_result_type(node)(get_vector_result_size(node))
             top = Assign(self.result, node)
             next_node.append(top)
 
