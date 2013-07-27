@@ -786,49 +786,55 @@ public:
     return vcl_node;
   }
 
-  void set_lhs_node_index(std::size_t i)
+  void set_operand_to_node_index(uint8_t operand, std::size_t i)
   {
-    vcl_node.lhs.node_index = i;
-  }
-
-  void set_rhs_node_index(std::size_t i)
-  {
-    vcl_node.rhs.node_index = i;
+    switch (operand) {
+    case 0:
+      vcl_node.lhs.node_index = i;
+      break;
+    case 1:
+      vcl_node.rhs.node_index = i;
+      break;
+    }
   }
 
 #define CONCAT(...) __VA_ARGS__
 
-#define SET_LHS(T, I) void set_lhs_ ## I (T I) { vcl_node.lhs.I  = I; }
-#define SET_RHS(T, I) void set_rhs_ ## I (T I) { vcl_node.rhs.I  = I; }
-#define SET_LHS_RHS(T, I) \
-  SET_LHS(CONCAT(T), I)	  \
-  SET_RHS(CONCAT(T), I)
+#define SET_OPERAND(T, I)					   \
+  void set_operand_to_ ## I (uint8_t operand, T I) {		   \
+    switch (operand) {						   \
+    case 0:							   \
+      vcl_node.lhs.I  = I;					   \
+      break;							   \
+    case 1:							   \
+      vcl_node.rhs.I  = I;					   \
+      break;							   \
+    default:							   \
+      throw viennacl::scheduler::statement_not_supported_exception \
+	("Only support operands 0 or 1");			   \
+    }								   \
+  }
 
-  SET_LHS_RHS(char,              host_char)
-  SET_LHS_RHS(unsigned char,     host_uchar)
-  SET_LHS_RHS(short,             host_short)
-  SET_LHS_RHS(unsigned short,    host_ushort)
-  SET_LHS_RHS(int,               host_int)
-  SET_LHS_RHS(unsigned int,      host_uint)
-  SET_LHS_RHS(long,              host_long)
-  SET_LHS_RHS(unsigned long,     host_ulong)
-  SET_LHS_RHS(float,             host_float)
-  SET_LHS_RHS(double,            host_double)
+  SET_OPERAND(char,              host_char)
+  SET_OPERAND(unsigned char,     host_uchar)
+  SET_OPERAND(short,             host_short)
+  SET_OPERAND(unsigned short,    host_ushort)
+  SET_OPERAND(int,               host_int)
+  SET_OPERAND(unsigned int,      host_uint)
+  SET_OPERAND(long,              host_long)
+  SET_OPERAND(unsigned long,     host_ulong)
+  SET_OPERAND(float,             host_float)
+  SET_OPERAND(double,            host_double)
 
-  SET_LHS_RHS(vcl::scalar<double>*, scalar_double)
-  SET_LHS_RHS(vcl::vector<double>*, vector_double)
-  SET_LHS_RHS(vcl::matrix<double>*, matrix_row_double)
+  SET_OPERAND(vcl::scalar<double>*, scalar_double)
+  SET_OPERAND(vcl::vector<double>*, vector_double)
+  SET_OPERAND(vcl::matrix<double>*, matrix_row_double)
   
-  SET_LHS_RHS(CONCAT(vcl::matrix_base<double, viennacl::column_major>*),
+  SET_OPERAND(CONCAT(vcl::matrix_base<double, viennacl::column_major>*),
     matrix_col_double)
 
 };
-#undef SET_LHS
-#undef SET_RHS
-#undef SET_LHS_PTR
-#undef SET_RHS_PTR
-#undef SET_LHS_RHS
-#undef SET_LHS_RHS_PTR
+#undef SET_OPERAND
 
 class statement_wrapper {
   typedef vcl::scheduler::statement::container_type nodes_container_t;
@@ -1400,11 +1406,9 @@ BOOST_PYTHON_MODULE(_viennacl)
     ;
 
 #define STRINGIFY(S) #S
-#define SET_LHS(I) \
-  .def(STRINGIFY(set_lhs_ ## I), &statement_node_wrapper::set_lhs_ ## I)
-#define SET_RHS(I) \
-  .def(STRINGIFY(set_rhs_ ## I), &statement_node_wrapper::set_rhs_ ## I)
-#define SET_LHS_RHS(I) SET_LHS(I) SET_RHS(I)
+#define SET_OPERAND(I)					\
+  .def(STRINGIFY(set_operand_to_ ## I),			\
+       &statement_node_wrapper::set_operand_to_ ## I)
 
   bp::class_<statement_node_wrapper>("statement_node",
 				     bp::init<statement_node_wrapper>())
@@ -1414,29 +1418,27 @@ BOOST_PYTHON_MODULE(_viennacl)
 	 vcl::scheduler::statement_node_type,
 	 vcl::scheduler::statement_node_type_family,
 	 vcl::scheduler::statement_node_type>())
-    SET_LHS_RHS(node_index)
-    //SET_LHS_RHS(host_char)
-    //SET_LHS_RHS(host_uchar)
-    //SET_LHS_RHS(host_short)
-    //SET_LHS_RHS(host_ushort)
-    SET_LHS_RHS(host_int)
-    SET_LHS_RHS(host_uint)
-    SET_LHS_RHS(host_long)
-    SET_LHS_RHS(host_ulong)
-    //SET_LHS_RHS(host_float)
-    SET_LHS_RHS(host_double)
-    SET_LHS_RHS(scalar_double)
-    SET_LHS_RHS(vector_double)
-    SET_LHS_RHS(matrix_row_double)
-    SET_LHS_RHS(matrix_col_double)
+    SET_OPERAND(node_index)
+    //SET_OPERAND(host_char)
+    //SET_OPERAND(host_uchar)
+    //SET_OPERAND(host_short)
+    //SET_OPERAND(host_ushort)
+    SET_OPERAND(host_int)
+    SET_OPERAND(host_uint)
+    SET_OPERAND(host_long)
+    SET_OPERAND(host_ulong)
+    //SET_OPERAND(host_float)
+    SET_OPERAND(host_double)
+    SET_OPERAND(scalar_double)
+    SET_OPERAND(vector_double)
+    SET_OPERAND(matrix_row_double)
+    SET_OPERAND(matrix_col_double)
     .add_property("vcl_statement_node",
 	 bp::make_function(&statement_node_wrapper::get_vcl_statement_node,
 			   bp::return_value_policy<bp::return_by_value>()))
     ;
 
-#undef SET_LHS
-#undef SET_RHS
-#undef SET_LHS_RHS
+#undef SET_OPERAND
 
   bp::class_<statement_wrapper>("statement")
     .add_property("size", &statement_wrapper::size)

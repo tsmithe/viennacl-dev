@@ -44,43 +44,68 @@ Leaf instances are the data interface for the expression tree
 * Provide convenience functions for arithmetic operations:
   + __add__, 
 
+
+It needs to be possible to register type deductions at runtime.
++ result type given n-ary node
++ vcl_node.set_rhs_*/set_lhs_* function calls
+
+We can abstract from UnaryNode and BinaryNode to n-ary Node, which
+represents not lhs and rhs, but n operands in Node.operands (a list):
+Node.operands[0] = lhs; Node.operands[1] = rhs, etc
 """
+
+class Operand:
+    def __init__(self, node, content):
+        self.content = content
+        if isinstance(content, Leaf):
+            self.vcl_content = content.vcl_leaf
+        if isinstance(content, Node):
+            self.vcl_content = content.vcl_node
+        self.node = node
+
+    @property
+    def set_vcl_operand(self):
+        if isinstance(self.content, Node):
+            return self.node.vcl_node.set_operand_to_node_index
+        elif isinstance(self.content, Vector):
+            return self.node.vcl_node.set_operand_to_vector_double
 
 class Node:
     """
+    Node base class -- includes shared logic for construction/execution
     """
 
-    def execute(self):
-        pass
-
-
-class UnaryNode(Node):
-    pass
-
-
-class BinaryNode(Node):
-    """
-    BinaryNode base class -- includes shared logic for construction/execution
-    """
-
-    def __init__(self, _lhs, _rhs):
+    def __init__(self, *args):
+        if len(args) == 1:
+            self.operation_node_type_family = _viennacl.operation_node_type_family.OPERATION_UNARY_TYPE_FAMILY
+        elif len(args) == 2:
+            self.operation_node_type_family = _viennacl.operation_node_type_family.OPERATION_BINARY_TYPE_FAMILY
+        else:
+            raise TypeError("Only unary or binary nodes support currently")
         self.statement_node_type_family = _viennacl.statement_node_type_family.COMPOSITE_OPERATION_FAMILY
         self.statement_node_type = _viennacl.statement_node_type.COMPOSITE_OPERATION_TYPE
-        self.operation_node_type_family = _viennacl.operation_node_type_family.OPERATION_BINARY_TYPE_FAMILY
-        self.lhs = _lhs
-        self.rhs = _rhs
+
+        self.operands = []
+        for opand in args:
+            self.operands.append(Operand(self, opand))
+
         self._init_node()
 
     def _vcl_node_factory(self):
         self.vcl_node = _viennacl.statement_node(
             self.operation_node_type_family,
             self.operation_node_type,
-            self.lhs.statement_node_type_family,
-            self.lhs.statement_node_type,
-            self.rhs.statement_node_type_family,
-            self.rhs.statement_node_type)
+            self.operands[0].content.statement_node_type_family,
+            self.operands[0].content.statement_node_type,
+            self.operands[1].content.statement_node_type_family,
+            self.operands[1].content.statement_node_type)
 
-class Add(BinaryNode):
+    def as_ndarray(self):
+        s = Statement(self)
+        return s.execute().as_ndarray()
+
+
+class Add(Node):
     """
     Derived node class for addition
     """
@@ -89,8 +114,11 @@ class Add(BinaryNode):
         self.operation_node_type = _viennacl.operation_node_type.OPERATION_BINARY_ADD_TYPE
         self._vcl_node_factory()
 
+    def __add__(self, rhs):
+        return Add(self, rhs)
 
-class Assign(BinaryNode):
+
+class Assign(Node):
     """
     Derived node class for assignment
     """
@@ -109,57 +137,64 @@ class Leaf:
         pass
 
     def as_ndarray(self):
-        pass
+        return self.vcl_leaf.as_ndarray()
 
 
 class Vector(Leaf):
-    def __init__(self):
+    def __init__(self, *args):
         """
-        Initialise a vcl vector -- classmethods (factories) for different types
+        Initialise the vcl_leaf..
         """
         self.statement_node_type_family = _viennacl.statement_node_type_family.VECTOR_TYPE_FAMILY
-        self.statement_node_type = _viennacl.VECTOR_DOUBLE_TYPE
-        self.vcl_leaf = _viennacl.vector(10, 0.1)
-
-
-    @classmethod
-    def scalar_vector(cls):
-        """
+        self.statement_node_type = _viennacl.statement_node_type.VECTOR_DOUBLE_TYPE
         
-        """
-        pass
+        if len(args) == 0:
+            self.vcl_leaf = _viennacl.vector()
+        elif len(args) == 1:
+            if isinstance(args[0], int):
+                self.vcl_leaf = _viennacl.vector(args[0])
+            elif isinstance(args[0], Vector):
+                self.vcl_leaf = _viennacl.vector(args[0].vcl_leaf)
+            elif isinstance(args[0], numpy.ndarray):
+                self.vcl_leaf = _viennacl.vector(args[0])
+            elif isinstance(args[0], list):
+                self.vcl_leaf = _viennacl.vector(args[0])
+            else:
+                raise TypeError("Vector cannot be constructed from %s instance" % type(args[0]))
+        elif len(args) == 2:
+            if isinstance(args[0], int) and isinstance(args[1], float):
+                self.vcl_leaf = _viennacl.vector(args[0], args[1])
+            else:
+                raise TypeError("Vector cannot be constructed from instances of %s and %s" % (type(args[0]), type(args[1])))
+        else:
+            raise TypeError("Vector cannot be constructed in this way")
 
+        self.size = self.vcl_leaf.size
+        self.internal_size = self.vcl_leaf.internal_size
 
-def get_unary_node_result_type(node):
-    pass
-
-
-def get_binary_node_result_type(node):
-    if isinstance(node, Add):
-        if isinstance(Add.lhs, Vector) and isinstance(Add.rhs, Vector):
-            return Vector
+    def __add__(self, rhs):
+        return Add(self, rhs)
 
 
 def get_result_type(node):
     """
     """
-    if not isinstance(node, Node):
-        raise RuntimeError("Only Node instances have result types!")
+    if isinstance(node, Leaf):
+        return type(node)
 
-    if isinstance(node, UnaryNode):
-        return get_unary_node_result_type(node)
+    if isinstance(node, Statement):
+        return type(node.result)
 
-    if isinstance(node, BinaryNode):
-        return get_binary_node_result_type(node)
+    if isinstance(node, Add):
+        if (get_result_type(node.operands[0].content) == Vector) and (get_result_type(node.operands[1].content) == Vector):
+            return Vector
 
+    raise RuntimeError("Only Node, Leaf and Statement instances have result types!")
 
 class Statement:
     def __init__(self, node):
         """
         Take an expression tree to a statement
-        
-        
-
         """
         if not isinstance(node, Node):
             raise RuntimeError("Statement must be initialised on a Node")
@@ -167,44 +202,39 @@ class Statement:
         self.statement = []
         next_node = []
 
-        if not isinstance(node, Assign):
-            self.result = get_result_type(node)()
-            top = Assign(result, node)
-            next_node.append(top)
+        if isinstance(node, Assign):
+            self.result = node.operands[0]
         else:
-            self.result = node.lhs
+            self.result = get_result_type(node)(10)
+            top = Assign(self.result, node)
+            next_node.append(top)
 
         next_node.append(node)
         
         for n in next_node:
             self.statement.append(n)
-            if isinstance(n, UnaryNode):
-                pass                          
-            elif isinstance(n, BinaryNode):
-                # then check lhs and rhs
-                if isinstance(n.lhs, Node):
-                    next_node.append(n.lhs)
-                if isinstance(n.rhs, Node):
-                    next_node.append(n.rhs)
+            for operand in n.operands:
+                if isinstance(operand.content, Node):
+                    next_node.append(operand.content)
 
         self.vcl_statement = _viennacl.statement()
 
         for n in self.statement:
-            if isinstance(n, UnaryNode):
-                pass
-            elif isinstance(n, BinaryNode):
-                if isinstance(n.lhs, Node): # n.lhs is in statement
-                    n.vcl_node.set_lhs_node_index(statement.index(n.lhs))
-                elif isinstance(n.lhs, Vector): # n.lhs is a Vector reference
-                    n.vcl_node.set_lhs_vector_double(n.lhs.vcl_leaf)
-
-                if isinstance(n.rhs, Node): # n.rhs is in statement
-                    n.vcl_node.set_rhs_node_index(statement.index(n.rhs))
-                elif isinstance(n.rhs, Vector): # n.rhs is a Vector reference
-                    n.vcl_node.set_rhs_vector_double(n.rhs.vcl_leaf)
+            #print("!!!!!!", n)
+            op_num = 0
+            for operand in n.operands:
+                #print("***********", op_num)
+                #print(operand.content)
+                #print(operand.vcl_content)
+                #print(operand.set_vcl_operand)
+                if isinstance(operand.content, Node):
+                    #print(self.statement.index(operand.content))
+                    operand.set_vcl_operand(op_num, self.statement.index(operand.content))
+                else:
+                    operand.set_vcl_operand(op_num, operand.vcl_content)
+                op_num += 1
             
             self.vcl_statement.insert_at_end(n.vcl_node)
-
 
     def execute(self):
         """
