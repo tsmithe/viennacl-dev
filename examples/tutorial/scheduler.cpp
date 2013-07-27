@@ -31,6 +31,7 @@
 #include "viennacl/matrix.hpp"
 
 #include "viennacl/scheduler/execute.hpp"
+#include "viennacl/scheduler/io.hpp"
 
 int main()
 {
@@ -97,7 +98,7 @@ int main()
 
   // OP
   expression_nodes[1].op_family        = viennacl::scheduler::OPERATION_BINARY_TYPE_FAMILY; // this is a binary operation, so both LHS and RHS operands are important
-  expression_nodes[1].op_type          = viennacl::scheduler::OPERATION_BINARY_ADD_TYPE;    // assignment operation: '='
+  expression_nodes[1].op_type          = viennacl::scheduler::OPERATION_BINARY_ADD_TYPE;    // addition operation: '+'
 
   // RHS
   expression_nodes[1].rhs_type_family  = viennacl::scheduler::VECTOR_TYPE_FAMILY;  // family of vectors
@@ -107,6 +108,9 @@ int main()
 
   // create the full statement (aka. single line of code such as vcl_vec3 = vcl_vec1 + vcl_vec2):
   viennacl::scheduler::statement vec_addition(expression_nodes);
+
+  // print it
+  std::cout << vec_addition << std::endl;
 
   // run it
   viennacl::scheduler::execute(vec_addition);
