@@ -801,8 +801,8 @@ public:
 #define CONCAT(...) __VA_ARGS__
 
 #define SET_OPERAND(T, I)					   \
-  void set_operand_to_ ## I (uint8_t operand, T I) {		   \
-    switch (operand) {						   \
+  void set_operand_to_ ## I (int o, T I) {			   \
+    switch (o) {						   \
     case 0:							   \
       vcl_node.lhs.I  = I;					   \
       break;							   \
