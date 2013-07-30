@@ -53,7 +53,7 @@ namespace viennacl
        */
       inline cl_mem memory_create(viennacl::ocl::context const & ctx, std::size_t size_in_bytes, const void * host_ptr = NULL)
       {
-        //std::cout << "Creating buffer (" << size_in_bytes << " bytes) host buffer " << host_ptr << std::endl;
+        //std::cout << "Creating buffer (" << size_in_bytes << " bytes) host buffer " << host_ptr << " in context " << &ctx << std::endl;
         return ctx.create_memory_without_smart_handle(CL_MEM_READ_WRITE, size_in_bytes, const_cast<void *>(host_ptr));
       }
 
@@ -95,13 +95,14 @@ namespace viennacl
       inline void memory_write(viennacl::ocl::handle<cl_mem> & dst_buffer,
                         std::size_t dst_offset,
                         std::size_t bytes_to_copy,
-                        const void * ptr)
+                        const void * ptr,
+                        bool async = false)
       {
         //std::cout << "Writing data (" << bytes_to_copy << " bytes, offset " << dst_offset << ") to OpenCL buffer" << std::endl;
         viennacl::ocl::context & memory_context = const_cast<viennacl::ocl::context &>(dst_buffer.context());
         cl_int err = clEnqueueWriteBuffer(memory_context.get_queue().handle().get(),
                                           dst_buffer.get(),
-                                          CL_TRUE,             //blocking
+                                          async ? CL_FALSE : CL_TRUE,             //blocking
                                           dst_offset,
                                           bytes_to_copy,
                                           ptr,
@@ -120,13 +121,14 @@ namespace viennacl
       inline void memory_read(viennacl::ocl::handle<cl_mem> const & src_buffer,
                        std::size_t src_offset,
                        std::size_t bytes_to_copy,
-                       void * ptr)
+                       void * ptr,
+                       bool async = false)
       {
         //std::cout << "Reading data (" << bytes_to_copy << " bytes, offset " << src_offset << ") from OpenCL buffer " << src_buffer.get() << " to " << ptr << std::endl;
         viennacl::ocl::context & memory_context = const_cast<viennacl::ocl::context &>(src_buffer.context());
         cl_int err =  clEnqueueReadBuffer(memory_context.get_queue().handle().get(),
                                           src_buffer.get(),
-                                          CL_TRUE,             //blocking
+                                          async ? CL_FALSE : CL_TRUE,             //blocking
                                           src_offset,
                                           bytes_to_copy,
                                           ptr,

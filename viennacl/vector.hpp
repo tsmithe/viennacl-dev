@@ -33,85 +33,104 @@
 #include "viennacl/linalg/vector_operations.hpp"
 #include "viennacl/meta/result_of.hpp"
 #include "viennacl/rand/utils.hpp"
+#include "viennacl/context.hpp"
+#include "viennacl/traits/handle.hpp"
 
 namespace viennacl
 {
-  //
-  // Initializer types
-  //
-  /** @brief Represents a vector consisting of 1 at a given index and zeros otherwise. To be used as an initializer for viennacl::vector, vector_range, or vector_slize only. */
-  template <typename SCALARTYPE>
-  class unit_vector
-  {
-    public:
-      typedef vcl_size_t        size_type;
 
-      unit_vector(size_type s, size_type ind) : size_(s), index_(ind)
+  template<typename SCALARTYPE>
+  class symbolic_vector_base
+  {
+    protected:
+      typedef vcl_size_t        size_type;
+      symbolic_vector_base(size_type s, std::size_t i, std::pair<SCALARTYPE, bool> v, viennacl::context ctx) : size_(s), index_(std::make_pair(true,i)), value_(v), ctx_(ctx){ }
+      symbolic_vector_base(size_type s, std::pair<SCALARTYPE, bool> v, viennacl::context ctx) : size_(s), index_(std::make_pair(false,0)), value_(v), ctx_(ctx){ }
+
+    public:
+      typedef SCALARTYPE const & const_reference;
+
+      viennacl::context context() const { return ctx_; }
+
+      size_type size() const { return size_; }
+
+      SCALARTYPE  value() const { return value_.first; }
+
+      bool is_value_static() const { return value_.second; }
+
+      std::size_t index() const { return index_.second; }
+
+      bool has_index() const { return index_.first; }
+
+      SCALARTYPE operator()(size_type i) const {
+        if(index_.first)
+          return (i==index_.second)?value_.first:0;
+        return value_.first;
+      }
+
+      SCALARTYPE operator[](size_type i) const {
+        if(index_.first)
+          return (i==index_.second)?value_.first:0;
+        return
+            value_.first;
+      }
+
+    protected:
+      size_type size_;
+      std::pair<bool, std::size_t> index_;
+      std::pair<SCALARTYPE, bool> value_;
+      viennacl::context ctx_;
+  };
+
+  /** @brief Represents a vector consisting of 1 at a given index and zeros otherwise.*/
+  template <typename SCALARTYPE>
+  class unit_vector : public symbolic_vector_base<SCALARTYPE>
+  {
+      typedef symbolic_vector_base<SCALARTYPE> base_type;
+    public:
+      typedef typename base_type::size_type size_type;
+      unit_vector(size_type s, size_type ind, viennacl::context ctx = viennacl::context()) : base_type(s, ind, std::make_pair(1,true), ctx)
       {
         assert( (ind < s) && bool("Provided index out of range!") );
       }
-
-      size_type size() const { return size_; }
-      size_type index() const { return index_; }
-
-    private:
-      size_type size_;
-      size_type index_;
   };
 
 
-  /** @brief Represents a vector consisting of zeros only. To be used as an initializer for viennacl::vector, vector_range, or vector_slize only. */
+  /** @brief Represents a vector consisting of zeros only. */
   template <typename SCALARTYPE>
-  class zero_vector
+  class zero_vector : public symbolic_vector_base<SCALARTYPE>
   {
+      typedef symbolic_vector_base<SCALARTYPE> base_type;
     public:
-      typedef vcl_size_t        size_type;
+      typedef typename base_type::size_type size_type;
       typedef SCALARTYPE        const_reference;
+      zero_vector(size_type s, viennacl::context ctx = viennacl::context()) : base_type(s, std::make_pair(0,true), ctx) {}
+  };
 
-      zero_vector(size_type s) : size_(s) {}
-
-      size_type size() const { return size_; }
-      const_reference operator()(size_type /*i*/) const { return 0; }
-      const_reference operator[](size_type /*i*/) const { return 0; }
-
-    private:
-      size_type size_;
+  /** @brief Represents a vector consisting of ones only. */
+  template <typename SCALARTYPE>
+  class one_vector : public symbolic_vector_base<SCALARTYPE>
+  {
+      typedef symbolic_vector_base<SCALARTYPE> base_type;
+    public:
+      typedef typename base_type::size_type size_type;
+      typedef SCALARTYPE        const_reference;
+      one_vector(size_type s, viennacl::context ctx = viennacl::context()) : base_type(s, std::make_pair(1,true), ctx) {}
   };
 
 
   /** @brief Represents a vector consisting of scalars 's' only, i.e. v[i] = s for all i. To be used as an initializer for viennacl::vector, vector_range, or vector_slize only. */
   template <typename SCALARTYPE>
-  class scalar_vector
+  class scalar_vector : public symbolic_vector_base<SCALARTYPE>
   {
+      typedef symbolic_vector_base<SCALARTYPE> base_type;
     public:
-      typedef vcl_size_t         size_type;
+      typedef typename base_type::size_type size_type;
       typedef SCALARTYPE const & const_reference;
 
-      scalar_vector(size_type s, SCALARTYPE val) : size_(s), value_(val)
-#ifdef VIENNACL_WITH_OPENCL
-                                                  , ctx_(&viennacl::ocl::current_context())
-#endif
-      {}
-
-#ifdef VIENNACL_WITH_OPENCL
-      scalar_vector(size_type s, SCALARTYPE val, viennacl::ocl::context const & ctx) : size_(s), value_(val), ctx_(&ctx) {}
-#endif
-
-      size_type size() const { return size_; }
-      const_reference operator()(size_type /*i*/) const { return value_; }
-      const_reference operator[](size_type /*i*/) const { return value_; }
-
-#ifdef VIENNACL_WITH_OPENCL
-      viennacl::ocl::context const & context() const { return *ctx_; }
-#endif
-
-    private:
-      size_type size_;
-      SCALARTYPE value_;
-#ifdef VIENNACL_WITH_OPENCL
-      viennacl::ocl::context const * ctx_;
-#endif
+      scalar_vector(size_type s, SCALARTYPE val, viennacl::context ctx = viennacl::context()) : base_type(s, std::make_pair(val,false), ctx) {}
   };
+
 
 #ifdef VIENNACL_WITH_OPENCL
   template<class SCALARTYPE, class DISTRIBUTION>
@@ -368,60 +387,35 @@ namespace viennacl
                            size_type vec_size, size_type vec_start, difference_type vec_stride) : size_(vec_size), start_(vec_start), stride_(vec_stride), elements_(h) {}
 
       /** @brief Creates a vector and allocates the necessary memory */
-      explicit vector_base(size_type vec_size) : size_(vec_size), start_(0), stride_(1)
+      explicit vector_base(size_type vec_size, viennacl::context ctx = viennacl::context()) : size_(vec_size), start_(0), stride_(1)
       {
         if (size_ > 0)
         {
           std::vector<SCALARTYPE> temp(internal_size());
-          viennacl::backend::memory_create(elements_, sizeof(SCALARTYPE)*internal_size(), &(temp[0]));
+          viennacl::backend::memory_create(elements_, sizeof(SCALARTYPE)*internal_size(), ctx, &(temp[0]));
           pad();
         }
       }
 
-#ifdef VIENNACL_WITH_OPENCL
-      /** @brief Creates a vector in the provided OpenCL context and allocates the necessary memory */
-      explicit vector_base(size_type vec_size, viennacl::ocl::context const & ctx) : size_(vec_size), start_(0), stride_(1)
+
+      /** @brief Creates the vector from the supplied random vector. */
+      /*template<class DISTRIBUTION>
+      vector(rand::random_vector_t<SCALARTYPE, DISTRIBUTION> v) : size_(v.size)
       {
-        if (size_ > 0)
+        if(size_ > 0)
         {
-          std::vector<SCALARTYPE> temp(internal_size());
-          viennacl::backend::memory_create(elements_, sizeof(SCALARTYPE)*internal_size(), &(temp[0]), static_cast<const void *>(&ctx));
-          pad();
+          viennacl::backend::memory_create(elements_, sizeof(SCALARTYPE)*internal_size());
+          rand::buffer_dumper<SCALARTYPE, DISTRIBUTION>::dump(elements_,v.distribution,0,size_);
         }
-      }
-#endif
-
-    /** @brief Creates the vector from the supplied random vector. */
-    /*template<class DISTRIBUTION>
-    vector(rand::random_vector_t<SCALARTYPE, DISTRIBUTION> v) : size_(v.size)
-    {
-      if(size_ > 0)
-      {
-        viennacl::backend::memory_create(elements_, sizeof(SCALARTYPE)*internal_size());
-        rand::buffer_dumper<SCALARTYPE, DISTRIBUTION>::dump(elements_,v.distribution,0,size_);
-      }
-    } */
-
-      /** @brief Creates a buffer of size 'vec_size' in the specified memory domain an uses this as the active domain */
-      explicit vector_base(size_type vec_size, viennacl::memory_types mem_type) : size_(vec_size), start_(0), stride_(1)
-      {
-        elements_.switch_active_handle_id(mem_type);
-        if (size_ > 0)
-        {
-          std::vector<SCALARTYPE> temp(internal_size());
-          viennacl::backend::memory_create(elements_, sizeof(SCALARTYPE)*internal_size(), &(temp[0]));
-          pad();
-        }
-      }
+      } */
 
       template <typename LHS, typename RHS, typename OP>
       explicit vector_base(vector_expression<const LHS, const RHS, OP> const & proxy) : size_(viennacl::traits::size(proxy)), start_(0), stride_(1)
       {
-        elements_.switch_active_handle_id(viennacl::traits::active_handle_id(proxy));
         if (size_ > 0)
         {
           std::vector<SCALARTYPE> temp(internal_size());
-          viennacl::backend::memory_create(elements_, sizeof(SCALARTYPE)*internal_size(), &(temp[0]));
+          viennacl::backend::memory_create(elements_, sizeof(SCALARTYPE)*internal_size(), viennacl::traits::context(proxy), &(temp[0]));
           pad();
         }
         self_type::operator=(proxy);
@@ -446,7 +440,7 @@ namespace viennacl
           {
             size_ = vec.size();
             elements_.switch_active_handle_id(vec.handle().get_active_handle_id());
-            viennacl::backend::memory_create(elements_, sizeof(SCALARTYPE)*internal_size());
+            viennacl::backend::memory_create(elements_, sizeof(SCALARTYPE)*internal_size(), viennacl::traits::context(vec));
           }
 
           viennacl::linalg::av(*this,
@@ -471,7 +465,7 @@ namespace viennacl
         if (size() == 0)
         {
           size_ = viennacl::traits::size(proxy);
-          viennacl::backend::memory_create(elements_, sizeof(SCALARTYPE)*internal_size());
+          viennacl::backend::memory_create(elements_, sizeof(SCALARTYPE)*internal_size(), viennacl::traits::context(proxy));
           pad();
         }
 
@@ -493,7 +487,7 @@ namespace viennacl
           size_ = v1.size();
           if (size_ > 0)
           {
-            viennacl::backend::memory_create(elements_, sizeof(SCALARTYPE)*internal_size());
+            viennacl::backend::memory_create(elements_, sizeof(SCALARTYPE)*internal_size(), viennacl::traits::context(v1));
             pad();
           }
         }
@@ -514,7 +508,7 @@ namespace viennacl
         {
           size_ = v.size();
           if (size_ > 0)
-            viennacl::backend::memory_create(elements_, sizeof(SCALARTYPE)*internal_size());
+            viennacl::backend::memory_create(elements_, sizeof(SCALARTYPE)*internal_size(), v.context());
         }
 
         if (size_ > 0)
@@ -536,7 +530,7 @@ namespace viennacl
         {
           size_ = v.size();
           if (size_ > 0)
-            viennacl::backend::memory_create(elements_, sizeof(SCALARTYPE)*internal_size());
+            viennacl::backend::memory_create(elements_, sizeof(SCALARTYPE)*internal_size(), v.context());
         }
 
         if (size_ > 0)
@@ -555,7 +549,7 @@ namespace viennacl
         {
           size_ = v.size();
           if (size_ > 0)
-            viennacl::backend::memory_create(elements_, sizeof(SCALARTYPE)*internal_size());
+            viennacl::backend::memory_create(elements_, sizeof(SCALARTYPE)*internal_size(), v.context());
         }
 
         if (size_ > 0)
@@ -860,9 +854,9 @@ namespace viennacl
         }
       }
 
-      void switch_memory_domain(viennacl::memory_types new_domain)
+      void switch_memory_context(viennacl::context new_ctx)
       {
-        viennacl::backend::switch_memory_domain<SCALARTYPE>(elements_, new_domain);
+        viennacl::backend::switch_memory_context<SCALARTYPE>(elements_, new_ctx);
       }
 
       //TODO: Think about implementing the following public member functions
@@ -877,25 +871,23 @@ namespace viennacl
       */
       void resize(size_type new_size, bool preserve = true)
       {
-        resize_impl(new_size, preserve, NULL);
+        resize_impl(new_size, viennacl::traits::context(*this), preserve);
       }
 
-#ifdef VIENNACL_WITH_OPENCL
       /** @brief Resizes the allocated memory for the vector. Convenience function for setting an OpenCL context in case reallocation is needed
       *
       *  @param new_size  The new size of the vector
       *  @param ctx       The context within which the new memory should be allocated
       *  @param preserve  If true, old entries of the vector are preserved, otherwise eventually discarded.
       */
-      void resize(size_type new_size, viennacl::ocl::context const & ctx, bool preserve = true)
+      void resize(size_type new_size, viennacl::context ctx, bool preserve = true)
       {
-        resize_impl(new_size, preserve, static_cast<const void *>(&ctx));
+        resize_impl(new_size, ctx, preserve);
       }
-#endif
 
     private:
 
-      void resize_impl(size_type new_size, bool preserve = true, const void * locality_info = NULL)
+      void resize_impl(size_type new_size, viennacl::context ctx, bool preserve = true)
       {
         assert(new_size > 0 && bool("Positive size required when resizing vector!"));
 
@@ -911,7 +903,7 @@ namespace viennacl
 
           if (new_internal_size != internal_size())
           {
-            viennacl::backend::memory_create(elements_, sizeof(SCALARTYPE)*new_internal_size, NULL, locality_info);
+            viennacl::backend::memory_create(elements_, sizeof(SCALARTYPE)*new_internal_size, ctx, NULL);
           }
 
           fast_copy(temp, *this);
@@ -956,6 +948,8 @@ namespace viennacl
     */
     explicit vector(size_type vec_size) : base_type(vec_size) {}
 
+    explicit vector(size_type vec_size, viennacl::context ctx) : base_type(vec_size, ctx) {}
+
 #ifdef VIENNACL_WITH_OPENCL
     /** @brief Create a vector from existing OpenCL memory
     *
@@ -985,18 +979,15 @@ namespace viennacl
 #endif
 
     template <typename LHS, typename RHS, typename OP>
-    vector(vector_expression<const LHS, const RHS, OP> const & proxy) : base_type(viennacl::traits::size(proxy), viennacl::traits::active_handle_id(proxy))
-    {
-      self_type::operator=(proxy);
-    }
+    vector(vector_expression<const LHS, const RHS, OP> const & proxy) : base_type(proxy) {}
 
-    vector(const base_type & v) : base_type(v.size(), v.handle().get_active_handle_id())
+    vector(const base_type & v) : base_type(v.size(), viennacl::traits::context(v))
     {
       if (v.size() > 0)
         base_type::operator=(v);
     }
 
-    vector(const self_type & v) : base_type(v.size(), v.handle().get_active_handle_id())
+    vector(const self_type & v) : base_type(v.size(), viennacl::traits::context(v))
     {
       if (v.size() > 0)
         base_type::operator=(v);
@@ -1010,18 +1001,14 @@ namespace viennacl
     }
 
     /** @brief Creates the vector from the supplied zero vector. */
-    vector(zero_vector<SCALARTYPE> const & v) : base_type(v.size())
+    vector(zero_vector<SCALARTYPE> const & v) : base_type(v.size(), v.context())
     {
       if (v.size() > 0)
         viennacl::linalg::vector_assign(*this, SCALARTYPE(0.0));
     }
 
     /** @brief Creates the vector from the supplied scalar vector. */
-    vector(scalar_vector<SCALARTYPE> const & v) : base_type(v.size()
-#ifdef VIENNACL_WITH_OPENCL
-                                                            , v.context()
-#endif
-                                                            )
+    vector(scalar_vector<SCALARTYPE> const & v) : base_type(v.size(), v.context())
     {
       if (v.size() > 0)
         viennacl::linalg::vector_assign(*this, v[0]);
@@ -1042,12 +1029,10 @@ namespace viennacl
       base_type::resize(new_size, preserve);
     }
 
-#ifdef VIENNACL_WITH_OPENCL
-    void resize(size_type new_size, viennacl::ocl::context const & ctx, bool preserve = true)
+    void resize(size_type new_size, viennacl::context ctx, bool preserve = true)
     {
       base_type::resize(new_size, ctx, preserve);
     }
-#endif
 
     /** @brief Swaps the handles of two vectors by swapping the OpenCL handles only, no data copy
     */
@@ -1057,9 +1042,9 @@ namespace viennacl
       return *this;
     }
 
-    void switch_memory_domain(viennacl::memory_types new_domain)
+    void switch_memory_context(viennacl::context new_ctx)
     {
-      base_type::switch_memory_domain(new_domain);
+      base_type::switch_memory_context(new_ctx);
     }
 
   }; //vector
@@ -1256,12 +1241,54 @@ namespace viennacl
   /** @brief Transfer from a gpu vector to a cpu vector. Convenience wrapper for viennacl::linalg::fast_copy(gpu_vec.begin(), gpu_vec.end(), cpu_vec.begin());
   *
   * @param gpu_vec    A gpu vector.
-  * @param cpu_vec    The cpu vector. Type requirements: Output iterator can be obtained via member function .begin()
+  * @param cpu_vec    The cpu vector. Type requirements: Output iterator pointing to entries linear in memory can be obtained via member function .begin()
   */
   template <typename NumericT, typename CPUVECTOR>
   void fast_copy(vector_base<NumericT> const & gpu_vec, CPUVECTOR & cpu_vec )
   {
     viennacl::fast_copy(gpu_vec.begin(), gpu_vec.end(), cpu_vec.begin());
+  }
+
+
+  /** @brief Asynchronous version of fast_copy(), copying data from device to host. The host iterator cpu_begin needs to reside in a linear piece of memory, such as e.g. for std::vector.
+  *
+  * This method allows for overlapping data transfer with host computation and returns immediately if the gpu vector has a unit-stride.
+  * In order to wait for the transfer to complete, use viennacl::backend::finish().
+  * Note that data pointed to by cpu_begin must not be modified prior to completion of the transfer.
+  *
+  * @param gpu_begin  GPU iterator pointing to the beginning of the gpu vector (STL-like)
+  * @param gpu_end    GPU iterator pointing to the end of the vector (STL-like)
+  * @param cpu_begin  Output iterator for the cpu vector. The cpu vector must be at least as long as the gpu vector!
+  */
+  template <typename SCALARTYPE, unsigned int ALIGNMENT, typename CPU_ITERATOR>
+  void async_copy(const const_vector_iterator<SCALARTYPE, ALIGNMENT> & gpu_begin,
+                  const const_vector_iterator<SCALARTYPE, ALIGNMENT> & gpu_end,
+                  CPU_ITERATOR cpu_begin )
+  {
+    if (gpu_begin != gpu_end)
+    {
+      if (gpu_begin.stride() == 1)
+      {
+        viennacl::backend::memory_read(gpu_begin.handle(),
+                                       sizeof(SCALARTYPE)*gpu_begin.offset(),
+                                       sizeof(SCALARTYPE)*gpu_begin.stride() * (gpu_end - gpu_begin),
+                                       &(*cpu_begin),
+                                       true);
+      }
+      else // no async copy possible, so fall-back to fast_copy
+        fast_copy(gpu_begin, gpu_end, cpu_begin);
+    }
+  }
+
+  /** @brief Transfer from a gpu vector to a cpu vector. Convenience wrapper for viennacl::linalg::fast_copy(gpu_vec.begin(), gpu_vec.end(), cpu_vec.begin());
+  *
+  * @param gpu_vec    A gpu vector.
+  * @param cpu_vec    The cpu vector. Type requirements: Output iterator pointing to entries linear in memory can be obtained via member function .begin()
+  */
+  template <typename NumericT, typename CPUVECTOR>
+  void async_copy(vector_base<NumericT> const & gpu_vec, CPUVECTOR & cpu_vec )
+  {
+    viennacl::async_copy(gpu_vec.begin(), gpu_vec.end(), cpu_vec.begin());
   }
 
 
@@ -1387,6 +1414,47 @@ namespace viennacl
   void fast_copy(const CPUVECTOR & cpu_vec, vector_base<NumericT> & gpu_vec)
   {
     viennacl::fast_copy(cpu_vec.begin(), cpu_vec.end(), gpu_vec.begin());
+  }
+
+  /** @brief Asynchronous version of fast_copy(), copying data from host to device. The host iterator cpu_begin needs to reside in a linear piece of memory, such as e.g. for std::vector.
+  *
+  * This method allows for overlapping data transfer with host computation and returns immediately if the gpu vector has a unit-stride.
+  * In order to wait for the transfer to complete, use viennacl::backend::finish().
+  * Note that data pointed to by cpu_begin must not be modified prior to completion of the transfer.
+  *
+  * @param cpu_begin  CPU iterator pointing to the beginning of the cpu vector (STL-like)
+  * @param cpu_end    CPU iterator pointing to the end of the vector (STL-like)
+  * @param gpu_begin  Output iterator for the gpu vector. The gpu iterator must be incrementable (cpu_end - cpu_begin) times, otherwise the result is undefined.
+  */
+  template <typename CPU_ITERATOR, typename SCALARTYPE, unsigned int ALIGNMENT>
+  void async_copy(CPU_ITERATOR const & cpu_begin,
+                  CPU_ITERATOR const & cpu_end,
+                  vector_iterator<SCALARTYPE, ALIGNMENT> gpu_begin)
+  {
+    if (cpu_end - cpu_begin > 0)
+    {
+      if (gpu_begin.stride() == 1)
+      {
+        viennacl::backend::memory_write(gpu_begin.handle(),
+                                        sizeof(SCALARTYPE)*gpu_begin.offset(),
+                                        sizeof(SCALARTYPE)*gpu_begin.stride() * (cpu_end - cpu_begin), &(*cpu_begin),
+                                        true);
+      }
+      else // fallback to blocking copy. There's nothing we can do to prevent this
+        fast_copy(cpu_begin, cpu_end, gpu_begin);
+    }
+  }
+
+
+  /** @brief Transfer from a cpu vector to a gpu vector. Convenience wrapper for viennacl::linalg::fast_copy(cpu_vec.begin(), cpu_vec.end(), gpu_vec.begin());
+  *
+  * @param cpu_vec    A cpu vector. Type requirements: Iterator can be obtained via member function .begin() and .end()
+  * @param gpu_vec    The gpu vector.
+  */
+  template <typename CPUVECTOR, typename NumericT>
+  void async_copy(const CPUVECTOR & cpu_vec, vector_base<NumericT> & gpu_vec)
+  {
+    viennacl::async_copy(cpu_vec.begin(), cpu_vec.end(), gpu_vec.begin());
   }
 
   //from cpu to gpu. Safe assumption: cpu_vector does not necessarily occupy a linear memory segment, but is not larger than the allocated memory on the GPU
@@ -1519,29 +1587,29 @@ namespace viennacl
   * @param val  The vector that should be printed
   */
   template <typename T>
-  std::ostream & operator<<(std::ostream & s, vector_base<T> const & val)
+  std::ostream & operator<<(std::ostream & os, vector_base<T> const & val)
   {
     std::vector<T> tmp(val.size());
     viennacl::copy(val.begin(), val.end(), tmp.begin());
-    std::cout << "[" << val.size() << "](";
+    os << "[" << val.size() << "](";
     for (typename std::vector<T>::size_type i=0; i<val.size(); ++i)
     {
       if (i > 0)
-        s << ",";
-      s << tmp[i];
+        os << ",";
+      os << tmp[i];
     }
-    std::cout << ")";
-    return s;
+    os << ")";
+    return os;
   }
 
   template <typename LHS, typename RHS, typename OP>
-  std::ostream & operator<<(std::ostream & s, vector_expression<LHS, RHS, OP> const & proxy)
+  std::ostream & operator<<(std::ostream & os, vector_expression<LHS, RHS, OP> const & proxy)
 
   {
     typedef typename viennacl::result_of::cpu_value_type<typename LHS::value_type>::type ScalarType;
     viennacl::vector<ScalarType> result = proxy;
-    s << result;
-    return s;
+    os << result;
+    return os;
   }
 
   /** @brief Swaps the contents of two vectors, data is copied

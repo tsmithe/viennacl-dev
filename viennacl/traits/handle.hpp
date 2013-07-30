@@ -57,16 +57,22 @@ namespace viennacl
     inline float  handle(float val)  { return val; }  //for unification purposes when passing CPU-scalars to kernels
     inline double handle(double val) { return val; }  //for unification purposes when passing CPU-scalars to kernels
 
-    template <typename T>
-    viennacl::backend::mem_handle       & handle(viennacl::scalar_expression< const scalar<T>, const scalar<T>, op_flip_sign> & obj)
+    template <typename LHS, typename RHS, typename OP>
+    viennacl::backend::mem_handle       & handle(viennacl::scalar_expression< const LHS, const RHS, OP> & obj)
     {
-      return obj.lhs().handle();
+      return handle(obj.lhs());
     }
 
-    template <typename T>
-    viennacl::backend::mem_handle const & handle(viennacl::scalar_expression< const scalar<T>, const scalar<T>, op_flip_sign> const & obj)
+    template <typename LHS, typename RHS, typename OP>
+    viennacl::backend::mem_handle const & handle(viennacl::matrix_expression<LHS, RHS, OP> const & obj);
+
+    template <typename LHS, typename RHS, typename OP>
+    viennacl::backend::mem_handle const & handle(viennacl::vector_expression<LHS, RHS, OP> const & obj);
+
+    template <typename LHS, typename RHS, typename OP>
+    viennacl::backend::mem_handle const & handle(viennacl::scalar_expression< const LHS, const RHS, OP> const & obj)
     {
-      return obj.lhs().handle();
+      return handle(obj.lhs());
     }
 
     // proxy objects require extra care (at the moment)
@@ -193,6 +199,18 @@ namespace viennacl
     }
 
     /** \cond */
+    template <typename T>
+    viennacl::memory_types active_handle_id(circulant_matrix<T> const & obj) { return OPENCL_MEMORY; }
+
+    template <typename T>
+    viennacl::memory_types active_handle_id(hankel_matrix<T> const & obj) { return OPENCL_MEMORY; }
+
+    template <typename T>
+    viennacl::memory_types active_handle_id(toeplitz_matrix<T> const & obj) { return OPENCL_MEMORY; }
+
+    template <typename T>
+    viennacl::memory_types active_handle_id(vandermonde_matrix<T> const & obj) { return OPENCL_MEMORY; }
+
     template <typename LHS, typename RHS, typename OP>
     viennacl::memory_types active_handle_id(viennacl::vector_expression<LHS, RHS, OP> const & obj);
 
@@ -214,6 +232,32 @@ namespace viennacl
       return active_handle_id(obj.lhs());
     }
     /** \endcond */
+
+    //
+    // Context
+    //
+    /** @brief Returns an ID for the currently active memory domain of an object */
+    template <typename T>
+    viennacl::context context(T const & t)
+    {
+#ifdef VIENNACL_WITH_OPENCL
+      if (traits::active_handle_id(t) == OPENCL_MEMORY)
+        return viennacl::context(traits::opencl_handle(t).context());
+#endif
+
+      return viennacl::context(traits::active_handle_id(t));
+    }
+
+    /** @brief Returns an ID for the currently active memory domain of an object */
+    inline viennacl::context context(viennacl::backend::mem_handle const & h)
+    {
+#ifdef VIENNACL_WITH_OPENCL
+      if (h.get_active_handle_id() == OPENCL_MEMORY)
+        return viennacl::context(h.opencl_handle().context());
+#endif
+
+      return viennacl::context(h.get_active_handle_id());
+    }
 
   } //namespace traits
 } //namespace viennacl

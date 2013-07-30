@@ -31,6 +31,7 @@
 //include basic scalar and vector types of ViennaCL
 #include "viennacl/scalar.hpp"
 #include "viennacl/vector.hpp"
+#include "viennacl/matrix.hpp"
 
 #include "viennacl/ocl/device.hpp"
 #include "viennacl/ocl/platform.hpp"
@@ -47,16 +48,21 @@
 template <typename T>
 void thread_func(std::string * message, std::size_t thread_id) //Note: using references instead of pointers leads to some troubles with boost.thread
 {
-  std::size_t N = 10;
+  std::size_t N = 6;
 
-  viennacl::vector<T> u = viennacl::scalar_vector<T>(N, 1.0 * (thread_id + 1), viennacl::ocl::get_context(thread_id));
-  viennacl::vector<T> v = viennacl::scalar_vector<T>(N, 2.0 * (thread_id + 1), viennacl::ocl::get_context(thread_id));
+  viennacl::context ctx(viennacl::ocl::get_context(thread_id));
+  viennacl::vector<T> u = viennacl::scalar_vector<T>(N, 1.0 * (thread_id + 1), ctx);
+  viennacl::vector<T> v = viennacl::scalar_vector<T>(N, 2.0 * (thread_id + 1), ctx);
+  viennacl::matrix<T> A = viennacl::linalg::outer_prod(u, v);
+  viennacl::vector<T> x(u);
 
   u += v;
   T result = viennacl::linalg::norm_2(u);
 
   std::stringstream ss;
   ss << "Result of thread " << thread_id << " on device " << viennacl::ocl::get_context(thread_id).devices()[0].name() << ": " << result << std::endl;
+  ss << "  A: " << A << std::endl;
+  ss << "  x: " << x << std::endl;
   *message = ss.str();
 }
 

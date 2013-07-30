@@ -439,19 +439,77 @@ namespace viennacl
         * @param rows     Number of rows
         * @param cols     Number of columns
         * @param nonzeros Optional number of nonzeros for memory preallocation
+        * @param ctx      Context in which to create the matrix. Uses the default context if omitted
         */
-        explicit compressed_matrix(std::size_t rows, std::size_t cols, std::size_t nonzeros = 0) : rows_(rows), cols_(cols), nonzeros_(nonzeros)
+        explicit compressed_matrix(std::size_t rows, std::size_t cols, std::size_t nonzeros = 0, viennacl::context ctx = viennacl::context())
+          : rows_(rows), cols_(cols), nonzeros_(nonzeros)
         {
+          row_buffer_.switch_active_handle_id(ctx.memory_type());
+          col_buffer_.switch_active_handle_id(ctx.memory_type());
+            elements_.switch_active_handle_id(ctx.memory_type());
+
+#ifdef VIENNACL_WITH_OPENCL
+          if (ctx.memory_type() == OPENCL_MEMORY)
+          {
+            row_buffer_.opencl_handle().context(ctx.opencl_context());
+            col_buffer_.opencl_handle().context(ctx.opencl_context());
+              elements_.opencl_handle().context(ctx.opencl_context());
+          }
+#endif
           if (rows > 0)
           {
-            viennacl::backend::memory_create(row_buffer_, viennacl::backend::typesafe_host_array<unsigned int>().element_size() * (rows + 1));
+            viennacl::backend::memory_create(row_buffer_, viennacl::backend::typesafe_host_array<unsigned int>().element_size() * (rows + 1), ctx);
           }
           if (nonzeros > 0)
           {
-            viennacl::backend::memory_create(col_buffer_, viennacl::backend::typesafe_host_array<unsigned int>().element_size() * nonzeros);
-            viennacl::backend::memory_create(elements_, sizeof(SCALARTYPE) * nonzeros);
+            viennacl::backend::memory_create(col_buffer_, viennacl::backend::typesafe_host_array<unsigned int>().element_size() * nonzeros, ctx);
+            viennacl::backend::memory_create(elements_, sizeof(SCALARTYPE) * nonzeros, ctx);
           }
         }
+
+        /** @brief Construction of a compressed matrix with the supplied number of rows and columns. If the number of nonzeros is positive, memory is allocated
+        *
+        * @param rows     Number of rows
+        * @param cols     Number of columns
+        * @param ctx      Context in which to create the matrix
+        */
+        explicit compressed_matrix(std::size_t rows, std::size_t cols, viennacl::context ctx)
+          : rows_(rows), cols_(cols), nonzeros_(0)
+        {
+          row_buffer_.switch_active_handle_id(ctx.memory_type());
+          col_buffer_.switch_active_handle_id(ctx.memory_type());
+            elements_.switch_active_handle_id(ctx.memory_type());
+
+#ifdef VIENNACL_WITH_OPENCL
+          if (ctx.memory_type() == OPENCL_MEMORY)
+          {
+            row_buffer_.opencl_handle().context(ctx.opencl_context());
+            col_buffer_.opencl_handle().context(ctx.opencl_context());
+              elements_.opencl_handle().context(ctx.opencl_context());
+          }
+#endif
+          if (rows > 0)
+          {
+            viennacl::backend::memory_create(row_buffer_, viennacl::backend::typesafe_host_array<unsigned int>().element_size() * (rows + 1), ctx);
+          }
+        }
+
+        explicit compressed_matrix(viennacl::context ctx) : rows_(0), cols_(0), nonzeros_(0)
+        {
+          row_buffer_.switch_active_handle_id(ctx.memory_type());
+          col_buffer_.switch_active_handle_id(ctx.memory_type());
+            elements_.switch_active_handle_id(ctx.memory_type());
+
+#ifdef VIENNACL_WITH_OPENCL
+          if (ctx.memory_type() == OPENCL_MEMORY)
+          {
+            row_buffer_.opencl_handle().context(ctx.opencl_context());
+            col_buffer_.opencl_handle().context(ctx.opencl_context());
+              elements_.opencl_handle().context(ctx.opencl_context());
+          }
+#endif
+        }
+
 
 #ifdef VIENNACL_WITH_OPENCL
         explicit compressed_matrix(cl_mem mem_row_buffer, cl_mem mem_col_buffer, cl_mem mem_elements,
@@ -516,13 +574,13 @@ namespace viennacl
           //std::cout << "Setting memory: " << cols + 1 << ", " << nonzeros << std::endl;
 
           //row_buffer_.switch_active_handle_id(viennacl::backend::OPENCL_MEMORY);
-          viennacl::backend::memory_create(row_buffer_, viennacl::backend::typesafe_host_array<unsigned int>(row_buffer_).element_size() * (rows + 1), row_jumper);
+          viennacl::backend::memory_create(row_buffer_, viennacl::backend::typesafe_host_array<unsigned int>(row_buffer_).element_size() * (rows + 1), viennacl::traits::context(row_buffer_), row_jumper);
 
           //col_buffer_.switch_active_handle_id(viennacl::backend::OPENCL_MEMORY);
-          viennacl::backend::memory_create(col_buffer_, viennacl::backend::typesafe_host_array<unsigned int>(col_buffer_).element_size() * nonzeros, col_buffer);
+          viennacl::backend::memory_create(col_buffer_, viennacl::backend::typesafe_host_array<unsigned int>(col_buffer_).element_size() * nonzeros, viennacl::traits::context(col_buffer_), col_buffer);
 
           //elements_.switch_active_handle_id(viennacl::backend::OPENCL_MEMORY);
-          viennacl::backend::memory_create(elements_, sizeof(SCALARTYPE) * nonzeros, elements);
+          viennacl::backend::memory_create(elements_, sizeof(SCALARTYPE) * nonzeros, viennacl::traits::context(elements_), elements);
 
           nonzeros_ = nonzeros;
           rows_ = rows;
@@ -537,11 +595,11 @@ namespace viennacl
             handle_type col_buffer_old;
             handle_type elements_old;
             viennacl::backend::memory_shallow_copy(col_buffer_, col_buffer_old);
-            viennacl::backend::memory_shallow_copy(elements_, elements_old);
+            viennacl::backend::memory_shallow_copy(elements_,   elements_old);
 
             viennacl::backend::typesafe_host_array<unsigned int> size_deducer(col_buffer_);
-            viennacl::backend::memory_create(col_buffer_, size_deducer.element_size() * new_nonzeros);
-            viennacl::backend::memory_create(elements_,   sizeof(SCALARTYPE) * new_nonzeros);
+            viennacl::backend::memory_create(col_buffer_, size_deducer.element_size() * new_nonzeros, viennacl::traits::context(col_buffer_));
+            viennacl::backend::memory_create(elements_,   sizeof(SCALARTYPE) * new_nonzeros,          viennacl::traits::context(elements_));
 
             viennacl::backend::memory_copy(col_buffer_old, col_buffer_, 0, 0, size_deducer.element_size() * nonzeros_);
             viennacl::backend::memory_copy(elements_old,   elements_,   0, 0, sizeof(SCALARTYPE)* nonzeros_);
@@ -650,14 +708,14 @@ namespace viennacl
         /** @brief  Returns the OpenCL handle to the matrix entry array */
         handle_type & handle() { return elements_; }
 
-        void switch_memory_domain(viennacl::memory_types new_domain)
+        void switch_memory_context(viennacl::context new_ctx)
         {
-          viennacl::backend::switch_memory_domain<unsigned int>(row_buffer_, new_domain);
-          viennacl::backend::switch_memory_domain<unsigned int>(col_buffer_, new_domain);
-          viennacl::backend::switch_memory_domain<SCALARTYPE>(elements_, new_domain);
+          viennacl::backend::switch_memory_context<unsigned int>(row_buffer_, new_ctx);
+          viennacl::backend::switch_memory_context<unsigned int>(col_buffer_, new_ctx);
+          viennacl::backend::switch_memory_context<SCALARTYPE>(elements_, new_ctx);
         }
 
-        viennacl::memory_types memory_domain() const
+        viennacl::memory_types memory_context() const
         {
           return row_buffer_.get_active_handle_id();
         }
@@ -719,7 +777,7 @@ namespace viennacl
               // check for the special case x = A * x
               if (viennacl::traits::handle(lhs) == viennacl::traits::handle(rhs.rhs()))
               {
-                viennacl::vector<T> temp(rhs.lhs().size1());
+                viennacl::vector<T> temp(rhs.lhs().size1(), viennacl::traits::context(rhs));
                 viennacl::linalg::prod_impl(rhs.lhs(), rhs.rhs(), temp);
                 lhs = temp;
               }
@@ -733,7 +791,7 @@ namespace viennacl
         {
             static void apply(vector_base<T> & lhs, vector_expression<const compressed_matrix<T, A>, const vector_base<T>, op_prod> const & rhs)
             {
-              viennacl::vector<T> temp(rhs.lhs().size1());
+              viennacl::vector<T> temp(rhs.lhs().size1(), viennacl::traits::context(rhs));
               viennacl::linalg::prod_impl(rhs.lhs(), rhs.rhs(), temp);
               lhs += temp;
             }
@@ -744,7 +802,7 @@ namespace viennacl
         {
             static void apply(vector_base<T> & lhs, vector_expression<const compressed_matrix<T, A>, const vector_base<T>, op_prod> const & rhs)
             {
-              viennacl::vector<T> temp(rhs.lhs().size1());
+              viennacl::vector<T> temp(rhs.lhs().size1(), viennacl::traits::context(rhs));
               viennacl::linalg::prod_impl(rhs.lhs(), rhs.rhs(), temp);
               lhs -= temp;
             }
@@ -757,7 +815,7 @@ namespace viennacl
         {
             static void apply(vector_base<T> & lhs, vector_expression<const compressed_matrix<T, A>, const vector_expression<const LHS, const RHS, OP>, op_prod> const & rhs)
             {
-              viennacl::vector<T> temp(rhs.rhs());
+              viennacl::vector<T> temp(rhs.rhs(), viennacl::traits::context(rhs));
               viennacl::linalg::prod_impl(rhs.lhs(), temp, lhs);
             }
         };
@@ -768,8 +826,8 @@ namespace viennacl
         {
             static void apply(vector_base<T> & lhs, vector_expression<const compressed_matrix<T, A>, vector_expression<const LHS, const RHS, OP>, op_prod> const & rhs)
             {
-              viennacl::vector<T> temp(rhs.rhs());
-              viennacl::vector<T> temp_result(lhs.size());
+              viennacl::vector<T> temp(rhs.rhs(), viennacl::traits::context(rhs));
+              viennacl::vector<T> temp_result(lhs.size(), viennacl::traits::context(rhs));
               viennacl::linalg::prod_impl(rhs.lhs(), temp, temp_result);
               lhs += temp_result;
             }
@@ -781,8 +839,8 @@ namespace viennacl
         {
             static void apply(vector_base<T> & lhs, vector_expression<const compressed_matrix<T, A>, const vector_expression<const LHS, const RHS, OP>, op_prod> const & rhs)
             {
-              viennacl::vector<T> temp(rhs.rhs());
-              viennacl::vector<T> temp_result(lhs.size());
+              viennacl::vector<T> temp(rhs.rhs(), viennacl::traits::context(rhs));
+              viennacl::vector<T> temp_result(lhs.size(), viennacl::traits::context(rhs));
               viennacl::linalg::prod_impl(rhs.lhs(), temp, temp_result);
               lhs -= temp_result;
             }
