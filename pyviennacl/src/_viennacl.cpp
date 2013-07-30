@@ -40,9 +40,6 @@ typedef double              cpu_scalar_t;
 
 // Dense types
 
-typedef std::vector<cpu_scalar_t> cpu_vector_t;
-typedef vcl::vector<cpu_scalar_t> vcl_vector_t;
-
 typedef vcl::matrix<cpu_scalar_t,
 		    vcl::row_major> vcl_matrix_t;
 typedef ublas::matrix<cpu_scalar_t,
@@ -385,25 +382,28 @@ cpu_scalar_t vcl_scalar_to_float(vcl_scalar_t const& vcl_s)
 
 // Vector
 
-/** @brief Returns a Python list describing the VCL_T */
-bp::list vcl_vector_to_list(vcl_vector_t const& v)
+template <class SCALARTYPE>
+bp::list vcl_vector_to_list(vcl::vector<SCALARTYPE> const& v)
 {
   bp::list l;
-  cpu_vector_t c(v.size());
+  std::vector<SCALARTYPE> c(v.size());
   vcl::copy(v.begin(), v.end(), c.begin());
   
   for (unsigned int i = 0; i < v.size(); ++i)
-    l.append((vcl_vector_t::value_type::value_type)c[i]);
+    l.append((SCALARTYPE)c[i]);
   
   return l;
 }
 
-np::ndarray vcl_vector_to_ndarray(vcl_vector_t const& v)
+template <class SCALARTYPE>
+np::ndarray vcl_vector_to_ndarray(vcl::vector<SCALARTYPE> const& v)
 {
-  return np::from_object(vcl_vector_to_list(v), np::dtype::get_builtin<cpu_scalar_t>());
+  return np::from_object(vcl_vector_to_list<SCALARTYPE>(v),
+			 np::dtype::get_builtin<SCALARTYPE>());
 }
 
-boost::shared_ptr<vcl_vector_t>
+template <class SCALARTYPE>
+boost::shared_ptr<vcl::vector<SCALARTYPE> >
 vector_init_ndarray(np::ndarray const& array)
 {
   int d = array.get_nd();
@@ -414,30 +414,32 @@ vector_init_ndarray(np::ndarray const& array)
   
   uint32_t s = (uint32_t) array.shape(0);
   
-  vcl_vector_t *v = new vcl_vector_t(s);
-  cpu_vector_t cpu_vector(s);
+  vcl::vector<SCALARTYPE> *v = new vcl::vector<SCALARTYPE>(s);
+  std::vector<SCALARTYPE> cpu_vector(s);
   
   for (uint32_t i=0; i < s; ++i)
-    cpu_vector[i] = bp::extract<cpu_scalar_t>(array[i]);
+    cpu_vector[i] = bp::extract<SCALARTYPE>(array[i]);
   
   vcl::fast_copy(cpu_vector.begin(), cpu_vector.end(), v->begin());
 
-  return boost::shared_ptr<vcl_vector_t>(v);
+  return boost::shared_ptr<vcl::vector<SCALARTYPE> >(v);
 }
 
-/** @brief Creates the vector from the supplied Python list */
-boost::shared_ptr<vcl_vector_t>
+template <class SCALARTYPE>
+boost::shared_ptr<vcl::vector<SCALARTYPE> >
 vector_init_list(bp::list const& l)
 {
-  return vector_init_ndarray(np::from_object(l, np::dtype::get_builtin<cpu_scalar_t>()));
+  return vector_init_ndarray<SCALARTYPE>
+    (np::from_object(l, np::dtype::get_builtin<SCALARTYPE>()));
 }
 
-boost::shared_ptr<vcl_vector_t>
-vector_init_scalar(uint32_t length, cpu_scalar_t value) {
-  ublas::scalar_vector<cpu_scalar_t> s_v(length, value);
-  vcl_vector_t* v = new vcl_vector_t(length);
+template <class SCALARTYPE>
+boost::shared_ptr<vcl::vector<SCALARTYPE> >
+vector_init_scalar(uint32_t length, SCALARTYPE value) {
+  ublas::scalar_vector<SCALARTYPE> s_v(length, value);
+  vcl::vector<SCALARTYPE> *v = new vcl::vector<SCALARTYPE>(length);
   vcl::copy(s_v.begin(), s_v.end(), v->begin());
-  return boost::shared_ptr<vcl_vector_t>(v);
+  return boost::shared_ptr<vcl::vector<SCALARTYPE> >(v);
 }
 
 // Dense matrix
@@ -747,6 +749,7 @@ public:
 
 class statement_node_wrapper {
 
+  //typedef std::size_t node_index;
   vcl::scheduler::statement::value_type vcl_node;
 
 public:
@@ -759,19 +762,19 @@ public:
     : vcl_node(node)
   { }
 
-  statement_node_wrapper(vcl::scheduler::operation_node_type_family op_family,
-			 vcl::scheduler::operation_node_type op_type,
-			 vcl::scheduler::statement_node_type_family lhs_family,
+  statement_node_wrapper(vcl::scheduler::statement_node_type_family lhs_family,
 			 vcl::scheduler::statement_node_type lhs_type,
+			 vcl::scheduler::operation_node_type_family op_family,
+			 vcl::scheduler::operation_node_type op_type,
 			 vcl::scheduler::statement_node_type_family rhs_family,
 			 vcl::scheduler::statement_node_type rhs_type)
   {
-    vcl_node.op_family = op_family;
-    vcl_node.op_type = op_type;
-    vcl_node.lhs_type_family = lhs_family;
-    vcl_node.lhs_type = lhs_type;
-    vcl_node.rhs_type_family = rhs_family;
-    vcl_node.rhs_type = rhs_type;
+    vcl_node.op.type_family = op_family;
+    vcl_node.op.type = op_type;
+    vcl_node.lhs.type_family = lhs_family;
+    vcl_node.lhs.type = lhs_type;
+    vcl_node.rhs.type_family = rhs_family;
+    vcl_node.rhs.type = rhs_type;
   }
 
   /*
@@ -786,6 +789,7 @@ public:
     return vcl_node;
   }
 
+  /*
   void set_operand_to_node_index(uint8_t operand, std::size_t i)
   {
     switch (operand) {
@@ -797,6 +801,7 @@ public:
       break;
     }
   }
+  */
 
 #define CONCAT(...) __VA_ARGS__
 
@@ -815,6 +820,8 @@ public:
     }								   \
   }
 
+  SET_OPERAND(std::size_t,       node_index)
+
   SET_OPERAND(char,              host_char)
   SET_OPERAND(unsigned char,     host_uchar)
   SET_OPERAND(short,             host_short)
@@ -826,10 +833,21 @@ public:
   SET_OPERAND(float,             host_float)
   SET_OPERAND(double,            host_double)
 
+  // NB: need to add remaining scalar types as they become available
+  SET_OPERAND(vcl::scalar<float>*, scalar_float)
   SET_OPERAND(vcl::scalar<double>*, scalar_double)
+
+  // NB: need to add remaining vector types as they become available
+  SET_OPERAND(vcl::vector<float>*, vector_float)
   SET_OPERAND(vcl::vector<double>*, vector_double)
+
+  // NB: need to add remaining matrix_row types as they become available
+  SET_OPERAND(vcl::matrix<float>*, matrix_row_float)
   SET_OPERAND(vcl::matrix<double>*, matrix_row_double)
   
+  // NB: need to add remaining matrix_col types as they become available
+  SET_OPERAND(CONCAT(vcl::matrix_base<float, viennacl::column_major>*),
+    matrix_col_float)
   SET_OPERAND(CONCAT(vcl::matrix_base<double, viennacl::column_major>*),
     matrix_col_double)
 
@@ -961,10 +979,12 @@ BOOST_PYTHON_MODULE(_viennacl)
 	 vcl_scalar_t&, vcl_scalar_t&,
 	 op_div, 0>)
 
+    /*
     // Scalar-vector operations
     .def("__mul__", pyvcl_do_2ary_op<vcl_vector_t,
 	 vcl_scalar_t&, vcl_vector_t&,
 	 op_mul, 0>)
+    */
 
     // Scalar-matrix operations
     .def("__mul__", pyvcl_do_2ary_op<vcl_matrix_t,
@@ -975,99 +995,44 @@ BOOST_PYTHON_MODULE(_viennacl)
 
   // --------------------------------------------------
 
-  // *** Vector type ***
+  // *** Vector types ***
   
-  bp::class_<vcl_vector_t, boost::shared_ptr<vcl_vector_t> >("vector")
-    .def(bp::init<int>())
-    .def(bp::init<vcl_vector_t>())
-    .def("__init__", bp::make_constructor(vector_init_ndarray))
-    .def("__init__", bp::make_constructor(vector_init_list))
-    .def("__init__", bp::make_constructor(vector_init_scalar))
-    .def("as_ndarray", &vcl_vector_to_ndarray)
-    .def("clear", &vcl_vector_t::clear)
-    //.def("resize", &vcl_vector_t::resize)
-    .add_property("size", &vcl_vector_t::size)
-    .add_property("internal_size", &vcl_vector_t::internal_size)
-
-    // Basic arithmetic operations
-    .def("__add__", pyvcl_do_2ary_op<vcl_vector_t,
-	 vcl_vector_t&, vcl_vector_t&,
-	 op_add, 0>)
-
-    .def("__sub__", pyvcl_do_2ary_op<vcl_vector_t,
-	 vcl_vector_t&, vcl_vector_t&,
-	 op_sub, 0>)
-
-    .def("__mul__", pyvcl_do_2ary_op<vcl_vector_t,
-	 vcl_vector_t&, vcl_scalar_t&,
-	 op_mul, 0>)
-
-    .def("__truediv__", pyvcl_do_2ary_op<vcl_vector_t,
-	 vcl_vector_t&, vcl_scalar_t&,
-	 op_div, 0>)
-
-    // In-place operations
-    .def("__iadd__", pyvcl_do_2ary_op<vcl_vector_t,
-	 vcl_vector_t&, vcl_vector_t&,
-	 op_iadd, 0>)
-
-    .def("__isub__", pyvcl_do_2ary_op<vcl_vector_t,
-	 vcl_vector_t&, vcl_vector_t&,
-	 op_isub, 0>)
-
-    .def("__imul__", pyvcl_do_2ary_op<vcl_vector_t,
-	 vcl_vector_t&, vcl_scalar_t&,
-	 op_imul, 0>)
-
-    .def("__itruediv__", pyvcl_do_2ary_op<vcl_vector_t,
-	 vcl_vector_t&, vcl_scalar_t&,
-	 op_idiv, 0>)
-
-    // BLAS 1 not covered above
-    .def("inner_prod", pyvcl_do_2ary_op<vcl_scalar_t,
-	 vcl_vector_t&, vcl_vector_t&,
-	 op_inner_prod, 0>)
-    .def("dot", pyvcl_do_2ary_op<vcl_scalar_t,
-	 vcl_vector_t&, vcl_vector_t&,
-	 op_inner_prod, 0>)
-
-    .def("element_prod", pyvcl_do_2ary_op<vcl_vector_t,
-	 vcl_vector_t&, vcl_vector_t&,
-	 op_element_prod, 0>)
-    .def("element_mul", pyvcl_do_2ary_op<vcl_vector_t,
-	 vcl_vector_t&, vcl_vector_t&,
-	 op_element_prod, 0>)
-
-    .def("element_div", pyvcl_do_2ary_op<vcl_vector_t,
-	 vcl_vector_t&, vcl_vector_t&,
-	 op_element_div, 0>)
-    .def("element_truediv", pyvcl_do_2ary_op<vcl_vector_t,
-	 vcl_vector_t&, vcl_vector_t&,
-	 op_element_div, 0>)
-
-    .add_property("norm_1", pyvcl_do_1ary_op<vcl_scalar_t,
-		  vcl_vector_t&,
-		  op_norm_1, 0>)
-    .add_property("norm_2", pyvcl_do_1ary_op<vcl_scalar_t,
-		  vcl_vector_t&,
-		  op_norm_2, 0>)
-    .add_property("norm_inf", pyvcl_do_1ary_op<vcl_scalar_t,
-		  vcl_vector_t&,
-		  op_norm_inf, 0>)
-    .add_property("index_norm_inf", pyvcl_do_1ary_op<vcl_scalar_t,
-		  vcl_vector_t&,
-		  op_index_norm_inf, 0>)
-
-    // BLAS 2
-    .def("outer_prod", pyvcl_do_2ary_op<vcl_matrix_t,
-	 vcl_vector_t&, vcl_vector_t&,
-	 op_outer_prod, 0>)
+#define EXPORT_VECTOR_CLASS(TYPE, NAME)					\
+  bp::class_<vcl::vector<TYPE>,						\
+	     boost::shared_ptr<vcl::vector<TYPE> > >			\
+    ( NAME )								\
+    .def(bp::init<int>())						\
+    .def(bp::init<vcl::vector<TYPE> >())				\
+    .def("__init__", bp::make_constructor(vector_init_ndarray<TYPE>))	\
+    .def("__init__", bp::make_constructor(vector_init_list<TYPE>))	\
+    .def("__init__", bp::make_constructor(vector_init_scalar<TYPE>))	\
+    .def("as_ndarray", &vcl_vector_to_ndarray<TYPE>)			\
+    .def("clear", &vcl::vector<TYPE>::clear)				\
+    .add_property("size", &vcl::vector<TYPE>::size)			\
+    .add_property("internal_size", &vcl::vector<TYPE>::internal_size)	\
+    .add_property("norm_1", pyvcl_do_1ary_op<vcl::scalar<TYPE>,		\
+		  vcl::vector<TYPE>&,					\
+		  op_norm_1, 0>)					\
+    .add_property("norm_2", pyvcl_do_1ary_op<vcl::scalar<TYPE>,		\
+		  vcl::vector<TYPE>&,					\
+		  op_norm_2, 0>)					\
+    .add_property("norm_inf", pyvcl_do_1ary_op<vcl::scalar<TYPE>,	\
+		  vcl::vector<TYPE>&,					\
+		  op_norm_inf, 0>)					\
+    .add_property("index_norm_inf", pyvcl_do_1ary_op<vcl::scalar<TYPE>,	\
+		  vcl::vector<TYPE>&,					\
+		  op_index_norm_inf, 0>)				\
     ;
 
+  EXPORT_VECTOR_CLASS(float, "vector_float")
+  EXPORT_VECTOR_CLASS(double, "vector_double")
+
+  /*
   bp::def("plane_rotation", pyvcl_do_4ary_op<bp::object,
 	  vcl_vector_t&, vcl_vector_t&,
 	  cpu_scalar_t, cpu_scalar_t,
 	  op_plane_rotation, 0>);
+  */
 
   // --------------------------------------------------
 
@@ -1129,6 +1094,7 @@ BOOST_PYTHON_MODULE(_viennacl)
 	 vcl_matrix_t&, vcl_scalar_t&,
 	 op_idiv, 0>)
 
+    /*
     .def("prod", pyvcl_do_2ary_op<vcl_vector_t,
 	 vcl_matrix_t, vcl_vector_t,
 	 op_prod, 0>)
@@ -1152,6 +1118,7 @@ BOOST_PYTHON_MODULE(_viennacl)
 	 vcl_matrix_t, vcl_vector_t,
 	 vcl::linalg::unit_upper_tag,
 	 op_solve, 0>)
+    */
 
     .def("solve", pyvcl_do_3ary_op<vcl_matrix_t,
 	 vcl_matrix_t, vcl_matrix_t,
@@ -1218,6 +1185,7 @@ BOOST_PYTHON_MODULE(_viennacl)
 		  make_function(&vcl_compressed_matrix_t::nnz,
 			      bp::return_value_policy<bp::return_by_value>()))
 
+    /*
     .def("prod", pyvcl_do_2ary_op<vcl_vector_t,
 	 vcl_compressed_matrix_t, vcl_vector_t,
 	 op_prod, 0>)
@@ -1238,6 +1206,7 @@ BOOST_PYTHON_MODULE(_viennacl)
 	 vcl_compressed_matrix_t&, vcl_vector_t&,
 	 vcl::linalg::upper_tag,
 	 op_inplace_solve, 0>)
+    */
 
     /*.def("solve", pyvcl_do_3ary_op<vcl_matrix_t,
 	 vcl_matrix_t, vcl_matrix_t,
@@ -1329,81 +1298,83 @@ BOOST_PYTHON_MODULE(_viennacl)
     VALUE(vcl::scheduler, COMPOSITE_OPERATION_TYPE)
 
     // host scalars:
-    // VALUE(vcl::scheduler, HOST_SCALAR_CHAR_TYPE)
-    // VALUE(vcl::scheduler, HOST_SCALAR_UCHAR_TYPE)
-    // VALUE(vcl::scheduler, HOST_SCALAR_SHORT_TYPE)
-    // VALUE(vcl::scheduler, HOST_SCALAR_USHORT_TYPE)
+    VALUE(vcl::scheduler, HOST_SCALAR_CHAR_TYPE)
+    VALUE(vcl::scheduler, HOST_SCALAR_UCHAR_TYPE)
+    VALUE(vcl::scheduler, HOST_SCALAR_SHORT_TYPE)
+    VALUE(vcl::scheduler, HOST_SCALAR_USHORT_TYPE)
     VALUE(vcl::scheduler, HOST_SCALAR_INT_TYPE)
     VALUE(vcl::scheduler, HOST_SCALAR_UINT_TYPE)
     VALUE(vcl::scheduler, HOST_SCALAR_LONG_TYPE)
     VALUE(vcl::scheduler, HOST_SCALAR_ULONG_TYPE)
-    // VALUE(vcl::scheduler, HOST_SCALAR_HALF_TYPE)
-    // VALUE(vcl::scheduler, HOST_SCALAR_FLOAT_TYPE)
+    VALUE(vcl::scheduler, HOST_SCALAR_HALF_TYPE)
+    VALUE(vcl::scheduler, HOST_SCALAR_FLOAT_TYPE)
     VALUE(vcl::scheduler, HOST_SCALAR_DOUBLE_TYPE)
     
     // device scalars:
-    // VALUE(vcl::scheduler, SCALAR_CHAR_TYPE)
-    // VALUE(vcl::scheduler, SCALAR_UCHAR_TYPE)
-    // VALUE(vcl::scheduler, SCALAR_SHORT_TYPE)
-    // VALUE(vcl::scheduler, SCALAR_USHORT_TYPE)
+    VALUE(vcl::scheduler, SCALAR_CHAR_TYPE)
+    VALUE(vcl::scheduler, SCALAR_UCHAR_TYPE)
+    VALUE(vcl::scheduler, SCALAR_SHORT_TYPE)
+    VALUE(vcl::scheduler, SCALAR_USHORT_TYPE)
     VALUE(vcl::scheduler, SCALAR_INT_TYPE)
     VALUE(vcl::scheduler, SCALAR_UINT_TYPE)
     VALUE(vcl::scheduler, SCALAR_LONG_TYPE)
     VALUE(vcl::scheduler, SCALAR_ULONG_TYPE)
-    // VALUE(vcl::scheduler, SCALAR_HALF_TYPE)
-    // VALUE(vcl::scheduler, SCALAR_FLOAT_TYPE)
+    VALUE(vcl::scheduler, SCALAR_HALF_TYPE)
+    VALUE(vcl::scheduler, SCALAR_FLOAT_TYPE)
     VALUE(vcl::scheduler, SCALAR_DOUBLE_TYPE)
     
     // vector:
-    // VALUE(vcl::scheduler, VECTOR_CHAR_TYPE)
-    // VALUE(vcl::scheduler, VECTOR_UCHAR_TYPE)
-    // VALUE(vcl::scheduler, VECTOR_SHORT_TYPE)
-    // VALUE(vcl::scheduler, VECTOR_USHORT_TYPE)
+    VALUE(vcl::scheduler, VECTOR_CHAR_TYPE)
+    VALUE(vcl::scheduler, VECTOR_UCHAR_TYPE)
+    VALUE(vcl::scheduler, VECTOR_SHORT_TYPE)
+    VALUE(vcl::scheduler, VECTOR_USHORT_TYPE)
     VALUE(vcl::scheduler, VECTOR_INT_TYPE)
     VALUE(vcl::scheduler, VECTOR_UINT_TYPE)
     VALUE(vcl::scheduler, VECTOR_LONG_TYPE)
     VALUE(vcl::scheduler, VECTOR_ULONG_TYPE)
-    // VALUE(vcl::scheduler, VECTOR_HALF_TYPE)
-    // VALUE(vcl::scheduler, VECTOR_FLOAT_TYPE)
+    VALUE(vcl::scheduler, VECTOR_HALF_TYPE)
+    VALUE(vcl::scheduler, VECTOR_FLOAT_TYPE)
     VALUE(vcl::scheduler, VECTOR_DOUBLE_TYPE)
     
     // matrix, row major:
-    // VALUE(vcl::scheduler, MATRIX_ROW_CHAR_TYPE)
-    // VALUE(vcl::scheduler, MATRIX_ROW_UCHAR_TYPE)
-    // VALUE(vcl::scheduler, MATRIX_ROW_SHORT_TYPE)
-    // VALUE(vcl::scheduler, MATRIX_ROW_USHORT_TYPE)
+    VALUE(vcl::scheduler, MATRIX_ROW_CHAR_TYPE)
+    VALUE(vcl::scheduler, MATRIX_ROW_UCHAR_TYPE)
+    VALUE(vcl::scheduler, MATRIX_ROW_SHORT_TYPE)
+    VALUE(vcl::scheduler, MATRIX_ROW_USHORT_TYPE)
     VALUE(vcl::scheduler, MATRIX_ROW_INT_TYPE)
     VALUE(vcl::scheduler, MATRIX_ROW_UINT_TYPE)
     VALUE(vcl::scheduler, MATRIX_ROW_LONG_TYPE)
     VALUE(vcl::scheduler, MATRIX_ROW_ULONG_TYPE)
-    // VALUE(vcl::scheduler, MATRIX_ROW_HALF_TYPE)
-    // VALUE(vcl::scheduler, MATRIX_ROW_FLOAT_TYPE)
-     VALUE(vcl::scheduler, MATRIX_ROW_DOUBLE_TYPE)
+    VALUE(vcl::scheduler, MATRIX_ROW_HALF_TYPE)
+    VALUE(vcl::scheduler, MATRIX_ROW_FLOAT_TYPE)
+    VALUE(vcl::scheduler, MATRIX_ROW_DOUBLE_TYPE)
     
     // matrix, row major:
-    // VALUE(vcl::scheduler, MATRIX_COL_CHAR_TYPE)
-    // VALUE(vcl::scheduler, MATRIX_COL_UCHAR_TYPE)
-    // VALUE(vcl::scheduler, MATRIX_COL_SHORT_TYPE)
-    // VALUE(vcl::scheduler, MATRIX_COL_USHORT_TYPE)
+    VALUE(vcl::scheduler, MATRIX_COL_CHAR_TYPE)
+    VALUE(vcl::scheduler, MATRIX_COL_UCHAR_TYPE)
+    VALUE(vcl::scheduler, MATRIX_COL_SHORT_TYPE)
+    VALUE(vcl::scheduler, MATRIX_COL_USHORT_TYPE)
     VALUE(vcl::scheduler, MATRIX_COL_INT_TYPE)
     VALUE(vcl::scheduler, MATRIX_COL_UINT_TYPE)
     VALUE(vcl::scheduler, MATRIX_COL_LONG_TYPE)
     VALUE(vcl::scheduler, MATRIX_COL_ULONG_TYPE)
-    // VALUE(vcl::scheduler, MATRIX_COL_HALF_TYPE)
-    // VALUE(vcl::scheduler, MATRIX_COL_FLOAT_TYPE)
+    VALUE(vcl::scheduler, MATRIX_COL_HALF_TYPE)
+    VALUE(vcl::scheduler, MATRIX_COL_FLOAT_TYPE)
     VALUE(vcl::scheduler, MATRIX_COL_DOUBLE_TYPE)
     ;
 
+  /*
   typedef vcl::scheduler::statement_node vcl_node_t;
 
   bp::class_<vcl_node_t>("vcl_statement_node")
-    .def_readonly("lhs_type_family", &vcl_node_t::lhs_type_family)
-    .def_readonly("lhs_type", &vcl_node_t::lhs_type)
-    .def_readonly("rhs_type_family", &vcl_node_t::rhs_type_family)
-    .def_readonly("rhs_type", &vcl_node_t::rhs_type)
-    .def_readonly("op_family", &vcl_node_t::op_family)
-    .def_readonly("op_type", &vcl_node_t::op_type)
+    .def_readonly("lhs_type_family", &vcl_node_t::lhs.type_family)
+    .def_readonly("lhs_type", &vcl_node_t::lhs.type)
+    .def_readonly("rhs_type_family", &vcl_node_t::rhs.type_family)
+    .def_readonly("rhs_type", &vcl_node_t::rhs.type)
+    .def_readonly("op_family", &vcl_node_t::op.family)
+    .def_readonly("op_type", &vcl_node_t::op.type)
     ;
+  */
 
 #define STRINGIFY(S) #S
 #define SET_OPERAND(I)					\
@@ -1412,26 +1383,30 @@ BOOST_PYTHON_MODULE(_viennacl)
 
   bp::class_<statement_node_wrapper>("statement_node",
 				     bp::init<statement_node_wrapper>())
-    .def(bp::init<vcl::scheduler::operation_node_type_family,
-	 vcl::scheduler::operation_node_type,
-	 vcl::scheduler::statement_node_type_family,
-	 vcl::scheduler::statement_node_type,
-	 vcl::scheduler::statement_node_type_family,
-	 vcl::scheduler::statement_node_type>())
+    .def(bp::init<vcl::scheduler::statement_node_type_family,  // lhs
+	 vcl::scheduler::statement_node_type,                  // lhs
+	 vcl::scheduler::operation_node_type_family,           // op
+	 vcl::scheduler::operation_node_type,                  // op
+	 vcl::scheduler::statement_node_type_family,           // rhs
+	 vcl::scheduler::statement_node_type>())               // rhs
     SET_OPERAND(node_index)
-    //SET_OPERAND(host_char)
-    //SET_OPERAND(host_uchar)
-    //SET_OPERAND(host_short)
-    //SET_OPERAND(host_ushort)
+    SET_OPERAND(host_char)
+    SET_OPERAND(host_uchar)
+    SET_OPERAND(host_short)
+    SET_OPERAND(host_ushort)
     SET_OPERAND(host_int)
     SET_OPERAND(host_uint)
     SET_OPERAND(host_long)
     SET_OPERAND(host_ulong)
-    //SET_OPERAND(host_float)
+    SET_OPERAND(host_float)
     SET_OPERAND(host_double)
+    SET_OPERAND(scalar_float)
     SET_OPERAND(scalar_double)
+    SET_OPERAND(vector_float)
     SET_OPERAND(vector_double)
+    SET_OPERAND(matrix_row_float)
     SET_OPERAND(matrix_row_double)
+    SET_OPERAND(matrix_col_float)
     SET_OPERAND(matrix_col_double)
     .add_property("vcl_statement_node",
 	 bp::make_function(&statement_node_wrapper::get_vcl_statement_node,
