@@ -71,10 +71,10 @@ typedef vcl::ell_matrix<cpu_scalar_t> vcl_ell_matrix_t;
 typedef vcl::hyb_matrix<cpu_scalar_t> vcl_hyb_matrix_t;
 
 enum op_t {
-  op_add,
-  op_sub,
+  op_add,              // done in sched: vector, ...
+  op_sub,              // done in sched: vector, ..
   op_mul,
-  op_div,
+  op_div,              // done in sched: ..
   op_iadd,
   op_isub,
   op_imul,
