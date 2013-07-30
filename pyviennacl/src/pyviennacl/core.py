@@ -17,7 +17,8 @@ HostScalarTypes = {
     'uint64': _v.statement_node_type.HOST_SCALAR_ULONG_TYPE,
     'float16': _v.statement_node_type.HOST_SCALAR_HALF_TYPE,
     'float32': _v.statement_node_type.HOST_SCALAR_FLOAT_TYPE,
-    'float64': _v.statement_node_type.HOST_SCALAR_DOUBLE_TYPE
+    'float64': _v.statement_node_type.HOST_SCALAR_DOUBLE_TYPE,
+    'float': _v.statement_node_type.HOST_SCALAR_DOUBLE_TYPE
 }
 
 
