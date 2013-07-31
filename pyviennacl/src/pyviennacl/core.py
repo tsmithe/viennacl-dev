@@ -22,127 +22,6 @@ HostScalarTypes = {
 }
 
 
-class NoResult: pass
-
-
-class Scalar:
-    size = 1 ## This required because of the hacky get_vector_result_size func.
-
-    def express(self, statement=""):
-        statement += type(self).__name__
-        return statement
-
-
-class HostScalar(Scalar):
-    """
-    Convenience class to hold a scalar type and value
-    
-    TODO: Extend to hold ViennaCL scalar types
-    + NB: Perhaps a good idea to implement vcl scalar types as numpy dtypes?
-    """
-    statement_node_type_family = _v.statement_node_type_family.HOST_SCALAR_TYPE_FAMILY
-
-    def __init__(self, value=0, dtype=None):
-
-        if dtype == None:
-            self.dtype = np_result_type(value)
-        else:
-            self.dtype = dtype
-
-        self.statement_node_type = HostScalarTypes[self.dtype.name]
-        self.value = value
-
-    def as_ndarray(self):
-        return array(self.value)
-
-
-class Leaf:
-    """
-    Leaf base class -- generic constructors/converters..
-    """
-
-    def express(self, statement=""):
-        statement += type(self).__name__
-        return statement
-
-    def as_ndarray(self):
-        return self.vcl_leaf.as_ndarray()
-
-
-class Vector(Leaf):
-    statement_node_type_family = _v.statement_node_type_family.VECTOR_TYPE_FAMILY
-
-    def __init__(self, *args, **kwargs):
-        """
-        Initialise the vcl_leaf..
-        """
-        if 'dtype' in kwargs.keys():
-            dt = kwargs['dtype']
-            self.dtype = dt
-            ## Maybe want to do this with a type conversion dict?
-            ## Maybe want to generalise the type information dicts?
-            if dt == int8:
-                self.statement_node_type = _v.statement_node_type.VECTOR_CHAR_TYPE
-                vcl_type = _v.vector_char
-            elif dt == int16:
-                self.statement_node_type = _v.statement_node_type.VECTOR_SHORT_TYPE
-                vcl_type = _v.vector_short
-            elif dt == int32:
-                self.statement_node_type = _v.statement_node_type.VECTOR_INT_TYPE
-                vcl_type = _v.vector_int
-            elif dt == int64:
-                self.statement_node_type = _v.statement_node_type.VECTOR_LONG_TYPE
-                vcl_type = _v.vector_long
-            elif dt == uint8:
-                self.statement_node_type = _v.statement_node_type.VECTOR_UCHAR_TYPE
-                vcl_type = _v.vector_uchar
-            elif dt == uint16:
-                self.statement_node_type = _v.statement_node_type.VECTOR_USHORT_TYPE
-                vcl_type = _v.vector_ushort
-            elif dt == uint32:
-                self.statement_node_type = _v.statement_node_type.VECTOR_UINT_TYPE
-                vcl_type = _v.vector_uint
-            elif dt == uint64:
-                self.statement_node_type = _v.statement_node_type.VECTOR_ULONG_TYPE
-                vcl_type = _v.vector_ulong
-            elif dt == float16:
-                self.statement_node_type = _v.statement_node_type.VECTOR_HALF_TYPE
-                vcl_type = _v.vector_half
-            elif dt == float32:
-                self.statement_node_type = _v.statement_node_type.VECTOR_FLOAT_TYPE
-                vcl_type = _v.vector_float
-            elif dt == float64:
-                self.statement_node_type = _v.statement_node_type.VECTOR_DOUBLE_TYPE
-                vcl_type = _v.vector_double
-            else:
-                raise TypeError("dtype %s not supported" % dtype)
-        else:
-            self.dtype = float64
-            self.statement_node_type = _v.statement_node_type.VECTOR_DOUBLE_TYPE
-            vcl_type = _v.vector_double
-
-        if len(args) == 0:
-            self.vcl_leaf = vcl_type()
-        elif len(args) == 1:
-            if isinstance(args[0], Vector):
-                self.vcl_leaf = vcl_type(args[0].vcl_leaf)
-            else:
-                self.vcl_leaf = vcl_type(args[0])
-        elif len(args) == 2:
-            self.vcl_leaf = vcl_type(args[0], args[1])
-        else:
-            raise TypeError("Vector cannot be constructed in this way")
-
-        self.size = self.vcl_leaf.size
-        self.internal_size = self.vcl_leaf.internal_size
-
-    def __add__(self, rhs):
-        return Add(self, rhs)
-
-    def __sub__(self, rhs):
-        return Sub(self, rhs)
-
-
 vcl_operand_setters = {
     _v.statement_node_type.COMPOSITE_OPERATION_TYPE: "set_operand_to_node_index",
 
@@ -172,65 +51,141 @@ vcl_operand_setters = {
 }
 
 
-def get_result_container_type(node):
-    """
-    """
-    if isinstance(node, Leaf):
-        return type(node)
+class NoResult: pass
 
-    if isinstance(node, Statement):
-        return type(node.result)
+
+class Leaf:
+    """
+    Leaf base class -- generic constructors/converters..
+    """
+
+    @property
+    def result_dtype(self):
+        return self.dtype
+
+    @property
+    def result_container_type(self):
+        return type(self)
+
+    def express(self, statement=""):
+        statement += type(self).__name__
+        return statement
+
+    def as_ndarray(self):
+        return self.vcl_leaf.as_ndarray()
+
+
+class Scalar(Leaf):
+    ndim = 0
+
+    @property
+    def shape(self):
+        raise TypeError("Scalars are 0-dimensional and thus have no shape")
+
+    def as_ndarray(self):
+        return array([self.value], dtype=self.dtype)
+
+
+
+class HostScalar(Scalar):
+    """
+    Convenience class to hold a scalar type and value
     
-    # Need to fix this for scalars.. (eg, Scalar vs HostScalar..)
-    if isinstance(node, Scalar):
-        return Scalar
-
-    try:
-        if (dtype(node).name in HostScalarTypes.keys()
-            and not (isinstance(node, Node)
-                     or isinstance(node, Leaf))):
-            return Scalar
-    except: pass
-
-    try:
-        if node.result_types is None:
-            return None
-        return node.result_types[(
-            get_result_container_type(node.operands[0]).__name__,
-            get_result_container_type(node.operands[1]).__name__ )]
-    except:
-        return NoResult
-
-
-def get_result_dtype(node):
-    if isinstance(node, Scalar):
-        return node.dtype
-
-    if isinstance(node, Leaf):
-        return node.dtype
-
-    if isinstance(node, Statement):
-        return node.result.dtype
-
-    return np_result_type(
-        get_result_dtype(node.operands[0]),
-        get_result_dtype(node.operands[1]) )
-
-
-def get_vector_result_size(node):
+    TODO: Extend to hold ViennaCL scalar types
+    + NB: Perhaps a good idea to implement vcl scalar types like numpy dtypes?
     """
-    This is just a stop-gap solution until I have a better way...
-    """
-    size = 0
-    for op in node.operands:
-        if isinstance(op, Node):
-            s = get_vector_result_size(op)
-            if (s > size):
-                size = s
+    statement_node_type_family = _v.statement_node_type_family.HOST_SCALAR_TYPE_FAMILY
+
+    def __init__(self, value=0, dtype=None):
+
+        if dtype == None:
+            self.dtype = np_result_type(value)
         else:
-            if (op.size > size):
-                size = op.size
-    return size
+            self.dtype = dtype
+
+        self.statement_node_type = HostScalarTypes[self.dtype.name]
+        self.value = value
+
+
+class Vector(Leaf):
+    ndim = 1
+    statement_node_type_family = _v.statement_node_type_family.VECTOR_TYPE_FAMILY
+
+    def __init__(self, *args, **kwargs):
+        """
+        Initialise the vcl_leaf..
+        """
+        if 'dtype' in kwargs.keys():
+            dt = dtype(kwargs['dtype'])
+            self.dtype = dt
+            ## Maybe want to do this with a type conversion dict?
+            ## Maybe want to generalise the type information dicts?
+            if dt.name == "int8":
+                self.statement_node_type = _v.statement_node_type.VECTOR_CHAR_TYPE
+                vcl_type = _v.vector_char
+            elif dt.name == "int16":
+                self.statement_node_type = _v.statement_node_type.VECTOR_SHORT_TYPE
+                vcl_type = _v.vector_short
+            elif dt.name == "int32":
+                self.statement_node_type = _v.statement_node_type.VECTOR_INT_TYPE
+                vcl_type = _v.vector_int
+            elif dt.name == "int64":
+                self.statement_node_type = _v.statement_node_type.VECTOR_LONG_TYPE
+                vcl_type = _v.vector_long
+            elif dt.name == "uint8":
+                self.statement_node_type = _v.statement_node_type.VECTOR_UCHAR_TYPE
+                vcl_type = _v.vector_uchar
+            elif dt.name == "uint16":
+                self.statement_node_type = _v.statement_node_type.VECTOR_USHORT_TYPE
+                vcl_type = _v.vector_ushort
+            elif dt.name == "uint32":
+                self.statement_node_type = _v.statement_node_type.VECTOR_UINT_TYPE
+                vcl_type = _v.vector_uint
+            elif dt.name == "uint64":
+                self.statement_node_type = _v.statement_node_type.VECTOR_ULONG_TYPE
+                vcl_type = _v.vector_ulong
+            elif dt.name == "float16":
+                self.statement_node_type = _v.statement_node_type.VECTOR_HALF_TYPE
+                vcl_type = _v.vector_half
+            elif dt.name == "float32":
+                self.statement_node_type = _v.statement_node_type.VECTOR_FLOAT_TYPE
+                vcl_type = _v.vector_float
+            elif dt.name == "float64":
+                self.statement_node_type = _v.statement_node_type.VECTOR_DOUBLE_TYPE
+                vcl_type = _v.vector_double
+            else:
+                raise TypeError("dtype %s not supported" % dtype)
+        else:
+            self.dtype = float64
+            self.statement_node_type = _v.statement_node_type.VECTOR_DOUBLE_TYPE
+            vcl_type = _v.vector_double
+
+        if 'shape' in kwargs.keys():
+            if len(kwargs['shape']) != 1:
+                raise TypeError("Vector can only have a 1-d shape")
+            self.vcl_leaf = vcl_type(kwargs['shape'][0], 0)
+        else:
+            if len(args) == 0:
+                self.vcl_leaf = vcl_type()
+            elif len(args) == 1:
+                if isinstance(args[0], Vector):
+                    self.vcl_leaf = vcl_type(args[0].vcl_leaf)
+                else:
+                    self.vcl_leaf = vcl_type(args[0])
+            elif len(args) == 2:
+                self.vcl_leaf = vcl_type(args[0], args[1])
+            else:
+                raise TypeError("Vector cannot be constructed in this way")
+
+        self.size = self.vcl_leaf.size
+        self.shape = (self.size,)
+        self.internal_size = self.vcl_leaf.internal_size
+
+    def __add__(self, rhs):
+        return Add(self, rhs)
+
+    def __sub__(self, rhs):
+        return Sub(self, rhs)
 
 
 class Node:
@@ -252,7 +207,7 @@ class Node:
         self.operands = []
         for opand in args:
             try:
-                if (dtype(opand).name in HostScalarTypes.keys()
+                if (dtype(type(opand)).name in HostScalarTypes.keys()
                     and not (isinstance(opand, Node)
                              or isinstance(opand, Leaf))):
                     opand = HostScalar(opand)
@@ -263,12 +218,12 @@ class Node:
 
     def _vcl_node_factory(self):
         # Check result type plausibility
-        self.result_container_type = get_result_container_type(self)
+        self.result_container_type = self._result_container_type
         if self.result_container_type is NoResult:
             # Try swapping the operands
             self.operands.reverse()
-            self.result_container_type = get_result_container_type(self)
-        self.dtype = get_result_dtype(self)
+            self.result_container_type = self._result_container_type
+        self.dtype = self.result_dtype
 
         # At the moment, ViennaCL does not do dtype promotion
         if dtype(self.operands[0]) != dtype(self.operands[1]):
@@ -287,6 +242,90 @@ class Node:
         return getattr(self.vcl_node,
                        vcl_operand_setters[operand.statement_node_type])
 
+    @property
+    def _result_container_type(self):
+        """
+        """
+        if isinstance(self, Statement):
+            return type(self.result)
+    
+        # Need to fix this for scalars.. (eg, Scalar vs HostScalar..)
+        if isinstance(self, Scalar):
+            return Scalar
+
+        if isinstance(self, Leaf):
+            return type(self)
+
+        try:
+            if (dtype(type(self)).name in HostScalarTypes.keys()
+                and not (isinstance(self, Node))):
+                return Scalar
+        except: pass
+
+        try:
+            if len(self.result_types) < 1:
+                return None
+            return self.result_types[(
+                self.operands[0].result_container_type.__name__,
+                self.operands[1].result_container_type.__name__ )]
+        except:
+            return NoResult
+
+    @property
+    def result_dtype(self):
+        if isinstance(self, Leaf):
+            return self.dtype
+
+        if isinstance(self, Statement):
+            return self.result.dtype
+
+        try:
+            if dtype(type(self)).name in HostScalarTypes.keys():
+                return dtype(type(self))
+        except:
+            pass
+
+        return np_result_type(
+            self.operands[0].result_dtype,
+            self.operands[1].result_dtype )
+
+    @property
+    def result_ndim(self):
+        ndim = 0
+        for op in self.operands:
+            if isinstance(op, Node):
+                nd = op.result_ndim
+                if (nd > ndim):
+                    ndim = nd
+            elif (op.ndim > ndim):
+                ndim = op.ndim
+        return ndim
+
+    @property
+    def result_max_axis_size(self):
+        max_size = 1
+        for op in self.operands:
+            if isinstance(op, Node):
+                s = op.result_max_axis_size
+                if (s > max_size):
+                    max_size = s
+            else:
+                try: op.shape
+                except: continue
+                for s in op.shape:
+                    if (s > max_size):
+                        max_size = s
+        return max_size
+
+    @property
+    def result_shape(self):
+        ndim = self.result_ndim
+        max_size = self.result_max_axis_size
+        shape = []
+        for n in range(ndim):
+            shape.append(max_size)
+        return tuple(shape)
+
     def express(self, statement=""):
         statement += type(self).__name__ + "("
         for op in self.operands:
@@ -303,7 +342,7 @@ class Assign(Node):
     """
     Derived node class for assignment
     """
-    result_types = None
+    result_types = {}
 
     def _init_node(self):
         self.operation_node_type = _v.operation_node_type.OPERATION_BINARY_ASSIGN_TYPE
@@ -341,7 +380,7 @@ class Mul(Node):
     """
     result_types = {
 #        ('Vector', 'Vector'): Matrix,
-        ('Vector', 'Scalar'): Vector
+        ('Vector', 'HostScalar'): Vector
     }
 
     def _init_node(self):
@@ -387,14 +426,14 @@ class Statement:
 
         if isinstance(node, Assign):
             self.result = node.operands[0]
-        elif node.result_container_type == None:
-            node.result_container_type = get_result_container_type(node)
-            if node.result_container_type == None:
+        elif not node.result_container_type:
+            node.result_container_type = node._result_container_type
+            if not node.result_container_type:
                 raise TypeError("Unsupported expression: %s" % (node.express()))
-            node.dtype = get_result_dtype(node)
+            node.dtype = node.result_dtype
         else:
             self.result = node.result_container_type(
-                get_vector_result_size(node), # HACKY
+                shape = node.result_shape,
                 dtype = node.dtype )
             top = Assign(self.result, node)
             next_node.append(top)
@@ -416,15 +455,14 @@ class Statement:
                     n.get_vcl_operand_setter(operand)(
                         op_num, 
                         self.statement.index(operand))
-                elif isinstance(operand, Leaf):
-                    n.get_vcl_operand_setter(operand)(op_num, operand.vcl_leaf)
                 elif isinstance(operand, Scalar):
                     n.get_vcl_operand_setter(operand)(op_num, operand.value)
+                elif isinstance(operand, Leaf):
+                    n.get_vcl_operand_setter(operand)(op_num, operand.vcl_leaf)
                 else:
                     try:
-                        if (dtype(operand).name in HostScalarTypes.keys()
-                            and not (isinstance(operand, Node)
-                                     or isinstance(operand, Leaf))):
+                        if (dtype(type(operand)).name in HostScalarTypes.keys()
+                            and not (isinstance(operand, Node))):
                             n.get_vcl_operand_setter(HostScalar(operand))(
                                 op_num, operand)
                     except: pass

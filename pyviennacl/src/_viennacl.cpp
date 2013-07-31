@@ -1022,6 +1022,9 @@ BOOST_PYTHON_MODULE(_viennacl)
     .add_property("index_norm_inf", pyvcl_do_1ary_op<vcl::scalar<TYPE>,	\
 		  vcl::vector<TYPE>&,					\
 		  op_index_norm_inf, 0>)				\
+    .def("__add__", pyvcl_do_2ary_op<vcl::vector<TYPE>,			\
+	 vcl::vector<TYPE>&, vcl::vector<TYPE>&,			\
+	 op_add, 0>)							\
     ;
 
   EXPORT_VECTOR_CLASS(float, "vector_float")
