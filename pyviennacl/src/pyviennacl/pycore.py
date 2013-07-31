@@ -45,6 +45,20 @@ vcl_container_type_strings = {
     _v.statement_node_type_family.VECTOR_TYPE_FAMILY: 'vector'
 }
 
+# This dict maps ViennaCL scalar types onto ViennaCL vector template types
+vcl_vector_types = {
+#    _v.statement_node_type.CHAR_TYPE: _v.vector_char,
+#    _v.statement_node_type.UCHAR_TYPE: _v.vector_uchar,
+#    _v.statement_node_type.SHORT_TYPE: _v.vector_short,
+#    _v.statement_node_type.USHORT_TYPE: _v.vector_ushort,
+#    _v.statement_node_type.INT_TYPE: _v.vector_int,
+#    _v.statement_node_type.UINT_TYPE: _v.vector_uint,
+#    _v.statement_node_type.LONG_TYPE: _v.vector_long,
+#    _v.statement_node_type.ULONG_TYPE: _v.vector_ulong,
+#    _v.statement_node_type.HALF_TYPE: _v.vector_half,
+    _v.statement_node_type.FLOAT_TYPE: _v.vector_float,
+    _v.statement_node_type.DOUBLE_TYPE: _v.vector_double
+}
 
 class NoResult: 
     """
@@ -138,30 +152,10 @@ class Vector(Leaf):
         """
         if self.dtype is None:
             self.dtype = float64
-            vcl_type = _v.vector_double
-        elif self.dtype.name == "int8":
-            vcl_type = _v.vector_char
-        elif self.dtype.name == "int16":
-            vcl_type = _v.vector_short
-        elif self.dtype.name == "int32":
-            vcl_type = _v.vector_int
-        elif self.dtype.name == "int64":
-            vcl_type = _v.vector_long
-        elif self.dtype.name == "uint8":
-            vcl_type = _v.vector_uchar
-        elif self.dtype.name == "uint16":
-            vcl_type = _v.vector_ushort
-        elif self.dtype.name == "uint32":
-            vcl_type = _v.vector_uint
-        elif self.dtype.name == "uint64":
-            vcl_type = _v.vector_ulong
-        elif self.dtype.name == "float16":
-            vcl_type = _v.vector_half
-        elif self.dtype.name == "float32":
-            vcl_type = _v.vector_float
-        elif self.dtype.name == "float64":
-            vcl_type = _v.vector_double
-        else:
+
+        try:
+            vcl_type = vcl_vector_types[self.statement_node_type]
+        except:
             raise TypeError("dtype %s not supported" % self.dtype)
 
         if 'shape' in kwargs.keys():
