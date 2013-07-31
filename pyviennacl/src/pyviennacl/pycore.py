@@ -7,47 +7,40 @@ from numpy import (ndarray, array, dtype,
 
 
 HostScalarTypes = {
-    'int8': _v.statement_node_type.HOST_SCALAR_CHAR_TYPE,
-    'int16': _v.statement_node_type.HOST_SCALAR_SHORT_TYPE,
-    'int32': _v.statement_node_type.HOST_SCALAR_INT_TYPE,
-    'int64': _v.statement_node_type.HOST_SCALAR_LONG_TYPE,
-    'uint8': _v.statement_node_type.HOST_SCALAR_UCHAR_TYPE,
-    'uint16': _v.statement_node_type.HOST_SCALAR_USHORT_TYPE,
-    'uint32': _v.statement_node_type.HOST_SCALAR_UINT_TYPE,
-    'uint64': _v.statement_node_type.HOST_SCALAR_ULONG_TYPE,
-    'float16': _v.statement_node_type.HOST_SCALAR_HALF_TYPE,
-    'float32': _v.statement_node_type.HOST_SCALAR_FLOAT_TYPE,
-    'float64': _v.statement_node_type.HOST_SCALAR_DOUBLE_TYPE,
-    'float': _v.statement_node_type.HOST_SCALAR_DOUBLE_TYPE
+    'int8': _v.statement_node_type.CHAR_TYPE,
+    'int16': _v.statement_node_type.SHORT_TYPE,
+    'int32': _v.statement_node_type.INT_TYPE,
+    'int64': _v.statement_node_type.LONG_TYPE,
+    'uint8': _v.statement_node_type.UCHAR_TYPE,
+    'uint16': _v.statement_node_type.USHORT_TYPE,
+    'uint32': _v.statement_node_type.UINT_TYPE,
+    'uint64': _v.statement_node_type.ULONG_TYPE,
+    'float16': _v.statement_node_type.HALF_TYPE,
+    'float32': _v.statement_node_type.FLOAT_TYPE,
+    'float64': _v.statement_node_type.DOUBLE_TYPE,
+    'float': _v.statement_node_type.DOUBLE_TYPE
 }
 
+vcl_container_type_strings = {
+    _v.statement_node_type_family.COMPOSITE_OPERATION_FAMILY: "node",
+    _v.statement_node_type_family.HOST_SCALAR_TYPE_FAMILY: "host",
+    _v.statement_node_type_family.SCALAR_TYPE_FAMILY: "scalar",
+    _v.statement_node_type_family.VECTOR_TYPE_FAMILY: "vector"
+}
 
-vcl_operand_setters = {
-    _v.statement_node_type.COMPOSITE_OPERATION_TYPE: "set_operand_to_node_index",
-
-    _v.statement_node_type.HOST_SCALAR_CHAR_TYPE: "set_operand_to_host_char",
-    _v.statement_node_type.HOST_SCALAR_UCHAR_TYPE: "set_operand_to_host_uchar",
-    _v.statement_node_type.HOST_SCALAR_SHORT_TYPE: "set_operand_to_host_short",
-    _v.statement_node_type.HOST_SCALAR_USHORT_TYPE: "set_operand_to_host_ushort",
-    _v.statement_node_type.HOST_SCALAR_INT_TYPE: "set_operand_to_host_int",
-    _v.statement_node_type.HOST_SCALAR_UINT_TYPE: "set_operand_to_host_uint",
-    _v.statement_node_type.HOST_SCALAR_LONG_TYPE: "set_operand_to_host_long",
-    _v.statement_node_type.HOST_SCALAR_ULONG_TYPE: "set_operand_to_host_ulong",
-    _v.statement_node_type.HOST_SCALAR_HALF_TYPE: "set_operand_to_host_half",
-    _v.statement_node_type.HOST_SCALAR_FLOAT_TYPE: "set_operand_to_host_float",
-    _v.statement_node_type.HOST_SCALAR_DOUBLE_TYPE: "set_operand_to_host_double",
-
-    _v.statement_node_type.VECTOR_CHAR_TYPE: "set_operand_to_vector_char",
-    _v.statement_node_type.VECTOR_UCHAR_TYPE: "set_operand_to_vector_uchar",
-    _v.statement_node_type.VECTOR_SHORT_TYPE: "set_operand_to_vector_short",
-    _v.statement_node_type.VECTOR_USHORT_TYPE: "set_operand_to_vector_ushort",
-    _v.statement_node_type.VECTOR_INT_TYPE: "set_operand_to_vector_int",
-    _v.statement_node_type.VECTOR_UINT_TYPE: "set_operand_to_vector_uint",
-    _v.statement_node_type.VECTOR_LONG_TYPE: "set_operand_to_vector_long",
-    _v.statement_node_type.VECTOR_ULONG_TYPE: "set_operand_to_vector_ulong",
-    _v.statement_node_type.VECTOR_HALF_TYPE: "set_operand_to_vector_half",
-    _v.statement_node_type.VECTOR_FLOAT_TYPE: "set_operand_to_vector_float",
-    _v.statement_node_type.VECTOR_DOUBLE_TYPE: "set_operand_to_vector_double"
+vcl_dtype_strings = {
+    _v.statement_node_type.COMPOSITE_OPERATION_TYPE: "index",
+    _v.statement_node_type.CHAR_TYPE: "char",
+    _v.statement_node_type.UCHAR_TYPE: "uchar",
+    _v.statement_node_type.SHORT_TYPE: "short",
+    _v.statement_node_type.USHORT_TYPE: "ushort",
+    _v.statement_node_type.INT_TYPE: "int",
+    _v.statement_node_type.UINT_TYPE: "uint",
+    _v.statement_node_type.LONG_TYPE: "long",
+    _v.statement_node_type.ULONG_TYPE: "ulong",
+    _v.statement_node_type.HALF_TYPE: "half",
+    _v.statement_node_type.FLOAT_TYPE: "float",
+    _v.statement_node_type.DOUBLE_TYPE: "double",
 }
 
 
@@ -121,43 +114,43 @@ class Vector(Leaf):
             ## Maybe want to do this with a type conversion dict?
             ## Maybe want to generalise the type information dicts?
             if dt.name == "int8":
-                self.statement_node_type = _v.statement_node_type.VECTOR_CHAR_TYPE
+                self.statement_node_type = _v.statement_node_type.CHAR_TYPE
                 vcl_type = _v.vector_char
             elif dt.name == "int16":
-                self.statement_node_type = _v.statement_node_type.VECTOR_SHORT_TYPE
+                self.statement_node_type = _v.statement_node_type.SHORT_TYPE
                 vcl_type = _v.vector_short
             elif dt.name == "int32":
-                self.statement_node_type = _v.statement_node_type.VECTOR_INT_TYPE
+                self.statement_node_type = _v.statement_node_type.INT_TYPE
                 vcl_type = _v.vector_int
             elif dt.name == "int64":
-                self.statement_node_type = _v.statement_node_type.VECTOR_LONG_TYPE
+                self.statement_node_type = _v.statement_node_type.LONG_TYPE
                 vcl_type = _v.vector_long
             elif dt.name == "uint8":
-                self.statement_node_type = _v.statement_node_type.VECTOR_UCHAR_TYPE
+                self.statement_node_type = _v.statement_node_type.UCHAR_TYPE
                 vcl_type = _v.vector_uchar
             elif dt.name == "uint16":
-                self.statement_node_type = _v.statement_node_type.VECTOR_USHORT_TYPE
+                self.statement_node_type = _v.statement_node_type.USHORT_TYPE
                 vcl_type = _v.vector_ushort
             elif dt.name == "uint32":
-                self.statement_node_type = _v.statement_node_type.VECTOR_UINT_TYPE
+                self.statement_node_type = _v.statement_node_type.UINT_TYPE
                 vcl_type = _v.vector_uint
             elif dt.name == "uint64":
-                self.statement_node_type = _v.statement_node_type.VECTOR_ULONG_TYPE
+                self.statement_node_type = _v.statement_node_type.ULONG_TYPE
                 vcl_type = _v.vector_ulong
             elif dt.name == "float16":
-                self.statement_node_type = _v.statement_node_type.VECTOR_HALF_TYPE
+                self.statement_node_type = _v.statement_node_type.HALF_TYPE
                 vcl_type = _v.vector_half
             elif dt.name == "float32":
-                self.statement_node_type = _v.statement_node_type.VECTOR_FLOAT_TYPE
+                self.statement_node_type = _v.statement_node_type.FLOAT_TYPE
                 vcl_type = _v.vector_float
             elif dt.name == "float64":
-                self.statement_node_type = _v.statement_node_type.VECTOR_DOUBLE_TYPE
+                self.statement_node_type = _v.statement_node_type.DOUBLE_TYPE
                 vcl_type = _v.vector_double
             else:
                 raise TypeError("dtype %s not supported" % dtype)
         else:
             self.dtype = float64
-            self.statement_node_type = _v.statement_node_type.VECTOR_DOUBLE_TYPE
+            self.statement_node_type = _v.statement_node_type.DOUBLE_TYPE
             vcl_type = _v.vector_double
 
         if 'shape' in kwargs.keys():
@@ -239,8 +232,13 @@ class Node:
             self.operands[1].statement_node_type)          # rhs
 
     def get_vcl_operand_setter(self, operand):
+        vcl_operand_setter = [
+            "set_operand_to_",
+            vcl_container_type_strings[operand.statement_node_type_family],
+            "_",
+            vcl_dtype_strings[operand.statement_node_type] ]
         return getattr(self.vcl_node,
-                       vcl_operand_setters[operand.statement_node_type])
+                       "".join(vcl_operand_setter))
 
     @property
     def _result_container_type(self):

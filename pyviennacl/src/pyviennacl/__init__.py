@@ -1,2 +1,2 @@
-from .core import *
+from .pycore import *
 from .util import *

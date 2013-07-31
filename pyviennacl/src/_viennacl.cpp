@@ -1300,6 +1300,19 @@ BOOST_PYTHON_MODULE(_viennacl)
   bp::enum_<vcl::scheduler::statement_node_type>("statement_node_type")
     VALUE(vcl::scheduler, COMPOSITE_OPERATION_TYPE)
 
+    VALUE(vcl::scheduler, CHAR_TYPE)
+    VALUE(vcl::scheduler, UCHAR_TYPE)
+    VALUE(vcl::scheduler, SHORT_TYPE)
+    VALUE(vcl::scheduler, USHORT_TYPE)
+    VALUE(vcl::scheduler, INT_TYPE)
+    VALUE(vcl::scheduler, UINT_TYPE)
+    VALUE(vcl::scheduler, LONG_TYPE)
+    VALUE(vcl::scheduler, ULONG_TYPE)
+    VALUE(vcl::scheduler, HALF_TYPE)
+    VALUE(vcl::scheduler, FLOAT_TYPE)
+    VALUE(vcl::scheduler, DOUBLE_TYPE)
+
+    /*
     // host scalars:
     VALUE(vcl::scheduler, HOST_SCALAR_CHAR_TYPE)
     VALUE(vcl::scheduler, HOST_SCALAR_UCHAR_TYPE)
@@ -1364,6 +1377,7 @@ BOOST_PYTHON_MODULE(_viennacl)
     VALUE(vcl::scheduler, MATRIX_COL_HALF_TYPE)
     VALUE(vcl::scheduler, MATRIX_COL_FLOAT_TYPE)
     VALUE(vcl::scheduler, MATRIX_COL_DOUBLE_TYPE)
+    */
     ;
 
   /*
