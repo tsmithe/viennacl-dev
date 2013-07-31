@@ -89,14 +89,23 @@ ScalarType diff ( ublas::vector<ScalarType> & v1, viennacl::vector<ScalarType,Al
 
 template<typename ScalarType>
 double diff(ScalarType s, viennacl::scalar<ScalarType> & gs){
-    return s - gs;
+  ScalarType other = gs;
+  return (s - other) / std::max (s, other);
+}
+
+
+void execute_statement(viennacl::scheduler::statement const & s){
+  generator::code_generator gen;
+  gen.add(viennacl::scheduler::statement(s));
+  viennacl::generator::enqueue(gen);
+  viennacl::backend::finish();
 }
 
 template< typename NumericT, typename Epsilon >
 int test_vector ( Epsilon const& epsilon) {
     int retval = EXIT_SUCCESS;
 
-    unsigned int size = 128;
+    unsigned int size = 1024;
 
     ublas::vector<NumericT> cw(size);
     ublas::vector<NumericT> cx(size);
@@ -108,7 +117,7 @@ int test_vector ( Epsilon const& epsilon) {
 
 
     for(unsigned int i=0; i<cw.size(); ++i){
-      cw[i]=(NumericT)i/cw.size();
+      cw[i]=std::rand()/(NumericT)RAND_MAX;
     }
 
     std::cout << "Running tests for vector of size " << cw.size() << std::endl;
@@ -127,39 +136,29 @@ int test_vector ( Epsilon const& epsilon) {
     viennacl::copy (cy, y);
     viennacl::copy (cz, z);
 
-    // --------------------------------------------------------------------------
+    // --------------------------------------------------------------------------      
 
-    {
-        std::cout << "w = x + y ..." << std::endl;
-        cw = cx + cy;
-        generator::code_generator gen;
-        gen.add(viennacl::scheduler::statement(w, viennacl::op_assign(), x + y));
-        viennacl::generator::enqueue(gen);
-        viennacl::backend::finish();
-        CHECK_RESULT(cw, w, w = x + y);
-    }
-
-    {
-        std::cout << "y = w + x ..." << std::endl;
-        cy = cw + cx;
-        generator::code_generator gen;
-        gen.add(viennacl::scheduler::statement(y, viennacl::op_assign(), w + x));
-        viennacl::generator::enqueue(gen);
-        viennacl::backend::finish();
-        CHECK_RESULT(cy, y, y = w + x);
-    }
+//    std::cout << "w = x + y ..." << std::endl;
+//    cw = cx + cy;
+//    execute_statement(viennacl::scheduler::statement(w, viennacl::op_assign(), x + y));
+//    CHECK_RESULT(cw, w, w = x + y);
 
 
-    {
-        std::cout << "x = y + w ..." << std::endl;
-        cx = cy + cw;
-        generator::code_generator gen;
-        gen.add(viennacl::scheduler::statement(x, viennacl::op_assign(), y + w));
-        viennacl::generator::enqueue(gen);
-        viennacl::backend::finish();
-        CHECK_RESULT(cx, x, x = y + w);
-    }
+//    std::cout << "y = w + x ..." << std::endl;
+//    cy = cw + cx;
+//    execute_statement(viennacl::scheduler::statement(y, viennacl::op_assign(), w + x));
+//    CHECK_RESULT(cy, y, y = w + x);
 
+//    std::cout << "x = y + w ..." << std::endl;
+//    cx = cy + cw;
+//    execute_statement(viennacl::scheduler::statement(x, viennacl::op_assign(), y + w));
+//    CHECK_RESULT(cx, x, x = y + w);
+
+    std::cout << "s = inner_prod(x,y)..." << std::endl;
+    s = 0;
+    for(unsigned int i=0 ; i<size ; ++i)  s+=cx[i]*cy[i];
+    execute_statement(viennacl::scheduler::statement(gs, viennacl::op_assign(), viennacl::linalg::inner_prod(x,y)));
+    CHECK_RESULT(s, gs, s = inner_prod(x,y));
 
 //    {
 //        std::cout << "w = x > 0.42" << std::endl;
@@ -460,7 +459,7 @@ int main(int argc, char* argv[]){
                         std::cout << "# Test passed" << std::endl;
                     else
                         return retval;
-                }
+              }
 
                 std::cout << std::endl;
                 std::cout << "----------------------------------------------" << std::endl;

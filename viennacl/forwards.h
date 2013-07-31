@@ -145,6 +145,9 @@ namespace viennacl
   template<class SCALARTYPE, unsigned int ALIGNMENT>
   class const_vector_iterator;
 
+  template<typename SCALARTYPE>
+  class symbolic_vector_base;
+
   template <typename SCALARTYPE>
   class zero_vector;
 
@@ -238,11 +241,15 @@ namespace viennacl
   //
   // Matrix types:
   //
+
   template<class SCALARTYPE, typename F = row_major, typename SizeType = vcl_size_t, typename DistanceType = vcl_ptrdiff_t>
   class matrix_base;
 
   template <class SCALARTYPE, typename F = row_major, unsigned int ALIGNMENT = 1>
   class matrix;
+
+  template<typename SCALARTYPE>
+  class symbolic_matrix_base;
 
   template <class SCALARTYPE>
   class identity_matrix;
@@ -390,7 +397,7 @@ namespace viennacl
     {
       typedef typename MATRIXTYPE::ERROR_SPECIALIZATION_FOR_THIS_MATRIX_TYPE_MISSING          ErrorIndicator;
 
-      static void apply(const MATRIXTYPE & mat, unsigned int & row, unsigned int & col) {}
+      static void apply(const MATRIXTYPE & mat, unsigned int & /*row*/, unsigned int & /*col*/) {}
     };
   }
 
