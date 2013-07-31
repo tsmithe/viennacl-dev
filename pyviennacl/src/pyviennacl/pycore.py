@@ -5,7 +5,7 @@ from numpy import (ndarray, array, dtype,
                    uint8, uint16, uint32, uint64,
                    float16, float32, float64)
 
-
+# This dict is used to map NumPy dtypes onto OpenCL/ViennaCL scalar types
 HostScalarTypes = {
     'int8': _v.statement_node_type.CHAR_TYPE,
     'int16': _v.statement_node_type.SHORT_TYPE,
@@ -21,36 +21,59 @@ HostScalarTypes = {
     'float': _v.statement_node_type.DOUBLE_TYPE
 }
 
-vcl_container_type_strings = {
-    _v.statement_node_type_family.COMPOSITE_OPERATION_FAMILY: "node",
-    _v.statement_node_type_family.HOST_SCALAR_TYPE_FAMILY: "host",
-    _v.statement_node_type_family.SCALAR_TYPE_FAMILY: "scalar",
-    _v.statement_node_type_family.VECTOR_TYPE_FAMILY: "vector"
-}
-
+# This dict maps ViennaCL scalar types onto the C++ strings used for them
 vcl_dtype_strings = {
-    _v.statement_node_type.COMPOSITE_OPERATION_TYPE: "index",
-    _v.statement_node_type.CHAR_TYPE: "char",
-    _v.statement_node_type.UCHAR_TYPE: "uchar",
-    _v.statement_node_type.SHORT_TYPE: "short",
-    _v.statement_node_type.USHORT_TYPE: "ushort",
-    _v.statement_node_type.INT_TYPE: "int",
-    _v.statement_node_type.UINT_TYPE: "uint",
-    _v.statement_node_type.LONG_TYPE: "long",
-    _v.statement_node_type.ULONG_TYPE: "ulong",
-    _v.statement_node_type.HALF_TYPE: "half",
-    _v.statement_node_type.FLOAT_TYPE: "float",
-    _v.statement_node_type.DOUBLE_TYPE: "double",
+    _v.statement_node_type.COMPOSITE_OPERATION_TYPE: 'index',
+    _v.statement_node_type.CHAR_TYPE: 'char',
+    _v.statement_node_type.UCHAR_TYPE: 'uchar',
+    _v.statement_node_type.SHORT_TYPE: 'short',
+    _v.statement_node_type.USHORT_TYPE: 'ushort',
+    _v.statement_node_type.INT_TYPE: 'int',
+    _v.statement_node_type.UINT_TYPE: 'uint',
+    _v.statement_node_type.LONG_TYPE: 'long',
+    _v.statement_node_type.ULONG_TYPE: 'ulong',
+    _v.statement_node_type.HALF_TYPE: 'half',
+    _v.statement_node_type.FLOAT_TYPE: 'float',
+    _v.statement_node_type.DOUBLE_TYPE: 'double',
+}
+
+# This dict maps ViennaCL container type families onto the strings used for them
+vcl_container_type_strings = {
+    _v.statement_node_type_family.COMPOSITE_OPERATION_FAMILY: 'node',
+    _v.statement_node_type_family.HOST_SCALAR_TYPE_FAMILY: 'host',
+    _v.statement_node_type_family.SCALAR_TYPE_FAMILY: 'scalar',
+    _v.statement_node_type_family.VECTOR_TYPE_FAMILY: 'vector'
 }
 
 
-class NoResult: pass
+class NoResult: 
+    """
+    This no-op class is used to represent when some ViennaCL operation produces
+    no explicit result, aside from any effects it may have on the operands.
+    
+    For instance, in-place operations can return NoResult, as can Assign.
+    """
+    pass
 
 
 class Leaf:
     """
-    Leaf base class -- generic constructors/converters..
+    This is the base class for all ``leaves`` in the ViennaCL expression tree
+    system. A leaf is any type that can store data for use in an operation,
+    such as a scalar, a vector, or a matrix.
     """
+
+    def __init__(self, *args, **kwargs):
+        if 'dtype' in kwargs.keys():
+            dt = dtype(kwargs['dtype'])
+            self.dtype = dt
+        else:
+            self.dtype = None
+        self.statement_node_type = HostScalarTypes[self.dtype.name]
+        self._init_leaf(args, kwargs)
+
+    def _init_leaf(self, args, kwargs):
+        pass
 
     @property
     def result_dtype(self):
@@ -69,7 +92,24 @@ class Leaf:
 
 
 class Scalar(Leaf):
+    """
+    This is the base class for all scalar types, regardless of their memory
+    and backend context. It represents the dtype and the value of the scalar
+    independently of one another.
+
+    TODO: Extend to hold ViennaCL scalar types
+    + NB: Perhaps a good idea to implement vcl scalar types like numpy dtypes?
+    """
     ndim = 0
+
+    def _init_leaf(self, args, kwargs):
+        if self.dtype is None:
+            self.dtype = np_result_type(value)
+
+        if 'value' in kwargs.keys():
+            self.value = kwargs['value']
+        else:
+            self.value = 0
 
     @property
     def shape(self):
@@ -79,79 +119,50 @@ class Scalar(Leaf):
         return array([self.value], dtype=self.dtype)
 
 
-
 class HostScalar(Scalar):
     """
-    Convenience class to hold a scalar type and value
-    
-    TODO: Extend to hold ViennaCL scalar types
-    + NB: Perhaps a good idea to implement vcl scalar types like numpy dtypes?
+    This class is used to represent a ``host scalar``: a scalar type that is
+    stored in main CPU RAM, and that is usually represented using a standard
+    NumPy scalar dtype, such as int32 or float64.
     """
     statement_node_type_family = _v.statement_node_type_family.HOST_SCALAR_TYPE_FAMILY
-
-    def __init__(self, value=0, dtype=None):
-
-        if dtype == None:
-            self.dtype = np_result_type(value)
-        else:
-            self.dtype = dtype
-
-        self.statement_node_type = HostScalarTypes[self.dtype.name]
-        self.value = value
 
 
 class Vector(Leaf):
     ndim = 1
     statement_node_type_family = _v.statement_node_type_family.VECTOR_TYPE_FAMILY
 
-    def __init__(self, *args, **kwargs):
+    def _init_leaf(self, args, kwargs):
         """
         Initialise the vcl_leaf..
         """
-        if 'dtype' in kwargs.keys():
-            dt = dtype(kwargs['dtype'])
-            self.dtype = dt
-            ## Maybe want to do this with a type conversion dict?
-            ## Maybe want to generalise the type information dicts?
-            if dt.name == "int8":
-                self.statement_node_type = _v.statement_node_type.CHAR_TYPE
-                vcl_type = _v.vector_char
-            elif dt.name == "int16":
-                self.statement_node_type = _v.statement_node_type.SHORT_TYPE
-                vcl_type = _v.vector_short
-            elif dt.name == "int32":
-                self.statement_node_type = _v.statement_node_type.INT_TYPE
-                vcl_type = _v.vector_int
-            elif dt.name == "int64":
-                self.statement_node_type = _v.statement_node_type.LONG_TYPE
-                vcl_type = _v.vector_long
-            elif dt.name == "uint8":
-                self.statement_node_type = _v.statement_node_type.UCHAR_TYPE
-                vcl_type = _v.vector_uchar
-            elif dt.name == "uint16":
-                self.statement_node_type = _v.statement_node_type.USHORT_TYPE
-                vcl_type = _v.vector_ushort
-            elif dt.name == "uint32":
-                self.statement_node_type = _v.statement_node_type.UINT_TYPE
-                vcl_type = _v.vector_uint
-            elif dt.name == "uint64":
-                self.statement_node_type = _v.statement_node_type.ULONG_TYPE
-                vcl_type = _v.vector_ulong
-            elif dt.name == "float16":
-                self.statement_node_type = _v.statement_node_type.HALF_TYPE
-                vcl_type = _v.vector_half
-            elif dt.name == "float32":
-                self.statement_node_type = _v.statement_node_type.FLOAT_TYPE
-                vcl_type = _v.vector_float
-            elif dt.name == "float64":
-                self.statement_node_type = _v.statement_node_type.DOUBLE_TYPE
-                vcl_type = _v.vector_double
-            else:
-                raise TypeError("dtype %s not supported" % dtype)
-        else:
+        if self.dtype is None:
             self.dtype = float64
-            self.statement_node_type = _v.statement_node_type.DOUBLE_TYPE
             vcl_type = _v.vector_double
+        elif self.dtype.name == "int8":
+            vcl_type = _v.vector_char
+        elif self.dtype.name == "int16":
+            vcl_type = _v.vector_short
+        elif self.dtype.name == "int32":
+            vcl_type = _v.vector_int
+        elif self.dtype.name == "int64":
+            vcl_type = _v.vector_long
+        elif self.dtype.name == "uint8":
+            vcl_type = _v.vector_uchar
+        elif self.dtype.name == "uint16":
+            vcl_type = _v.vector_ushort
+        elif self.dtype.name == "uint32":
+            vcl_type = _v.vector_uint
+        elif self.dtype.name == "uint64":
+            vcl_type = _v.vector_ulong
+        elif self.dtype.name == "float16":
+            vcl_type = _v.vector_half
+        elif self.dtype.name == "float32":
+            vcl_type = _v.vector_float
+        elif self.dtype.name == "float64":
+            vcl_type = _v.vector_double
+        else:
+            raise TypeError("dtype %s not supported" % self.dtype)
 
         if 'shape' in kwargs.keys():
             if len(kwargs['shape']) != 1:
@@ -197,7 +208,7 @@ class Node:
         else:
             raise TypeError("Only unary or binary nodes support currently")
 
-        def get_operand(opand):
+        def fix_operand(opand):
             try:
                 if (dtype(type(opand)).name in HostScalarTypes
                     and not (isinstance(opand, Node)
@@ -205,12 +216,8 @@ class Node:
                     return HostScalar(opand)
                 else: return opand
             except: return opand
-        self.operands = list(map(get_operand, args))
+        self.operands = list(map(fix_operand, args))
 
-        self._init_node()
-
-    def _vcl_node_factory(self):
-        # Check result type plausibility
         self.result_container_type = self._result_container_type
         if self.result_container_type is NoResult:
             # Try swapping the operands
@@ -341,10 +348,7 @@ class Assign(Node):
     Derived node class for assignment
     """
     result_types = {}
-
-    def _init_node(self):
-        self.operation_node_type = _v.operation_node_type.OPERATION_BINARY_ASSIGN_TYPE
-        self._vcl_node_factory()
+    operation_node_type = _v.operation_node_type.OPERATION_BINARY_ASSIGN_TYPE
 
 
 class Add(Node):
@@ -354,10 +358,7 @@ class Add(Node):
     result_types = {
         ('Vector', 'Vector'): Vector
     }
-
-    def _init_node(self):
-        self.operation_node_type = _v.operation_node_type.OPERATION_BINARY_ADD_TYPE
-        self._vcl_node_factory()
+    operation_node_type = _v.operation_node_type.OPERATION_BINARY_ADD_TYPE
 
     def __add__(self, rhs):
         return Add(self, rhs)
@@ -380,10 +381,7 @@ class Mul(Node):
 #        ('Vector', 'Vector'): Matrix,
         ('Vector', 'HostScalar'): Vector
     }
-
-    def _init_node(self):
-        self.operation_node_type = _v.operation_node_type.OPERATION_BINARY_MULT_TYPE
-        self._vcl_node_factory()
+    operation_node_type = _v.operation_node_type.OPERATION_BINARY_MULT_TYPE
 
     def __add__(self, rhs):
         return Add(self, rhs)
@@ -399,10 +397,7 @@ class Sub(Node):
     result_types = {
         ('Vector', 'Vector'): Vector
     }
-
-    def _init_node(self):
-        self.operation_node_type = _v.operation_node_type.OPERATION_BINARY_SUB_TYPE
-        self._vcl_node_factory()
+    operation_node_type = _v.operation_node_type.OPERATION_BINARY_SUB_TYPE
 
     def __add__(self, rhs):
         return Add(self, rhs)
