@@ -11,7 +11,7 @@
 #include <boost/numeric/ublas/vector_of_vector.hpp>
 
 #define VIENNACL_WITH_UBLAS
-#define VIENNACL_WITH_OPENCL
+//#define VIENNACL_WITH_OPENCL
 //#define VIENNACL_WITH_PYTHON
 #include <viennacl/linalg/direct_solve.hpp>
 #include <viennacl/linalg/inner_prod.hpp>

@@ -204,15 +204,15 @@ class Node:
         else:
             raise TypeError("Only unary or binary nodes support currently")
 
-        self.operands = []
-        for opand in args:
+        def get_operand(opand):
             try:
-                if (dtype(type(opand)).name in HostScalarTypes.keys()
+                if (dtype(type(opand)).name in HostScalarTypes
                     and not (isinstance(opand, Node)
                              or isinstance(opand, Leaf))):
-                    opand = HostScalar(opand)
-            except: pass
-            self.operands.append(opand)
+                    return HostScalar(opand)
+                else: return opand
+            except: return opand
+        self.operands = list(map(get_operand, args))
 
         self._init_node()
 
