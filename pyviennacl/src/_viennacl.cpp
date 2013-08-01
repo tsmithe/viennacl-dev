@@ -915,22 +915,20 @@ public:
   Python module initialisation
  *******************************/
 
-/*
-void translate_scheduler_exception(vcl::scheduler::statement_not_supported_exception e)
+
+void translate_string_exception(const char* e)
 {
   // Use the Python 'C' API to set up an exception object
-  PyErr_SetString(PyExc_RuntimeError, e.what());
+  PyErr_SetString(PyExc_RuntimeError, e);
 }
-*/
+
 
 BOOST_PYTHON_MODULE(_viennacl)
 {
 
-  /*
   bp::register_exception_translator
-    <vcl::scheduler::statement_not_supported_exception>
-    (&translate_scheduler_exception);
-  */
+    <const char*>
+    (&translate_string_exception);
 
   np::initialize();
 

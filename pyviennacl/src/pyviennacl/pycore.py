@@ -42,7 +42,8 @@ vcl_container_type_strings = {
     _v.statement_node_type_family.COMPOSITE_OPERATION_FAMILY: 'node',
     _v.statement_node_type_family.HOST_SCALAR_TYPE_FAMILY: 'host',
     _v.statement_node_type_family.SCALAR_TYPE_FAMILY: 'scalar',
-    _v.statement_node_type_family.VECTOR_TYPE_FAMILY: 'vector'
+    _v.statement_node_type_family.VECTOR_TYPE_FAMILY: 'vector',
+    _v.statement_node_type_family.MATRIX_ROW_TYPE_FAMILY: 'matrix_row'
 }
 
 # This dict maps ViennaCL scalar types onto ViennaCL vector template types
@@ -59,6 +60,22 @@ vcl_vector_types = {
     _v.statement_node_type.FLOAT_TYPE: _v.vector_float,
     _v.statement_node_type.DOUBLE_TYPE: _v.vector_double
 }
+
+# This dict maps ViennaCL scalar types onto ViennaCL matrix template types
+vcl_matrix_types = {
+#    _v.statement_node_type.CHAR_TYPE: _v.matrix_char,
+#    _v.statement_node_type.UCHAR_TYPE: _v.matrix_uchar,
+#    _v.statement_node_type.SHORT_TYPE: _v.matrix_short,
+#    _v.statement_node_type.USHORT_TYPE: _v.matrix_ushort,
+#    _v.statement_node_type.INT_TYPE: _v.matrix_int,
+#    _v.statement_node_type.UINT_TYPE: _v.matrix_uint,
+#    _v.statement_node_type.LONG_TYPE: _v.matrix_long,
+#    _v.statement_node_type.ULONG_TYPE: _v.matrix_ulong,
+#    _v.statement_node_type.HALF_TYPE: _v.matrix_half,
+#    _v.statement_node_type.FLOAT_TYPE: _v.matrix_float,
+    _v.statement_node_type.DOUBLE_TYPE: _v.matrix #_double
+}
+
 
 class NoResult: 
     """
@@ -205,7 +222,7 @@ class Vector(Leaf):
         self.statement_node_type = HostScalarTypes[self.dtype.name]
 
         try:
-            vcl_type = vcl_vector_types[self.statement_node_type]
+            vcl_type = vcl_matrix_types[self.statement_node_type]
         except:
             raise TypeError("dtype %s not supported" % self.statement_node_type)
 
@@ -229,6 +246,77 @@ class Vector(Leaf):
         self.size = self.vcl_leaf.size
         self.shape = (self.size,)
         self.internal_size = self.vcl_leaf.internal_size
+
+    def __add__(self, rhs):
+        return Add(self, rhs)
+
+    def __sub__(self, rhs):
+        return Sub(self, rhs)
+
+
+class Matrix(Leaf):
+    """
+    A generalised Vector class: represents ViennaCL vector objects of all
+    supported scalar types. Can be constructed in a number of ways:
+    + from an ndarray of the correct dtype
+    + from an integer tuple: produces an empty Matrix of that shape
+    + from a tuple: first two values shape, third scalar value
+
+    Also provides convenience functions for arithmetic.
+    """
+    ndim = 2
+    statement_node_type_family = _v.statement_node_type_family.MATRIX_ROW_TYPE_FAMILY
+
+    def _init_leaf(self, args, kwargs):
+        """
+        Construct the underlying ViennaCL vector object according to the 
+        given arguments and types.
+        """
+        if self.dtype is None:
+            # TODO: Fix this 
+            self.dtype = dtype(float64)
+
+        self.statement_node_type = HostScalarTypes[self.dtype.name]
+
+        try:
+            vcl_type = vcl_matrix_types[self.statement_node_type]
+        except:
+            raise TypeError("dtype %s not supported" % self.statement_node_type)
+
+        if 'shape' in kwargs.keys():
+            ## TODO: Fix this -- far too brittle..
+            if len(kwargs['shape']) != 2:
+                raise TypeError("Matrix can only have a 2-d shape")
+            self.vcl_leaf = vcl_type(kwargs['shape'][0],
+                                     kwargs['shape'][1],
+                                     0)
+        else:
+            if len(args) == 0:
+                self.vcl_leaf = vcl_type()
+            elif len(args) == 1:
+                if isinstance(args[0], Matrix):
+                    self.vcl_leaf = vcl_type(args[0].vcl_leaf)
+                else:
+                    self.vcl_leaf = vcl_type(args[0])
+            elif len(args) == 2:
+                self.vcl_leaf = vcl_type(args[0], args[1])
+            elif len(args) == 3:
+                self.vcl_leaf = vcl_type(args[0], args[1], args[2])
+            else:
+                raise TypeError("Vector cannot be constructed in this way")
+
+        self.size1 = self.vcl_leaf.size1
+        self.size2 = self.vcl_leaf.size2
+        self.shape = (self.size1, self.size2)
+        self.internal_size1 = self.vcl_leaf.internal_size1
+        self.internal_size2 = self.vcl_leaf.internal_size2
+
+    def clear(self):
+        return self.vcl_leaf.clear
+
+    def T(self):
+        return self.vcl_leaf.trans
+    trans = T
 
     def __add__(self, rhs):
         return Add(self, rhs)
@@ -413,6 +501,7 @@ class Node:
         determining the upper-bound size of the corresponding dimension.
         """
         ndim = self.result_ndim
+        print("NDIM", ndim)
         max_size = self.result_max_axis_size
         shape = []
         for n in range(ndim):
@@ -456,7 +545,8 @@ class Add(Node):
     arithemetic.
     """
     result_types = {
-        ('Vector', 'Vector'): Vector
+        ('Vector', 'Vector'): Vector,
+        ('Matrix', 'Matrix'): Matrix
     }
     operation_node_type = _v.operation_node_type.OPERATION_BINARY_ADD_TYPE
 
@@ -536,6 +626,7 @@ class Statement:
         elif not node.result_container_type:
             raise TypeError("Unsupported expression: %s" % (node.express()))
         else:
+            print("SHAPE:", node.result_shape)
             self.result = node.result_container_type(
                 shape = node.result_shape,
                 dtype = node.dtype )
