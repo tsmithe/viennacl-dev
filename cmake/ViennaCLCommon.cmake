@@ -38,7 +38,7 @@ file(RELATIVE_PATH CONF_REL_INCLUDE_DIR "${INSTALL_CMAKE_DIR}"
 
 option(ENABLE_CUDA "Use the CUDA backend" OFF)
 
-option(BUILD_EXAMPLES "Build example programs" OFF)
+option(BUILD_EXAMPLES "Build example programs" ON)
 
 option(ENABLE_OPENCL "Use the OpenCL backend" ON)
 
@@ -55,7 +55,7 @@ cmake_dependent_option(ENABLE_VIENNAPROFILER
 # If you want to build the examples that use boost::numeric::ublas, enable
 # the following:
 cmake_dependent_option(ENABLE_UBLAS "Enable examples using uBLAS" OFF
-   BUILD_EXAMPLES OFF)
+   BUILD_EXAMPLES ON)
 
 # If you want to build the examples that use Eigen
 cmake_dependent_option(ENABLE_EIGEN "Enable examples that use Eigen" OFF

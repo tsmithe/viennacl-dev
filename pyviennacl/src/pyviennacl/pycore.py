@@ -501,7 +501,6 @@ class Node:
         determining the upper-bound size of the corresponding dimension.
         """
         ndim = self.result_ndim
-        print("NDIM", ndim)
         max_size = self.result_max_axis_size
         shape = []
         for n in range(ndim):
@@ -626,7 +625,6 @@ class Statement:
         elif not node.result_container_type:
             raise TypeError("Unsupported expression: %s" % (node.express()))
         else:
-            print("SHAPE:", node.result_shape)
             self.result = node.result_container_type(
                 shape = node.result_shape,
                 dtype = node.dtype )
