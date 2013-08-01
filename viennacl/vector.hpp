@@ -397,7 +397,49 @@ namespace viennacl
         }
       }
 
+      // CUDA or host memory:
+      explicit vector_base(SCALARTYPE * ptr_to_mem, size_type vec_size, viennacl::memory_types mem_type, std::size_t start = 0, difference_type stride = 1)
+        : size_(vec_size), start_(start), stride_(stride)
+      {
+        if (mem_type == viennacl::CUDA_MEMORY)
+        {
+#ifdef VIENNACL_WITH_CUDA
+          elements_.switch_active_handle_id(viennacl::CUDA_MEMORY);
+          elements_.cuda_handle().reset(reinterpret_cast<char*>(ptr_to_mem));
+          elements_.cuda_handle().inc(); //prevents that the user-provided memory is deleted once the vector object is destroyed.
+#else
+          throw "CUDA not activated!";
+#endif
+        }
+        else if (mem_type == viennacl::MAIN_MEMORY)
+        {
+          elements_.switch_active_handle_id(viennacl::MAIN_MEMORY);
+          elements_.ram_handle().reset(reinterpret_cast<char*>(ptr_to_mem));
+          elements_.ram_handle().inc(); //prevents that the user-provided memory is deleted once the vector object is destroyed.
+        }
 
+        elements_.raw_size(sizeof(SCALARTYPE) * vec_size);
+
+      }
+
+#ifdef VIENNACL_WITH_OPENCL
+      /** @brief Create a vector from existing OpenCL memory
+      *
+      * Note: The provided memory must take an eventual ALIGNMENT into account, i.e. existing_mem must be at least of size internal_size()!
+      * This is trivially the case with the default alignment, but should be considered when using vector<> with an alignment parameter not equal to 1.
+      *
+      * @param existing_mem   An OpenCL handle representing the memory
+      * @param vec_size       The size of the vector.
+      */
+      explicit vector_base(cl_mem existing_mem, size_type vec_size, size_type start = 0, difference_type stride = 1, viennacl::context ctx = viennacl::context()) : size_(vec_size), start_(start), stride_(stride)
+      {
+        elements_.switch_active_handle_id(viennacl::OPENCL_MEMORY);
+        elements_.opencl_handle() = existing_mem;
+        elements_.opencl_handle().inc();  //prevents that the user-provided memory is deleted once the vector object is destroyed.
+        elements_.opencl_handle().context(ctx.opencl_context());
+        elements_.raw_size(sizeof(SCALARTYPE) * vec_size);
+      }
+#endif
       /** @brief Creates the vector from the supplied random vector. */
       /*template<class DISTRIBUTION>
       vector(rand::random_vector_t<SCALARTYPE, DISTRIBUTION> v) : size_(v.size)
@@ -937,6 +979,7 @@ namespace viennacl
 
   public:
     typedef typename base_type::size_type                  size_type;
+    typedef typename base_type::difference_type            difference_type;
 
     /** @brief Default constructor in order to be compatible with various containers.
     */
@@ -950,6 +993,9 @@ namespace viennacl
 
     explicit vector(size_type vec_size, viennacl::context ctx) : base_type(vec_size, ctx) {}
 
+    explicit vector(SCALARTYPE * ptr_to_mem, size_type vec_size, viennacl::memory_types mem_type, size_type start = 0, difference_type stride = 1)
+        : base_type(ptr_to_mem, vec_size, mem_type, start, stride) {}
+
 #ifdef VIENNACL_WITH_OPENCL
     /** @brief Create a vector from existing OpenCL memory
     *
@@ -959,16 +1005,7 @@ namespace viennacl
     * @param existing_mem   An OpenCL handle representing the memory
     * @param vec_size       The size of the vector.
     */
-    explicit vector(cl_mem existing_mem, size_type vec_size) : base_type(vec_size)
-    {
-      viennacl::backend::mem_handle h;
-      h.switch_active_handle_id(viennacl::OPENCL_MEMORY);
-      h.opencl_handle() = existing_mem;
-      h.opencl_handle().inc();  //prevents that the user-provided memory is deleted once the vector object is destroyed.
-      h.raw_size(sizeof(SCALARTYPE) * vec_size);
-
-      base_type::set_handle(h);
-    }
+    explicit vector(cl_mem existing_mem, size_type vec_size, size_type start = 0, difference_type stride = 1) : base_type(existing_mem, vec_size, start, stride) {}
 
     /** @brief An explicit constructor for the vector, allocating the given amount of memory (plus a padding specified by 'ALIGNMENT') and the OpenCL context provided
     *

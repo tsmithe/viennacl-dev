@@ -80,7 +80,7 @@ endif()
 include_directories(BEFORE ${PROJECT_SOURCE_DIR})
 
 IF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-  INCLUDE_DIRECTORIES("/opt/local/include") 
+  INCLUDE_DIRECTORIES("/opt/local/include")
   set(CMAKE_EXE_LINKER_FLAGS "-framework OpenCL")
 ENDIF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 
@@ -105,6 +105,8 @@ if(BUILD_PYVIENNACL)
    add_subdirectory(external/boost_numpy)
    add_subdirectory(pyviennacl)
 endif()
+
+add_subdirectory(libviennacl)
 
 # Install
 #########
@@ -205,30 +207,30 @@ if(ENABLE_DIST)
    #
    # Sources only (no generated files):
    #
-   foreach(f LICENSE 
-             README 
+   foreach(f LICENSE
+             README
              changelog
              cmake/copymanual.cmake
              cmake/FindMTL.cmake
              cmake/FindOpenCL.cmake
-             cmake/FindViennaProfiler.cmake 
+             cmake/FindViennaProfiler.cmake
              cmake/ViennaCLCommon.cmake
              cmake/ViennaCLConfig.cmake.in
-             cmake/ViennaCLConfigVersion.cmake.in 
+             cmake/ViennaCLConfigVersion.cmake.in
              auxiliary/README
              build/README)
       configure_file(${f} "${DIST_SOURCES_DIR}/${f}" COPYONLY)
    endforeach()
 
    add_custom_target(copymanual-src ALL
-      "${CMAKE_COMMAND}" 
+      "${CMAKE_COMMAND}"
          -DSRC="${PROJECT_SOURCE_DIR}/doc/manual/"
          -DDST="${DIST_SOURCES_DIR}/doc/manual/"
          -P ${CMAKE_SOURCE_DIR}/cmake/copymanual.cmake
    )
 
    add_custom_target(dist-src
-   
+
       # Set up directory layout:
       COMMAND "${CMAKE_COMMAND}" -E make_directory "${DIST_SOURCES_DIR}"
       COMMAND "${CMAKE_COMMAND}" -E copy_directory

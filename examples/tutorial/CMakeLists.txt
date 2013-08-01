@@ -4,7 +4,7 @@
 #
 # Part 1: Tutorials which work without OpenCL as well:
 #
-foreach(tut bandwidth-reduction blas1 scheduler)
+foreach(tut bandwidth-reduction blas1 scheduler wrap-host-buffer)
    add_executable(${tut} ${tut}.cpp)
    if (ENABLE_OPENCL)
      target_link_libraries(${tut} ${OPENCL_LIBRARIES})
@@ -75,7 +75,7 @@ endif (ENABLE_OPENCL)
 #
 
 if (ENABLE_CUDA)
-  foreach(tut blas1)
+  foreach(tut blas1 wrap-cuda-buffer)
     cuda_add_executable(${tut}-cuda ${tut}.cu)
   endforeach()
 
@@ -88,3 +88,28 @@ if (ENABLE_CUDA)
 
 endif (ENABLE_CUDA)
 
+#
+# Part 4: Tutorials on using the shared C-library
+#
+
+include_directories(${PROJECT_SOURCE_DIR}/libviennacl/include/)
+
+if(ENABLE_CUDA)
+  if(ENABLE_OPENCL)
+    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-DVIENNACL_WITH_OPENCL") #set flags before setting executable!
+    cuda_add_executable(libviennacl-tutorial libviennacl.cu)
+    #set_target_properties(libviennacl-tutorial PROPERTIES COMPILE_FLAGS "-DVIENNACL_WITH_OPENCL -DVIENNACL_WITH_CUDA")
+    target_link_libraries(libviennacl-tutorial viennacl ${OPENCL_LIBRARIES})
+  else(ENABLE_OPENCL)
+    cuda_add_executable(libviennacl-tutorial libviennacl.cu)
+    target_link_libraries(libviennacl-tutorial viennacl)
+  endif(ENABLE_OPENCL)
+else(ENABLE_CUDA)
+  add_executable(libviennacl-tutorial libviennacl.cpp)
+  if(ENABLE_OPENCL)
+    set_target_properties(libviennacl-tutorial PROPERTIES COMPILE_FLAGS "-DVIENNACL_WITH_OPENCL")
+    target_link_libraries(libviennacl-tutorial viennacl ${OPENCL_LIBRARIES})
+  else(ENABLE_OPENCL)
+    target_link_libraries(libviennacl-tutorial viennacl)
+  endif(ENABLE_OPENCL)
+endif(ENABLE_CUDA)
