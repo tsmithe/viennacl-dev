@@ -46,36 +46,6 @@ vcl_container_type_strings = {
     _v.statement_node_type_family.MATRIX_ROW_TYPE_FAMILY: 'matrix_row'
 }
 
-# This dict maps ViennaCL scalar types onto ViennaCL vector template types
-vcl_vector_types = {
-#    _v.statement_node_type.CHAR_TYPE: _v.vector_char,
-#    _v.statement_node_type.UCHAR_TYPE: _v.vector_uchar,
-#    _v.statement_node_type.SHORT_TYPE: _v.vector_short,
-#    _v.statement_node_type.USHORT_TYPE: _v.vector_ushort,
-#    _v.statement_node_type.INT_TYPE: _v.vector_int,
-#    _v.statement_node_type.UINT_TYPE: _v.vector_uint,
-#    _v.statement_node_type.LONG_TYPE: _v.vector_long,
-#    _v.statement_node_type.ULONG_TYPE: _v.vector_ulong,
-#    _v.statement_node_type.HALF_TYPE: _v.vector_half,
-    _v.statement_node_type.FLOAT_TYPE: _v.vector_float,
-    _v.statement_node_type.DOUBLE_TYPE: _v.vector_double
-}
-
-# This dict maps ViennaCL scalar types onto ViennaCL matrix template types
-vcl_matrix_types = {
-#    _v.statement_node_type.CHAR_TYPE: _v.matrix_char,
-#    _v.statement_node_type.UCHAR_TYPE: _v.matrix_uchar,
-#    _v.statement_node_type.SHORT_TYPE: _v.matrix_short,
-#    _v.statement_node_type.USHORT_TYPE: _v.matrix_ushort,
-#    _v.statement_node_type.INT_TYPE: _v.matrix_int,
-#    _v.statement_node_type.UINT_TYPE: _v.matrix_uint,
-#    _v.statement_node_type.LONG_TYPE: _v.matrix_long,
-#    _v.statement_node_type.ULONG_TYPE: _v.matrix_ulong,
-#    _v.statement_node_type.HALF_TYPE: _v.matrix_half,
-#    _v.statement_node_type.FLOAT_TYPE: _v.matrix_float,
-    _v.statement_node_type.DOUBLE_TYPE: _v.matrix #_double
-}
-
 
 class NoResult: 
     """
@@ -115,7 +85,7 @@ class Leaf:
         
         If you're deriving from Leaf, then you probably want to override this.
         """
-        pass
+        raise NotImplementedError("Help")
 
     @property
     def result_container_type(self):
@@ -139,8 +109,12 @@ class Leaf:
         """
         return self.vcl_leaf.as_ndarray()
 
+    @property
+    def value(self):
+        return self.as_ndarray()
 
-class Scalar(Leaf):
+
+class ScalarBase(Leaf):
     """
     This is the base class for all scalar types, regardless of their memory
     and backend context. It represents the dtype and the value of the scalar
@@ -148,9 +122,6 @@ class Scalar(Leaf):
 
     Because scalars are leaves in the ViennaCL expression graph, this class
     derives from the Leaf base class.
-
-    TODO: Extend to hold ViennaCL scalar types
-    + NB: Perhaps a good idea to implement vcl scalar types like numpy dtypes?
     """
     ndim = 0 # Scalars are point-like, and thus 0-dimensional
 
@@ -162,38 +133,81 @@ class Scalar(Leaf):
            a dtype.
         """
         if 'value' in kwargs.keys():
-            self.value = kwargs['value']
+            self._value = kwargs['value']
         elif len(args) == 1:
-            self.value = args[0]
+            if isinstance(args[0], ScalarBase):
+                self._value = args[0].value
+            else:
+                self._value = args[0]
         else:
-            self.vaue = 0
+            self._value = 666
 
         if self.dtype is None:
-            self.dtype = np_result_type(self.value)
+            self.dtype = np_result_type(self._value)
 
-        self.statement_node_type = HostScalarTypes[self.dtype.name]
+        try:
+            self.statement_node_type = HostScalarTypes[self.dtype.name]
+        except KeyError:
+            raise TypeError("dtype %s not supported" % self.dtype.name)
+        except:
+            raise
+
+        self._init_scalar()
+
+    def _init_scalar(self):
+        raise NotImplementedError("Help!")
 
     @property
     def shape(self):
         raise TypeError("Scalars are 0-dimensional and thus have no shape")
+
+    @property
+    def value(self):
+        return self._value
 
     def as_ndarray(self):
         """
         Return a point-like ndarray containing only the value of this Scalar,
         with the dtype set accordingly.
         """
-        return array([self.value], dtype=self.dtype)
+        return array(self.value, self.dtype)
 
 
-class HostScalar(Scalar):
+class HostScalar(ScalarBase):
     """
     This class is used to represent a ``host scalar``: a scalar type that is
     stored in main CPU RAM, and that is usually represented using a standard
     NumPy scalar dtype, such as int32 or float64.
 
-    It derives from Scalar.
+    It derives from ScalarBase.
     """
     statement_node_type_family = _v.statement_node_type_family.HOST_SCALAR_TYPE_FAMILY
+
+    def _init_scalar(self):
+        self.vcl_leaf = self._value
+
+
+class Scalar(ScalarBase):
+    """
+    This class is used to represent a ViennaCL scalar: a scalar type that is
+    usually stored in OpenCL global memory, but which can be converted to a 
+    HostScalar, and thence to a standard NumPy scalar dtype, such as int32 or
+    float64.
+
+    It derives from ScalarBase.
+    """
+    statement_node_type_family = _v.statement_node_type_family.SCALAR_TYPE_FAMILY
+
+    def _init_scalar(self):
+        try:
+            vcl_type = getattr(_v, "scalar_" + vcl_dtype_strings[self.statement_node_type])
+        except (KeyError, AttributeError):
+            raise TypeError("ViennaCL type %s not supported" % self.statement_node_type)
+        self.vcl_leaf = vcl_type(self._value)
+
+    @property
+    def value(self):
+        return self.vcl_leaf.as_double()
 
 
 class Vector(Leaf):
@@ -215,34 +229,44 @@ class Vector(Leaf):
         Construct the underlying ViennaCL vector object according to the 
         given arguments and types.
         """
-        if self.dtype is None:
-            # TODO: Fix this 
+        
+        if 'shape' in kwargs.keys():
+            if len(kwargs['shape']) != 1:
+                raise TypeError("Vector can only have a 1-d shape")
+            args = list(args)
+            args.insert(0, kwargs['shape'][0])
+
+        if len(args) == 0:
+            def get_leaf(vcl_t):
+                return vcl_t()
+        elif len(args) == 1:
+            if isinstance(args[0], Vector):
+                if self.dtype is None:
+                    self.dtype = args[0].dtype
+                def get_leaf(vcl_t):
+                    return vcl_t(args[0].vcl_leaf)
+            else:
+                # This doesn't do any dtype checking, so beware...
+                def get_leaf(vcl_t):
+                    return vcl_t(args[0])
+        elif len(args) == 2:
+            if self.dtype is None:
+                self.dtype = dtype(args[1])
+            def get_leaf(vcl_t):
+                return vcl_t(args[0], args[1])
+        else:
+            raise TypeError("Vector cannot be constructed in this way")
+
+        if self.dtype is None: # ie, still None, even after checks -- so guess
             self.dtype = dtype(float64)
 
         self.statement_node_type = HostScalarTypes[self.dtype.name]
 
         try:
-            vcl_type = vcl_matrix_types[self.statement_node_type]
-        except:
+            vcl_type = getattr(_v, "vector_" + vcl_dtype_strings[self.statement_node_type])
+        except (KeyError, AttributeError):
             raise TypeError("dtype %s not supported" % self.statement_node_type)
-
-        if 'shape' in kwargs.keys():
-            if len(kwargs['shape']) != 1:
-                raise TypeError("Vector can only have a 1-d shape")
-            self.vcl_leaf = vcl_type(kwargs['shape'][0], 0)
-        else:
-            if len(args) == 0:
-                self.vcl_leaf = vcl_type()
-            elif len(args) == 1:
-                if isinstance(args[0], Vector):
-                    self.vcl_leaf = vcl_type(args[0].vcl_leaf)
-                else:
-                    self.vcl_leaf = vcl_type(args[0])
-            elif len(args) == 2:
-                self.vcl_leaf = vcl_type(args[0], args[1])
-            else:
-                raise TypeError("Vector cannot be constructed in this way")
-
+        self.vcl_leaf = get_leaf(vcl_type)
         self.size = self.vcl_leaf.size
         self.shape = (self.size,)
         self.internal_size = self.vcl_leaf.internal_size
@@ -256,7 +280,7 @@ class Vector(Leaf):
 
 class Matrix(Leaf):
     """
-    A generalised Vector class: represents ViennaCL vector objects of all
+    A generalised Matrix class: represents ViennaCL matrix objects of all
     supported scalar types. Can be constructed in a number of ways:
     + from an ndarray of the correct dtype
     + from an integer tuple: produces an empty Matrix of that shape
@@ -272,39 +296,56 @@ class Matrix(Leaf):
         Construct the underlying ViennaCL vector object according to the 
         given arguments and types.
         """
-        if self.dtype is None:
-            # TODO: Fix this 
+        if 'shape' in kwargs.keys():
+            if len(kwargs['shape']) != 2:
+                raise TypeError("Matrix can only have a 2-d shape")
+            args = list(args)
+            args.insert(0, kwargs['shape'])
+
+        if len(args) == 0:
+            def get_leaf(vcl_t):
+                return vcl_t()
+        elif len(args) == 1:
+            if isinstance(args[0], Matrix):
+                if self.dtype is None:
+                    self.dtype = args[0].dtype
+                def get_leaf(vcl_t):
+                    return vcl_t(args[0].vcl_leaf)
+            elif isinstance(args[0], tuple) or isinstance(args[0], list):
+                def get_leaf(vcl_t):
+                    return vcl_t(args[0][0], args[0][1])
+            else:
+                # This doesn't do any dtype checking, so beware...
+                def get_leaf(vcl_t):
+                    return vcl_t(args[0])
+        elif len(args) == 2:
+            if isinstance(args[0], tuple) or isinstance(args[0], list):
+                if self.dtype is None:
+                    self.dtype = np_result_type(args[1])
+                def get_leaf(vcl_t):
+                    return vcl_t(args[0][0], args[0][1], args[1])
+            else:
+                def get_leaf(vcl_t):
+                    return vcl_t(args[0], args[1])
+        elif len(args) == 3:
+            if self.dtype is None:
+                self.dtype = np_result_type(args[2])
+            def get_leaf(vcl_t):
+                return vcl_t(args[0], args[1], args[2])
+        else:
+            raise TypeError("Matrix cannot be constructed in this way")
+
+        if self.dtype is None: # ie, still None, even after checks -- so guess
             self.dtype = dtype(float64)
 
         self.statement_node_type = HostScalarTypes[self.dtype.name]
 
         try:
-            vcl_type = vcl_matrix_types[self.statement_node_type]
-        except:
+            vcl_type = getattr(_v, "matrix_" + vcl_dtype_strings[self.statement_node_type])
+        except (KeyError, AttributeError):
             raise TypeError("dtype %s not supported" % self.statement_node_type)
 
-        if 'shape' in kwargs.keys():
-            ## TODO: Fix this -- far too brittle..
-            if len(kwargs['shape']) != 2:
-                raise TypeError("Matrix can only have a 2-d shape")
-            self.vcl_leaf = vcl_type(kwargs['shape'][0],
-                                     kwargs['shape'][1],
-                                     0)
-        else:
-            if len(args) == 0:
-                self.vcl_leaf = vcl_type()
-            elif len(args) == 1:
-                if isinstance(args[0], Matrix):
-                    self.vcl_leaf = vcl_type(args[0].vcl_leaf)
-                else:
-                    self.vcl_leaf = vcl_type(args[0])
-            elif len(args) == 2:
-                self.vcl_leaf = vcl_type(args[0], args[1])
-            elif len(args) == 3:
-                self.vcl_leaf = vcl_type(args[0], args[1], args[2])
-            else:
-                raise TypeError("Vector cannot be constructed in this way")
-
+        self.vcl_leaf = get_leaf(vcl_type)
         self.size1 = self.vcl_leaf.size1
         self.size2 = self.vcl_leaf.size2
         self.shape = (self.size1, self.size2)
@@ -375,8 +416,7 @@ class Node:
         if len(self.operands) > 1:
             if dtype(self.operands[0]) != dtype(self.operands[1]):
                 raise TypeError("dtypes on operands do not match: %s and %s" % (dtype(self.operands[0]), dtype(self.operands[1])))
-
-            # Set up the ViennaCL statement_node
+            # Set up the ViennaCL statement_node with two operands
             self.vcl_node = _v.statement_node(
                 self.operands[0].statement_node_type_family,   # lhs
                 self.operands[0].statement_node_type,          # lhs
@@ -384,6 +424,15 @@ class Node:
                 self.operation_node_type,                      # op
                 self.operands[1].statement_node_type_family,   # rhs
                 self.operands[1].statement_node_type)          # rhs
+        else:
+            # Set up the ViennaCL statement_node with one operand, twice..
+            self.vcl_node = _v.statement_node(
+                self.operands[0].statement_node_type_family,   # lhs
+                self.operands[0].statement_node_type,          # lhs
+                self.operation_node_type_family,               # op
+                self.operation_node_type,                      # op
+                self.operands[0].statement_node_type_family,   # rhs
+                self.operands[0].statement_node_type)          # rhs
 
     def get_vcl_operand_setter(self, operand):
         """
@@ -404,11 +453,11 @@ class Node:
     @property
     def result_container_type(self):
         """
-        Determine the container type (ie, Scalar, Vector, etc) needed to store
-        the result of the operation encoded by this Node. If the operation
-        has some effect (eg, in-place), but does not produce a distinct result,
-        then return NoResult. If the operation is not supported for the given
-        operand types, then return None.
+        Determine the container type (ie, ScalarBase, Vector, etc) needed to
+        store the result of the operation encoded by this Node. If the 
+        operation has some effect (eg, in-place), but does not produce a
+        distinct result, then return NoResult. If the operation is not
+        supported for the given operand types, then return None.
         """
         if len(self.result_types) < 1:
             return NoResult
@@ -418,9 +467,8 @@ class Node:
                 op0_t = self.operands[0].result_container_type.__name__
             except AttributeError:
                 # Not a PyViennaCL type, so we have a number of options
-                # For now, just assume HostScalar
-                #
-                # TODO: Fix possible alternative types
+                # However, since HostScalar can cope with any normal Pythonic
+                # scalar type, we assume that and hope for the best.
                 op0_t = 'HostScalar'
         else:
             raise RuntimeError("What is a 0-ary operation?")
@@ -430,10 +478,9 @@ class Node:
                 op1_t = self.operands[1].result_container_type.__name__
                 return self.result_types[(op0_t, op1_t)]
             except AttributeError:
-                # Not a PyViennaCL type, so we have a number of options
-                # For now, just assume HostScalar
-                #
-                # TODO: Fix possible alternative types
+                # Not a PyViennaCL type, so we have a number of options.
+                # However, since HostScalar can cope with any normal Pythonic
+                # scalar type, we assume that and hope for the best.
                 op1_t = 'HostScalar'
             except KeyError:
                 # Operation not supported for given operand types
@@ -519,13 +566,52 @@ class Node:
         statement = statement[:-2] + ")"
         return statement
 
-    def as_ndarray(self):
+    @property
+    def result(self):
         """
-        Returns the result of computing the operation represented by this Node
-        as a NumPy ndarray instance.
+        Returns the result of computing the operation represented by this Node.
         """
         s = Statement(self)
-        return s.execute().as_ndarray()
+        return s.execute()
+
+    @property
+    def value(self):
+        """
+        Returns the value of the result of computing the operation represented 
+        by this Node.
+        """
+        s = Statement(self)
+        return s.execute().value
+
+    def as_ndarray(self):
+        return array(self.value, self.dtype)
+
+
+class Norm_1(Node):
+    """
+    """
+    result_types = {
+        ('Vector',): Scalar
+    }
+    operation_node_type = _v.operation_node_type.OPERATION_UNARY_NORM_1_TYPE
+
+
+class Norm_2(Node):
+    """
+    """
+    result_types = {
+        ('Vector',): Scalar
+    }
+    operation_node_type = _v.operation_node_type.OPERATION_UNARY_NORM_2_TYPE
+
+
+class Norm_Inf(Node):
+    """
+    """
+    result_types = {
+        ('Vector',): Scalar
+    }
+    operation_node_type = _v.operation_node_type.OPERATION_UNARY_NORM_INF_TYPE
 
 
 class Assign(Node):
@@ -563,7 +649,8 @@ class Mul(Node):
     """
     result_types = {
 #        ('Vector', 'Vector'): Matrix,
-        ('Vector', 'HostScalar'): Vector
+        ('Vector', 'HostScalar'): Vector,
+        ('Vector', 'Scalar'): Vector
     }
     operation_node_type = _v.operation_node_type.OPERATION_BINARY_MULT_TYPE
 
@@ -589,6 +676,15 @@ class Sub(Node):
 
     def __sub__(self, rhs):
         return Sub(self, rhs)
+
+
+class Dot(Node):
+    """
+    """
+    result_types = {
+        ('Vector', 'Vector'): Scalar
+    }
+    operation_node_type = _v.operation_node_type.OPERATION_BINARY_INNER_PROD_TYPE
 
 
 class Statement:
@@ -618,12 +714,14 @@ class Statement:
         self.statement = []  # A list to hold the flattened expression tree
         next_node = []       # Holds nodes as we travel down the tree
 
+        # Test to see that we can actually do the operation
+        if not node.result_container_type:
+            raise TypeError("Unsupported expression: %s" %(node.express()))
+
         # If the root node is not an Assign instance, then construct a
         # temporary to hold the result.
         if isinstance(node, Assign):
             self.result = node.operands[0]
-        elif not node.result_container_type:
-            raise TypeError("Unsupported expression: %s" % (node.express()))
         else:
             self.result = node.result_container_type(
                 shape = node.result_shape,
@@ -651,17 +749,11 @@ class Statement:
                     n.get_vcl_operand_setter(operand)(
                         op_num, 
                         self.statement.index(operand))
-                elif isinstance(operand, Scalar):
-                    n.get_vcl_operand_setter(operand)(op_num, operand.value)
                 elif isinstance(operand, Leaf):
                     n.get_vcl_operand_setter(operand)(op_num, operand.vcl_leaf)
-                else:
-                    try:
-                        if (dtype(type(operand)).name in HostScalarTypes.keys()
-                            and not (isinstance(operand, Node))):
-                            n.get_vcl_operand_setter(HostScalar(operand))(
-                                op_num, operand)
-                    except: pass
+                elif dtype(type(operand)).name in HostScalarTypes.keys():
+                    n.get_vcl_operand_setter(HostScalar(operand))(
+                        op_num, operand)
                 op_num += 1
             self.vcl_statement.insert_at_end(n.vcl_node)
 
@@ -672,7 +764,7 @@ class Statement:
         """
         try:
             self.vcl_statement.execute()
-        except:
+        except RuntimeError:
             print("!!! EXCEPTION EXECUTING:",self.statement[0].express())
             raise
         return self.result

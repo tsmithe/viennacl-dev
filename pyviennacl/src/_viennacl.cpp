@@ -11,7 +11,7 @@
 #include <boost/numeric/ublas/vector_of_vector.hpp>
 
 #define VIENNACL_WITH_UBLAS
-#define VIENNACL_WITH_OPENCL
+//#define VIENNACL_WITH_OPENCL
 #include <viennacl/linalg/direct_solve.hpp>
 #include <viennacl/linalg/inner_prod.hpp>
 #include <viennacl/linalg/norm_1.hpp>
@@ -386,7 +386,7 @@ bp::list vcl_vector_to_list(vcl::vector<SCALARTYPE> const& v)
 {
   bp::list l;
   std::vector<SCALARTYPE> c(v.size());
-  vcl::async_copy(v.begin(), v.end(), c.begin());
+  vcl::fast_copy(v.begin(), v.end(), c.begin());
   
   for (unsigned int i = 0; i < v.size(); ++i)
     l.append((SCALARTYPE)c[i]);
@@ -419,7 +419,7 @@ vector_init_ndarray(np::ndarray const& array)
   for (uint32_t i=0; i < s; ++i)
     cpu_vector[i] = bp::extract<SCALARTYPE>(array[i]);
   
-  vcl::async_copy(cpu_vector.begin(), cpu_vector.end(), v->begin());
+  vcl::fast_copy(cpu_vector.begin(), cpu_vector.end(), v->begin());
 
   return boost::shared_ptr<vcl::vector<SCALARTYPE> >(v);
 }
@@ -437,7 +437,7 @@ boost::shared_ptr<vcl::vector<SCALARTYPE> >
 vector_init_scalar(uint32_t length, SCALARTYPE value) {
   ublas::scalar_vector<SCALARTYPE> s_v(length, value);
   vcl::vector<SCALARTYPE> *v = new vcl::vector<SCALARTYPE>(length);
-  vcl::async_copy(s_v.begin(), s_v.end(), v->begin());
+  vcl::copy(s_v.begin(), s_v.end(), v->begin());
   return boost::shared_ptr<vcl::vector<SCALARTYPE> >(v);
 }
 
@@ -941,7 +941,7 @@ BOOST_PYTHON_MODULE(_viennacl)
 
   // *** Scalar type ***
 
-  bp::class_<vcl_scalar_t>("scalar")
+  bp::class_<vcl_scalar_t>("scalar_double")
     // Utility functions
     .def(bp::init<float>())
     .def(bp::init<int>())
@@ -1043,7 +1043,7 @@ BOOST_PYTHON_MODULE(_viennacl)
 
   // *** Dense matrix type ***
 
-  bp::class_<vcl_matrix_t, boost::shared_ptr<vcl_matrix_t> >("matrix")
+  bp::class_<vcl_matrix_t, boost::shared_ptr<vcl_matrix_t> >("matrix_double")
     .def(bp::init<vcl_matrix_t>())
     .def(bp::init<uint32_t, uint32_t>())
     .def("__init__", bp::make_constructor(matrix_init_ndarray))
