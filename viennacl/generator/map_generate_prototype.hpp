@@ -55,27 +55,27 @@ namespace viennacl{
           }
 
         public:
-          typedef mapped_container * result_type;
+          typedef container_ptr_type result_type;
 
-          map_functor(std::map<void *, std::size_t> & memory, unsigned int & current_arg) : memory_(memory), current_arg_(current_arg){ }
+          map_functor(std::map<void *, std::size_t> & memory, unsigned int & current_arg, mapping_type & mapping) : memory_(memory), current_arg_(current_arg), mapping_(mapping){ }
 
           //Binary leaf
           template<class T>
-          result_type binary_leaf(scheduler::statement const * statement, statement_node const * root_node, mapping_type const * mapping){
+          result_type binary_leaf(scheduler::statement const * statement, statement_node const * root_node, mapping_type const * mapping) const {
             T * p = new T("float");
 
             p->info_.statement = statement;
             p->info_.root_node = root_node;
             p->info_.mapping = mapping;
 
-            return p;
+            return container_ptr_type(p);
           }
 
           template<class ScalarType>
           result_type operator()(ScalarType const & scal) const {
             mapped_host_scalar * p = new mapped_host_scalar(utils::type_to_string<ScalarType>::value());
             p->name_ = create_name(current_arg_, memory_, (void*)&scal);
-            return p;
+              ;
           }
 
           //Scalar mapping
@@ -83,7 +83,7 @@ namespace viennacl{
           result_type operator()(scalar<ScalarType> const & scal) const {
             mapped_scalar * p = new mapped_scalar(utils::type_to_string<ScalarType>::value());
             p->name_ = create_name(current_arg_, memory_, (void*)&scal);
-            return p;
+            return container_ptr_type(p);
           }
 
           //Vector mapping
@@ -95,7 +95,7 @@ namespace viennacl{
               p->start_name_ = p->name_ +"_start";
             if(vec.stride() > 1)
               p->stride_name_ = p->name_ + "_stride";
-            return p;
+            return container_ptr_type(p);
           }
 
           //Symbolic vector mapping
@@ -107,7 +107,7 @@ namespace viennacl{
               p->value_name_ = create_name(current_arg_, memory_, NULL);
             if(vec.has_index())
               p->value_name_ = create_name(current_arg_, memory_, NULL);
-            return p;
+            return container_ptr_type(p);
           }
 
           //Matrix mapping
@@ -124,7 +124,7 @@ namespace viennacl{
               p->start2_name_ = p->name_ +"_start2";
             if(mat.stride2() > 1)
               p->stride2_name_ = p->name_ + "_stride2";
-            return p;
+            return container_ptr_type(p);
           }
 
           //Symbolic matrix mapping
@@ -135,46 +135,32 @@ namespace viennacl{
             if(mat.is_value_static()==false)
               p->value_name_ = create_name(current_arg_, memory_, NULL);
 
-            return p;
+            return container_ptr_type(p);
+          }
+
+          //Traversal functor
+          void operator()(scheduler::statement const * statement, scheduler::statement_node const * root_node, detail::node_type node_type) const {
+            const key_type key(root_node, node_type);
+            if(node_type == LHS_NODE_TYPE && root_node->lhs.type_family != scheduler::COMPOSITE_OPERATION_FAMILY)
+                 mapping_.insert(mapping_type::value_type(key, utils::call_on_element(root_node->lhs, *this)));
+            else if(node_type == RHS_NODE_TYPE && root_node->rhs.type_family != scheduler::COMPOSITE_OPERATION_FAMILY)
+                 mapping_.insert(mapping_type::value_type(key,  utils::call_on_element(root_node->rhs, *this)));
+            else if( node_type== PARENT_NODE_TYPE){
+                  operation_node_type op_type = root_node->op.type;
+                if(op_type == OPERATION_BINARY_INNER_PROD_TYPE)
+                  mapping_.insert(mapping_type::value_type(key, binary_leaf<mapped_scalar_reduction>(statement, root_node, &mapping_)));
+                else if(op_type == OPERATION_BINARY_MAT_VEC_PROD_TYPE)
+                  mapping_.insert(mapping_type::value_type(key, binary_leaf<mapped_vector_reduction>(statement, root_node, &mapping_)));
+                else if(op_type == OPERATION_BINARY_MAT_MAT_PROD_TYPE)
+                  mapping_.insert(mapping_type::value_type(key, binary_leaf<mapped_matrix_product>(statement, root_node, &mapping_)));
+            }
           }
 
         private:
           std::map<void *, std::size_t> & memory_;
           unsigned int & current_arg_;
+          mapping_type & mapping_;
       };
-
-      static void map_statement(scheduler::statement const & statement, scheduler::statement_node const & root_node, std::map<void *, std::size_t> & memory, unsigned int & current_arg, mapping_type & mapping){
-        if(root_node.lhs.type_family==COMPOSITE_OPERATION_FAMILY)
-          map_statement(statement, statement.array()[root_node.lhs.node_index], memory, current_arg, mapping);
-        else
-          mapping.insert(std::make_pair(key_type(&root_node, LHS_NODE_TYPE), utils::call_on_element(root_node.lhs.type_family, root_node.lhs.type, root_node.lhs, map_functor(memory, current_arg))));
-
-        if(root_node.op.type==OPERATION_BINARY_INNER_PROD_TYPE){
-          mapping.insert(std::make_pair(key_type(&root_node, PARENT_NODE_TYPE), map_functor(memory, current_arg).binary_leaf<mapped_scalar_reduction>(&statement, &root_node, &mapping)));
-        }
-        else if(root_node.op.type==OPERATION_BINARY_MAT_VEC_PROD_TYPE){
-          mapping.insert(std::make_pair(key_type(&root_node, PARENT_NODE_TYPE), map_functor(memory, current_arg).binary_leaf<mapped_vector_reduction>(&statement, &root_node, &mapping)));
-        }
-        else if(root_node.op.type==OPERATION_BINARY_MAT_MAT_PROD_TYPE){
-          mapping.insert(std::make_pair(key_type(&root_node, PARENT_NODE_TYPE), map_functor(memory, current_arg).binary_leaf<mapped_matrix_product>(&statement, &root_node, &mapping)));
-        }
-
-        if(root_node.rhs.type_family==COMPOSITE_OPERATION_FAMILY)
-          map_statement(statement, statement.array()[root_node.rhs.node_index], memory, current_arg, mapping);
-        else
-          mapping.insert(std::make_pair(key_type(&root_node, RHS_NODE_TYPE), utils::call_on_element(root_node.rhs.type_family, root_node.rhs.type, root_node.rhs, map_functor(memory, current_arg))));
-      }
-
-      template<class InputIterator>
-      static void map_all_statements(InputIterator begin, InputIterator end, std::vector<detail::mapping_type> & mapping){
-        std::map<void *, std::size_t> memory;
-        unsigned int current_arg = 0;
-        std::size_t i = 0;
-        while(begin!=end){
-          map_statement(begin->first, begin->second, memory, current_arg, mapping[i++]);
-          ++begin;
-        }
-      }
 
     }
 

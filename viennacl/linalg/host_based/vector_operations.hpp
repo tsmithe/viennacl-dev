@@ -253,7 +253,7 @@ namespace viennacl
         value_type data_alpha = static_cast<value_type>(alpha);
 
 #ifdef VIENNACL_WITH_OPENMP
-        #pragma omp parallel for if (internal_size1 > VIENNACL_OPENMP_VECTOR_MIN_SIZE)
+        #pragma omp parallel for if (loop_bound > VIENNACL_OPENMP_VECTOR_MIN_SIZE)
 #endif
         for (std::size_t i = 0; i < loop_bound; ++i)
           data_vec1[i*inc1+start1] = data_alpha;
@@ -433,7 +433,7 @@ namespace viennacl
         std::size_t inc_result   = viennacl::traits::stride(result);
 
         for (std::size_t j=0; j < vec_tuple.const_size(); ++j)
-          result[j * inc_result + start_result] = temp[j];  //Note: Assignment to result might be expensive, thus 'temp' is used for accumulation
+          result[j] = temp[j];  //Note: Assignment to result might be expensive, thus 'temp' is used for accumulation
       }
 
 

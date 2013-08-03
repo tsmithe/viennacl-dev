@@ -116,18 +116,18 @@ namespace viennacl{
                   //The LHS of the prod is a vector
                   if(current_node->lhs.type_family==scheduler::VECTOR_TYPE_FAMILY)
                   {
-                    vector_size = utils::call_on_vector(current_node->lhs.type, current_node->lhs, utils::size_fun());
+                    vector_size = utils::call_on_vector(current_node->lhs, utils::size_fun());
                   }
                   else{
                     //The LHS of the prod is a vector expression
                     current_node = &exprs[current_node->lhs.node_index];
                     if(current_node->lhs.type_family==scheduler::VECTOR_TYPE_FAMILY)
                     {
-                      vector_size = cl_uint(utils::call_on_vector(current_node->lhs.type, current_node->lhs, utils::size_fun()));
+                      vector_size = cl_uint(utils::call_on_vector(current_node->lhs, utils::size_fun()));
                     }
                     else if(current_node->rhs.type_family==scheduler::VECTOR_TYPE_FAMILY)
                     {
-                      vector_size = cl_uint(utils::call_on_vector(current_node->lhs.type, current_node->lhs, utils::size_fun()));
+                      vector_size = cl_uint(utils::call_on_vector(current_node->lhs, utils::size_fun()));
                     }
                     else{
                       assert(false && bool("unexpected expression tree"));
@@ -138,9 +138,24 @@ namespace viennacl{
               }
             }
 
+            virtual std::ostream & print(std::ostream & s) const{
+                s << "Scalar Reduction : { vector_type, group_size, num_groups, global_decomposition } = {"
+                  << vectorization_
+                  << ", " << group_size_
+                  << ", " << num_groups_
+                  << ", " << global_decomposition_
+                  << "}";
+            }
+
           public:
             /** @brief The user constructor */
             profile(unsigned int vectorization, unsigned int group_size, unsigned int num_groups, bool global_decomposition) : template_base::profile(vectorization, 2), group_size_(group_size), num_groups_(num_groups), global_decomposition_(global_decomposition){ }
+
+            unsigned int num_groups() const { return num_groups_; }
+
+            unsigned int group_size() const { return group_size_; }
+
+            bool global_decomposition() const { return global_decomposition_; }
 
             void set_local_sizes(std::size_t& s1, std::size_t& s2, std::size_t /*kernel_id*/) const{
               s1 = group_size_;
@@ -182,10 +197,6 @@ namespace viennacl{
                 arguments_string += detail::generate_pointer_kernel_argument("__global", it->first, "temp" + utils::to_string(std::distance(temporaries_.begin(), it)));
               }
             }
-
-            unsigned int num_groups() const { return num_groups_; }
-
-            unsigned int group_size() const { return group_size_; }
           private:
             unsigned int group_size_;
             unsigned int num_groups_;
@@ -218,29 +229,36 @@ namespace viennacl{
           //Fetch vector entry
           std::set<std::string>  fetched;
 
-          for(std::size_t k = 0 ; k < exprs.size() ; ++k){
-            detail::traverse(exprs[k]->statement(), exprs[k]->root_node(), detail::fetch_traversal(fetched, std::make_pair("i", "0"), profile_.vectorization_, stream, exprs[k]->mapping()), true, true, false);
-            detail::traverse(exprs[k]->statement(), exprs[k]->root_node(), detail::fetch_traversal(fetched, std::make_pair("i", "0"), profile_.vectorization_, stream, exprs[k]->mapping()), true, false, true);
+          for(std::vector<detail::mapped_scalar_reduction*>::iterator it = exprs.begin() ; it != exprs.end() ; ++it){
+            viennacl::scheduler::statement const & statement = (*it)->statement();
+            viennacl::scheduler::statement_node const & root_node = (*it)->root_node();
+            detail::mapping_type const & mapping = (*it)->mapping();
+
+            detail::fetch_all_lhs(fetched,statement,root_node, std::make_pair("i", "0"),profile_.vectorization_,stream,mapping);
+            detail::fetch_all_rhs(fetched,statement,root_node, std::make_pair("i", "0"),profile_.vectorization_,stream,mapping);
           }
 
 
           //Update sums;
-          for(std::size_t k = 0 ; k < exprs.size() ; ++k){
+          for(std::vector<detail::mapped_scalar_reduction*>::iterator it = exprs.begin() ; it != exprs.end() ; ++it){
+              viennacl::scheduler::statement const & statement = (*it)->statement();
+              viennacl::scheduler::statement_node const & root_node = (*it)->root_node();
+              detail::mapping_type const & mapping = (*it)->mapping();
             if(profile_.vectorization_ > 1){
               for(unsigned int a = 0 ; a < profile_.vectorization_ ; ++a){
-                std::string expr_str;
-                detail::traverse(exprs[k]->statement(), exprs[k]->root_node(), detail::expression_generation_traversal(std::make_pair("i", "0"), a, expr_str, exprs[k]->mapping()), true, true, false);
-                expr_str += "*";
-                detail::traverse(exprs[k]->statement(), exprs[k]->root_node(), detail::expression_generation_traversal(std::make_pair("i", "0"), a, expr_str, exprs[k]->mapping()), true, false, true);
-                stream << " sum" << k << " += "  << expr_str << ";" << std::endl;
+                std::string str;
+                detail::generate_all_lhs(statement,root_node,std::make_pair("i","0"),a,str,mapping);
+                str += "*";
+                detail::generate_all_rhs(statement,root_node,std::make_pair("i","0"),a,str,mapping);
+                stream << " sum" << std::distance(exprs.begin(),it) << " += "  << str << ";" << std::endl;
               }
             }
             else{
-              std::string expr_str;
-              detail::traverse(exprs[k]->statement(), exprs[k]->root_node(), detail::expression_generation_traversal(std::make_pair("i", "0"), -1, expr_str, exprs[k]->mapping()), true, true, false);
-              expr_str += "*";
-              detail::traverse(exprs[k]->statement(), exprs[k]->root_node(), detail::expression_generation_traversal(std::make_pair("i", "0"), -1, expr_str, exprs[k]->mapping()), true, false, true);
-              stream << " sum" << k << " += "  << expr_str << ";" << std::endl;
+              std::string str;
+              detail::generate_all_lhs(statement,root_node,std::make_pair("i","0"),-1,str,mapping);
+              str += "*";
+              detail::generate_all_rhs(statement,root_node,std::make_pair("i","0"),-1,str,mapping);
+              stream << " sum" << std::distance(exprs.begin(),it) << " += "  << str << ";" << std::endl;
             }
           }
 
@@ -266,7 +284,7 @@ namespace viennacl{
             stream << "}" << std::endl;
           }
 
-          //Last reduction and fetches to temporary buffer
+          //Last reduction and write back to temporary buffer
           stream << "barrier(CLK_LOCAL_MEM_FENCE); " << std::endl;
           stream << "if(lid==0){" << std::endl;
           stream.inc_tab();

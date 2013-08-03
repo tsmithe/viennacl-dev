@@ -46,6 +46,8 @@ namespace viennacl{
 
         class profile{
           protected:
+            friend std::ostream & operator<<(std::ostream &, profile const &);
+
             virtual bool invalid_impl(viennacl::ocl::device const & /*dev*/, size_t /*scalartype_size*/) const{ return false; }
 
             virtual std::size_t lmem_used(std::size_t /*scalartype_size*/) const { return 0; }
@@ -57,6 +59,7 @@ namespace viennacl{
               k.local_work_size(1,lsize2);
             }
 
+            virtual std::ostream & print(std::ostream & s) const = 0;
 
           public:
             profile(unsigned int vectorization, std::size_t num_kernels) : vectorization_(vectorization), num_kernels_(num_kernels){ }
@@ -104,9 +107,19 @@ namespace viennacl{
           std::string prototype;
           std::set<std::string> already_generated;
           profile_.kernel_arguments(statements_, prototype);
-          detail::map_all_statements(statements_.begin(), statements_.end(), mapping_);
+
+          {
+            std::map<void *, std::size_t> memory;
+            unsigned int current_arg = 0;
+            std::size_t i = 0;
+            for(statements_type::const_iterator it = statements_.begin() ; it != statements_.end() ; ++it)
+              detail::traverse(it->first, it->second, detail::map_functor(memory,current_arg,mapping_[i++]));
+          }
+
+
+
           for(statements_type::const_iterator it = statements_.begin() ; it != statements_.end() ; ++it){
-            detail::traverse(it->first, it->second, detail::prototype_generation_traversal(already_generated, prototype, profile_.vectorization(), mapping_[std::distance(statements_.begin(), it)]), true, true, true);
+            detail::traverse(it->first, it->second, detail::prototype_generation_traversal(already_generated, prototype, profile_.vectorization(), mapping_[std::distance(statements_.begin(), it)]));
           }
           prototype.erase(prototype.size()-1); //Last comma pruned
           return prototype;
@@ -136,6 +149,9 @@ namespace viennacl{
         profile const & profile_;
     };
 
+    std::ostream & operator<<(std::ostream & os, template_base::profile const & profile){
+        profile.print(os);
+    }
 
   }
 

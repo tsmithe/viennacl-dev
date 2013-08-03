@@ -55,6 +55,18 @@ namespace viennacl{
               return lmem_used;
             }
 
+            virtual std::ostream & print(std::ostream & s) const{
+                s << "{vector_type, ms, ks, ns, ml, kl, nl, use_lhs_shared, use_rhs_shared, unroll} = {"
+                  << vectorization_
+                  << ms_ << ", "
+                  << ks_ << ", "
+                  << ns_ << ", "
+                  << ml_ << ", "
+                  << kl_ << ", "
+                  << nl_ << ", "
+                  << use_lhs_shared_ << ", " << use_rhs_shared_ << ", " << unroll_ << "}" ;
+            }
+
           public:
             /** @brief The user constructor */
             profile(unsigned int vectorization, unsigned int ml, unsigned int kl, unsigned int nl
@@ -90,8 +102,8 @@ namespace viennacl{
             void configure_range_enqueue_arguments(std::size_t kernel_id, statements_type  const & statements, viennacl::ocl::kernel & k, unsigned int & n_arg)  const {
               //set M, N
               scheduler::statement_node const & first_node = statements.front().second;
-              unsigned int M = utils::call_on_matrix(first_node.lhs.type, first_node.lhs, utils::size1_fun());
-              unsigned int N = utils::call_on_matrix(first_node.lhs.type, first_node.lhs, utils::size2_fun());
+              unsigned int M = utils::call_on_matrix(first_node.lhs, utils::size1_fun());
+              unsigned int N = utils::call_on_matrix(first_node.lhs, utils::size2_fun());
 
               //set ND range
               configure_local_sizes(k, kernel_id);
@@ -113,7 +125,7 @@ namespace viennacl{
                     if(current_node->lhs.type_family==scheduler::MATRIX_ROW_TYPE_FAMILY
                        ||current_node->lhs.type_family==scheduler::MATRIX_COL_TYPE_FAMILY)
                     {
-                      k.arg(n_arg++, cl_uint(utils::call_on_matrix(current_node->lhs.type, current_node->lhs, utils::size2_fun())));
+                      k.arg(n_arg++, cl_uint(utils::call_on_matrix(current_node->lhs, utils::size2_fun())));
                     }
                     else{
                       //The LHS of the prod is a matrix expression
@@ -121,12 +133,12 @@ namespace viennacl{
                       if(current_node->lhs.type_family==scheduler::MATRIX_ROW_TYPE_FAMILY
                          ||current_node->lhs.type_family==scheduler::MATRIX_COL_TYPE_FAMILY)
                       {
-                        k.arg(n_arg++, cl_uint(utils::call_on_matrix(current_node->lhs.type, current_node->lhs, utils::size2_fun())));
+                        k.arg(n_arg++, cl_uint(utils::call_on_matrix(current_node->lhs, utils::size2_fun())));
                       }
                       else if(current_node->rhs.type_family==scheduler::MATRIX_ROW_TYPE_FAMILY
                               ||current_node->rhs.type_family==scheduler::MATRIX_COL_TYPE_FAMILY)
                       {
-                        k.arg(n_arg++, cl_uint(utils::call_on_matrix(current_node->lhs.type, current_node->lhs, utils::size2_fun())));
+                        k.arg(n_arg++, cl_uint(utils::call_on_matrix(current_node->lhs, utils::size2_fun())));
                       }
                       else{
                         assert(false && bool("unexpected expression tree"));
@@ -366,7 +378,7 @@ namespace viennacl{
 
                 if(iit->rhs.type_family == scheduler::COMPOSITE_OPERATION_FAMILY){
                   is_rhs_transposed = true;
-                  rhs = (detail::mapped_matrix const *)mapping_.at(i).at(std::make_pair(&exprs[iit->rhs.node_index], detail::RHS_NODE_TYPE)).get();
+                  rhs = (detail::mapped_matrix const *)mapping_.at(i).at(std::make_pair(&exprs[iit->rhs.node_index], detail::LHS_NODE_TYPE)).get();
                 }
                 else{
                   is_rhs_transposed = false;
