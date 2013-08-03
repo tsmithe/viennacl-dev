@@ -1025,6 +1025,9 @@ BOOST_PYTHON_MODULE(_viennacl)
     .def("__add__", pyvcl_do_2ary_op<vcl::vector<TYPE>,			\
 	 vcl::vector<TYPE>&, vcl::vector<TYPE>&,			\
 	 op_add, 0>)							\
+    .def("__mul__", pyvcl_do_2ary_op<vcl::matrix<TYPE>,                 \
+	 vcl::vector<TYPE>&, vcl::vector<TYPE>&,			\
+	 op_outer_prod, 0>)                                             \
     ;
 
   EXPORT_VECTOR_CLASS(float, "vector_float")
@@ -1077,6 +1080,14 @@ BOOST_PYTHON_MODULE(_viennacl)
 	 vcl_matrix_t&, vcl_scalar_t&,
 	 op_mul, 0>)
 
+    .def("__mul__", pyvcl_do_2ary_op<viennacl::vector<double>,
+	 vcl_matrix_t, viennacl::vector<double>,
+	 op_prod, 0>)
+
+    .def("__mul__", pyvcl_do_2ary_op<vcl_matrix_t,
+	 vcl_matrix_t, vcl_matrix_t,
+	 op_prod, 0>)
+
     .def("__truediv__", pyvcl_do_2ary_op<vcl_matrix_t,
 	 vcl_matrix_t&, vcl_scalar_t&,
 	 op_div, 0>)
@@ -1097,31 +1108,22 @@ BOOST_PYTHON_MODULE(_viennacl)
 	 vcl_matrix_t&, vcl_scalar_t&,
 	 op_idiv, 0>)
 
-    /*
-    .def("prod", pyvcl_do_2ary_op<vcl_vector_t,
-	 vcl_matrix_t, vcl_vector_t,
-	 op_prod, 0>)
-    .def("prod", pyvcl_do_2ary_op<vcl_matrix_t,
-	 vcl_matrix_t, vcl_matrix_t,
-	 op_prod, 0>)
-
-    .def("solve", pyvcl_do_3ary_op<vcl_vector_t,
-	 vcl_matrix_t, vcl_vector_t,
+    .def("solve", pyvcl_do_3ary_op<viennacl::vector<double>,
+	 vcl_matrix_t, viennacl::vector<double>,
 	 vcl::linalg::lower_tag,
 	 op_solve, 0>)
-    .def("solve", pyvcl_do_3ary_op<vcl_vector_t,
-	 vcl_matrix_t, vcl_vector_t,
+    .def("solve", pyvcl_do_3ary_op<viennacl::vector<double>,
+	 vcl_matrix_t, viennacl::vector<double>,
 	 vcl::linalg::unit_lower_tag,
 	 op_solve, 0>)
-    .def("solve", pyvcl_do_3ary_op<vcl_vector_t,
-	 vcl_matrix_t, vcl_vector_t,
+    .def("solve", pyvcl_do_3ary_op<viennacl::vector<double>,
+	 vcl_matrix_t, viennacl::vector<double>,
 	 vcl::linalg::upper_tag,
 	 op_solve, 0>)
-    .def("solve", pyvcl_do_3ary_op<vcl_vector_t,
-	 vcl_matrix_t, vcl_vector_t,
+    .def("solve", pyvcl_do_3ary_op<viennacl::vector<double>,
+	 vcl_matrix_t, viennacl::vector<double>,
 	 vcl::linalg::unit_upper_tag,
 	 op_solve, 0>)
-    */
 
     .def("solve", pyvcl_do_3ary_op<vcl_matrix_t,
 	 vcl_matrix_t, vcl_matrix_t,
@@ -1269,11 +1271,13 @@ BOOST_PYTHON_MODULE(_viennacl)
     VALUE(vcl::scheduler, OPERATION_UNARY_SQRT_TYPE)
     VALUE(vcl::scheduler, OPERATION_UNARY_TAN_TYPE)
     VALUE(vcl::scheduler, OPERATION_UNARY_TANH_TYPE)
+    VALUE(vcl::scheduler, OPERATION_UNARY_TRANS_TYPE)
     VALUE(vcl::scheduler, OPERATION_UNARY_NORM_1_TYPE)
     VALUE(vcl::scheduler, OPERATION_UNARY_NORM_2_TYPE)
     VALUE(vcl::scheduler, OPERATION_UNARY_NORM_INF_TYPE)
     
     // binary expression
+    VALUE(vcl::scheduler, OPERATION_BINARY_ACCESS_TYPE)
     VALUE(vcl::scheduler, OPERATION_BINARY_ASSIGN_TYPE)
     VALUE(vcl::scheduler, OPERATION_BINARY_INPLACE_ADD_TYPE)
     VALUE(vcl::scheduler, OPERATION_BINARY_INPLACE_SUB_TYPE)
@@ -1281,7 +1285,8 @@ BOOST_PYTHON_MODULE(_viennacl)
     VALUE(vcl::scheduler, OPERATION_BINARY_SUB_TYPE)
     VALUE(vcl::scheduler, OPERATION_BINARY_MAT_VEC_PROD_TYPE)
     VALUE(vcl::scheduler, OPERATION_BINARY_MAT_MAT_PROD_TYPE)
-    VALUE(vcl::scheduler, OPERATION_BINARY_MULT_TYPE)// scalar*vector/matrix
+    VALUE(vcl::scheduler, OPERATION_BINARY_MULT_TYPE)// scalar * vector/matrix
+    VALUE(vcl::scheduler, OPERATION_BINARY_DIV_TYPE) // vector/matrix / scalar
     VALUE(vcl::scheduler, OPERATION_BINARY_ELEMENT_MULT_TYPE)
     VALUE(vcl::scheduler, OPERATION_BINARY_ELEMENT_DIV_TYPE)
     VALUE(vcl::scheduler, OPERATION_BINARY_INNER_PROD_TYPE)

@@ -7,13 +7,16 @@ unit_lower_tag = _v.unit_lower_tag
 upper_tag = _v.upper_tag
 unit_upper_tag = _v.unit_upper_tag
 
+def norm(x, ord=None):
+    return NotImplemented
+
 def solve(A, B, tag):
-    pass
+    return NotImplemented
 
 def eig(A, tag):
-    pass
+    return NotImplemented
 
 def ilu(A, config):
-    pass
+    return NotImplemented
 
 ## And QR decomposition..?

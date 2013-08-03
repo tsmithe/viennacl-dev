@@ -1,5 +1,5 @@
 from pyviennacl import _viennacl as _v
-from numpy import (ndarray, array, dtype,
+from numpy import (ndarray, array, dtype, inf,
                    result_type as np_result_type,
                    int8, int16, int32, int64,
                    uint8, uint16, uint32, uint64,
@@ -51,8 +51,10 @@ def deprecated(func):
     """
     A decorator to make deprecation really obvious.
     """
-    print("THIS FUNCTION CALL IS OR WILL SOON BE DEPRECATED:\n", func)
-    return func
+    def new_func(*args):
+        print("THIS FUNCTION CALL IS OR WILL SOON BE DEPRECATED:\n", func)
+        return func(*args)
+    return new_func
 
 
 class NoResult: 
@@ -70,42 +72,65 @@ class MagicMethods:
     A class to provide convenience methods for arithmetic and BLAS access.
 
     Classes derived from this will inherit lots of useful goodies.
-
-    BLAS 1:
-    + Addition, subtraction; in-place addition, subtraction.
-    + Scalar multiplication, division
-    + Elementwise multiplication and division
     """
+    def norm(self, ord=None):
+        if ord == 1:
+            return Norm_1(self)
+        elif ord == 2:
+            return Norm_2(self)
+        elif ord == inf:
+            return Norm_Inf(self)
+        else:
+            return NotImplemented
+
+    @property
+    def norm_1(self):
+        return Norm_1(self).result
+
+    @property
+    def norm_2(self):
+        return Norm_2(self).result
+
+    @property
+    def norm_inf(self):
+        return Norm_Inf(self).result
+
+    def element_prod(self, rhs):
+        return ElementMul(self, rhs)
+    element_mul = element_prod
+
+    def element_div(self, rhs):
+        return ElementDiv(self, rhs)
+
     def __add__(self, rhs):
-        return Add(self, rhs)
+        op = Add(self, rhs)
+        return op
 
     def __sub__(self, rhs):
-        return Sub(self, rhs)
+        op = Sub(self, rhs)
+        return op
 
     def __mul__(self, rhs):
-        return Mul(self, rhs)
+        op = Mul(self, rhs)
+        return op
 
     def __truediv__(self, rhs):
-        if isinstance(rhs, ScalarBase):
-            new_rhs = HostScalar(1/rhs.value,dtype=np_result_type(1/rhs.value))
-            return Mul(self, new_rhs)
-        else:
-            try:
-                new_rhs = HostScalar(1/rhs, dtype=np_result_type(1/rhs))
-                return Mul(self, new_rhs)
-            except:
-                raise TypeError("Unsupported expression: %s" %(self.express()))
+        op = Div(self, rhs)
+        return op
 
     def __iadd__(self, rhs):
-        InplaceAdd(self, rhs).execute()
+        op = InplaceAdd(self, rhs)
+        op.execute()        
         return self
 
     def __isub__(self, rhs):
-        InplaceSub(self, rhs).execute()
+        op = InplaceSub(self, rhs)
+        op.execute()
         return self
 
     def __rmul__(self, rhs):
-        return Mul(self, rhs)
+        op = Mul(self, rhs)
+        return op
 
 
 class Leaf(MagicMethods):
@@ -325,6 +350,25 @@ class Vector(Leaf):
         self.shape = (self.size,)
         self.internal_size = self.vcl_leaf.internal_size
 
+    @deprecated
+    def outer_prod(self, rhs):
+        if isinstance(rhs, Vector):
+            return Matrix(self.vcl_leaf * rhs.vcl_leaf)
+        else:
+            raise TypeError("Cannot calculate the outer-product of non-vector type: %s" % type(rhs))
+
+    def dot(self, rhs):
+        return Dot(self, rhs)
+    inner_prod = dot
+
+    @deprecated
+    def __mul__(self, rhs):
+        if isinstance(rhs, Vector):
+            return Matrix(self.vcl_leaf * rhs.vcl_leaf)
+        else:
+            op = Mul(self, rhs)
+            return op
+
 
 class Matrix(Leaf):
     """
@@ -403,9 +447,20 @@ class Matrix(Leaf):
     def clear(self):
         return self.vcl_leaf.clear
 
+    @deprecated
     def T(self):
         return self.vcl_leaf.trans
     trans = T
+
+    @deprecated
+    def __mul__(self, rhs):
+        if isinstance(rhs, Matrix):
+            return Matrix(self.vcl_leaf * rhs.vcl_leaf)
+        elif isinstance(rhs, Vector):
+            return Vector(self.vcl_leaf * rhs.vcl_leaf)
+        else:
+            op = Mul(self, rhs)
+            return op
 
 
 class Node(MagicMethods):
@@ -452,8 +507,14 @@ class Node(MagicMethods):
             # these operand types in one order but not the other; in this case
             # the mathematical intention is not ambiguous.
             self.operands.reverse()
+            if self.result_container_type is None:
+                # No use, so revert
+                self.operands.reverse()
 
         self._extra_init()
+
+        if self.operation_node_type is None:
+            raise TypeError("Unsupported expression: %s" % (self.express()))
 
         # At the moment, ViennaCL does not do dtype promotion, so check that
         # the operands all have the same dtype.
@@ -721,6 +782,20 @@ class Add(Node):
     operation_node_type = _v.operation_node_type.OPERATION_BINARY_ADD_TYPE
 
 
+class Sub(Node):
+    """
+    Derived node class for subtraction. Provides convenience magic methods
+    for arithmetic.
+    """
+    result_types = {
+        ('Scalar', 'Scalar'): Scalar,
+        ('HostScalar', 'HostScalar'): HostScalar,
+        ('Vector', 'Vector'): Vector,
+        ('Matrix', 'Matrix'): Matrix
+    }
+    operation_node_type = _v.operation_node_type.OPERATION_BINARY_SUB_TYPE
+
+
 class Mul(Node):
     """
     Derived node class for multiplication. Provides convenience magic methods
@@ -728,13 +803,13 @@ class Mul(Node):
     """
     result_types = {
         # OPERATION_BINARY_MAT_MAT_PROD_TYPE
-        ('Matrix', 'Matrix'): Matrix,
+        #('Matrix', 'Matrix'): Matrix, # NOT IMPLEMENTED IN SCHEDULER
 
         # OPERATION_BINARY_MAT_VEC_PROD_TYPE
-        ('Matrix', 'Vector'): Matrix,
+        #('Matrix', 'Vector'): Matrix, # NOT IMPLEMENTED IN SCHEDULER
 
         # "OPERATION_BINARY_VEC_VEC_PROD_TYPE" -- VEC as 1-D MAT?
-        #('Vector', 'Vector'): Matrix,
+        #('Vector', 'Vector'): Matrix, # NOT IMPLEMENTED IN SCHEDULER
 
         # OPERATION_BINARY_MULT_TYPE
         ('Matrix', 'HostScalar'): Matrix,
@@ -756,15 +831,35 @@ class Mul(Node):
                 self.operation_node_type = _v.operation_node_type.OPERATION_BINARY_MULT_TYPE
             elif isinstance(self.operands[1], HostScalar):
                 self.operation_node_type = _v.operation_node_type.OPERATION_BINARY_MULT_TYPE
+            else:
+                self.operation_node_type = None
         elif isinstance(self.operands[0], Vector): # Vector * ...
             if isinstance(self.operands[1], Scalar):
                 self.operation_node_type = _v.operation_node_type.OPERATION_BINARY_MULT_TYPE
             elif isinstance(self.operands[1], HostScalar):
                 self.operation_node_type = _v.operation_node_type.OPERATION_BINARY_MULT_TYPE
+            else:
+                self.operation_node_type = None
         #elif isinstance(self.operands[0], Scalar): 
         #    pass
         #elif isinstance(self.operands[0], HostScalar):
         #    pass
+        else:
+            self.operation_node_type = None
+
+
+class Div(Node):
+    """
+    Derived node class for vector/matrix-scalar division. Provides convenience
+    magic methods for arithmetic.
+    """
+    result_types = {
+        ('Vector', 'Scalar'): Vector,
+        ('Vector', 'HostScalar'): Vector,
+        ('Matrix', 'Scalar'): Matrix,
+        ('Matrix', 'HostScalar'): Matrix
+    }
+    operation_node_type = _v.operation_node_type.OPERATION_BINARY_DIV_TYPE
 
 
 class ElementMul(Node):
@@ -789,20 +884,6 @@ class ElementDiv(Node):
         ('Matrix', 'Matrix'): Matrix
     }
     operation_node_type = _v.operation_node_type.OPERATION_BINARY_ELEMENT_DIV_TYPE
-
-
-class Sub(Node):
-    """
-    Derived node class for subtraction. Provides convenience magic methods
-    for arithmetic.
-    """
-    result_types = {
-        ('Scalar', 'Scalar'): Scalar,
-        ('HostScalar', 'HostScalar'): HostScalar,
-        ('Vector', 'Vector'): Vector,
-        ('Matrix', 'Matrix'): Matrix
-    }
-    operation_node_type = _v.operation_node_type.OPERATION_BINARY_SUB_TYPE
 
 
 class Dot(Node):
