@@ -350,6 +350,10 @@ class Vector(Leaf):
         self.shape = (self.size,)
         self.internal_size = self.vcl_leaf.internal_size
 
+    @property
+    def index_norm_inf(self):
+        return self.vcl_leaf.index_norm_inf
+
     @deprecated
     def outer_prod(self, rhs):
         if isinstance(rhs, Vector):

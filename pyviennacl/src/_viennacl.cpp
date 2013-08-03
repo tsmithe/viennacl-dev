@@ -1028,17 +1028,15 @@ BOOST_PYTHON_MODULE(_viennacl)
     .def("__mul__", pyvcl_do_2ary_op<vcl::matrix<TYPE>,                 \
 	 vcl::vector<TYPE>&, vcl::vector<TYPE>&,			\
 	 op_outer_prod, 0>)                                             \
-    ;
+    ;                                                                   \
+  bp::def("plane_rotation", pyvcl_do_4ary_op<bp::object,                \
+	  vcl::vector<TYPE>&, vcl::vector<TYPE>&,                       \
+	  TYPE, TYPE,                                                   \
+	  op_plane_rotation, 0>);
 
   EXPORT_VECTOR_CLASS(float, "vector_float")
   EXPORT_VECTOR_CLASS(double, "vector_double")
 
-  /*
-  bp::def("plane_rotation", pyvcl_do_4ary_op<bp::object,
-	  vcl_vector_t&, vcl_vector_t&,
-	  cpu_scalar_t, cpu_scalar_t,
-	  op_plane_rotation, 0>);
-  */
 
   // --------------------------------------------------
 
