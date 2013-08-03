@@ -1,4 +1,4 @@
-from . import _viennacl as _v
+from pyviennacl import _viennacl as _v
 from numpy import (ndarray, array, dtype,
                    result_type as np_result_type,
                    int8, int16, int32, int64,
@@ -47,6 +47,14 @@ vcl_container_type_strings = {
 }
 
 
+def deprecated(func):
+    """
+    A decorator to make deprecation really obvious.
+    """
+    print("THIS FUNCTION CALL IS OR WILL SOON BE DEPRECATED:\n", func)
+    return func
+
+
 class NoResult: 
     """
     This no-op class is used to represent when some ViennaCL operation produces
@@ -57,7 +65,50 @@ class NoResult:
     pass
 
 
-class Leaf:
+class MagicMethods:
+    """
+    A class to provide convenience methods for arithmetic and BLAS access.
+
+    Classes derived from this will inherit lots of useful goodies.
+
+    BLAS 1:
+    + Addition, subtraction; in-place addition, subtraction.
+    + Scalar multiplication, division
+    + Elementwise multiplication and division
+    """
+    def __add__(self, rhs):
+        return Add(self, rhs)
+
+    def __sub__(self, rhs):
+        return Sub(self, rhs)
+
+    def __mul__(self, rhs):
+        return Mul(self, rhs)
+
+    def __truediv__(self, rhs):
+        if isinstance(rhs, ScalarBase):
+            new_rhs = HostScalar(1/rhs.value,dtype=np_result_type(1/rhs.value))
+            return Mul(self, new_rhs)
+        else:
+            try:
+                new_rhs = HostScalar(1/rhs, dtype=np_result_type(1/rhs))
+                return Mul(self, new_rhs)
+            except:
+                raise TypeError("Unsupported expression: %s" %(self.express()))
+
+    def __iadd__(self, rhs):
+        InplaceAdd(self, rhs).execute()
+        return self
+
+    def __isub__(self, rhs):
+        InplaceSub(self, rhs).execute()
+        return self
+
+    def __rmul__(self, rhs):
+        return Mul(self, rhs)
+
+
+class Leaf(MagicMethods):
     """
     This is the base class for all ``leaves`` in the ViennaCL expression tree
     system. A leaf is any type that can store data for use in an operation,
@@ -83,7 +134,7 @@ class Leaf:
         """
         By default, leaf subclasses inherit a no-op further init function.
         
-        If you're deriving from Leaf, then you probably want to override this.
+        If you're derived from Leaf, then you probably want to override this.
         """
         raise NotImplementedError("Help")
 
@@ -134,7 +185,7 @@ class ScalarBase(Leaf):
         """
         if 'value' in kwargs.keys():
             self._value = kwargs['value']
-        elif len(args) == 1:
+        elif len(args) > 0:
             if isinstance(args[0], ScalarBase):
                 self._value = args[0].value
             else:
@@ -251,7 +302,10 @@ class Vector(Leaf):
                     return vcl_t(args[0])
         elif len(args) == 2:
             if self.dtype is None:
-                self.dtype = dtype(args[1])
+                try:
+                    self.dtype = dtype(args[1])
+                except TypeError:
+                    self.dtype = np_result_type(args[1])
             def get_leaf(vcl_t):
                 return vcl_t(args[0], args[1])
         else:
@@ -270,12 +324,6 @@ class Vector(Leaf):
         self.size = self.vcl_leaf.size
         self.shape = (self.size,)
         self.internal_size = self.vcl_leaf.internal_size
-
-    def __add__(self, rhs):
-        return Add(self, rhs)
-
-    def __sub__(self, rhs):
-        return Sub(self, rhs)
 
 
 class Matrix(Leaf):
@@ -359,14 +407,8 @@ class Matrix(Leaf):
         return self.vcl_leaf.trans
     trans = T
 
-    def __add__(self, rhs):
-        return Add(self, rhs)
 
-    def __sub__(self, rhs):
-        return Sub(self, rhs)
-
-
-class Node:
+class Node(MagicMethods):
     """
     This is the base class for all nodes in the ViennaCL expression tree. A
     node is any binary or unary operation, such as addition. This class
@@ -398,7 +440,7 @@ class Node:
             """
             If opand is a scalar type, wrap it in a PyViennaCL scalar class.
             """
-            if (dtype(type(opand)).name in HostScalarTypes
+            if (np_result_type(opand).name in HostScalarTypes
                 and not (isinstance(opand, Node)
                          or isinstance(opand, Leaf))):
                 return HostScalar(opand)
@@ -410,6 +452,8 @@ class Node:
             # these operand types in one order but not the other; in this case
             # the mathematical intention is not ambiguous.
             self.operands.reverse()
+
+        self._extra_init()
 
         # At the moment, ViennaCL does not do dtype promotion, so check that
         # the operands all have the same dtype.
@@ -433,6 +477,9 @@ class Node:
                 self.operation_node_type,                      # op
                 self.operands[0].statement_node_type_family,   # rhs
                 self.operands[0].statement_node_type)          # rhs
+
+    def _extra_init(self):
+        pass
 
     def get_vcl_operand_setter(self, operand):
         """
@@ -574,6 +621,12 @@ class Node:
         s = Statement(self)
         return s.execute()
 
+    def execute(self):
+        """
+        Synonymous with self.result
+        """
+        return self.result
+
     @property
     def value(self):
         """
@@ -624,22 +677,48 @@ class Assign(Node):
     operation_node_type = _v.operation_node_type.OPERATION_BINARY_ASSIGN_TYPE
 
 
+class InplaceAdd(Assign):
+    """
+    Derived node class for in-place addition. Derives from Assign rather than
+    directly from Node because in-place operations are mathematically similar
+    to assignation. Provides convenience magic methods for arithmetic.
+    """
+    result_types = {
+        ('Scalar', 'Scalar'): Scalar,
+        ('HostScalar', 'HostScalar'): HostScalar,
+        ('Vector', 'Vector'): Vector,
+        ('Matrix', 'Matrix'): Matrix
+    }
+    operation_node_type  = _v.operation_node_type.OPERATION_BINARY_INPLACE_ADD_TYPE
+
+
+class InplaceSub(Assign):
+    """
+    Derived node class for in-place addition. Derives from Assign rather than
+    directly from Node because in-place operations are mathematically similar
+    to assignation. Provides convenience magic methods for arithmetic.
+    """
+    result_types = {
+        ('Scalar', 'Scalar'): Scalar,
+        ('HostScalar', 'HostScalar'): HostScalar,
+        ('Vector', 'Vector'): Vector,
+        ('Matrix', 'Matrix'): Matrix
+    }
+    operation_node_type  = _v.operation_node_type.OPERATION_BINARY_INPLACE_SUB_TYPE
+
+
 class Add(Node):
     """
     Derived node class for addition. Provides convenience magic methods for
-    arithemetic.
+    arithmetic.
     """
     result_types = {
+        ('Scalar', 'Scalar'): Scalar,
+        ('HostScalar', 'HostScalar'): HostScalar,
         ('Vector', 'Vector'): Vector,
         ('Matrix', 'Matrix'): Matrix
     }
     operation_node_type = _v.operation_node_type.OPERATION_BINARY_ADD_TYPE
-
-    def __add__(self, rhs):
-        return Add(self, rhs)
-
-    def __sub__(self, rhs):
-        return Sub(self, rhs)
 
 
 class Mul(Node):
@@ -648,17 +727,68 @@ class Mul(Node):
     for arithmetic.
     """
     result_types = {
-#        ('Vector', 'Vector'): Matrix,
+        # OPERATION_BINARY_MAT_MAT_PROD_TYPE
+        ('Matrix', 'Matrix'): Matrix,
+
+        # OPERATION_BINARY_MAT_VEC_PROD_TYPE
+        ('Matrix', 'Vector'): Matrix,
+
+        # "OPERATION_BINARY_VEC_VEC_PROD_TYPE" -- VEC as 1-D MAT?
+        #('Vector', 'Vector'): Matrix,
+
+        # OPERATION_BINARY_MULT_TYPE
+        ('Matrix', 'HostScalar'): Matrix,
+        ('Matrix', 'Scalar'): Matrix,
         ('Vector', 'HostScalar'): Vector,
-        ('Vector', 'Scalar'): Vector
+        ('Vector', 'Scalar'): Vector,
+        #('Scalar', 'Scalar'): Scalar,
+        #('Scalar', 'HostScalar'): HostScalar,
+        #('HostScalar', 'HostScalar'): HostScalar
     }
-    operation_node_type = _v.operation_node_type.OPERATION_BINARY_MULT_TYPE
 
-    def __add__(self, rhs):
-        return Add(self, rhs)
+    def _extra_init(self):
+        if isinstance(self.operands[0], Matrix): # Matrix * ...
+            if isinstance(self.operands[1], Matrix):
+                self.operation_node_type = _v.operation_node_type.OPERATION_BINARY_MAT_MAT_PROD_TYPE
+            elif isinstance(self.operands[1], Vector):
+                self.operation_node_type = _v.operation_node_type.OPERATION_BINARY_MAT_VEC_PROD_TYPE
+            elif isinstance(self.operands[1], Scalar):
+                self.operation_node_type = _v.operation_node_type.OPERATION_BINARY_MULT_TYPE
+            elif isinstance(self.operands[1], HostScalar):
+                self.operation_node_type = _v.operation_node_type.OPERATION_BINARY_MULT_TYPE
+        elif isinstance(self.operands[0], Vector): # Vector * ...
+            if isinstance(self.operands[1], Scalar):
+                self.operation_node_type = _v.operation_node_type.OPERATION_BINARY_MULT_TYPE
+            elif isinstance(self.operands[1], HostScalar):
+                self.operation_node_type = _v.operation_node_type.OPERATION_BINARY_MULT_TYPE
+        #elif isinstance(self.operands[0], Scalar): 
+        #    pass
+        #elif isinstance(self.operands[0], HostScalar):
+        #    pass
 
-    def __sub__(self, rhs):
-        return Sub(self, rhs)
+
+class ElementMul(Node):
+    """
+    Derived node class for element-wise multiplication. Provides convenience
+    magic methods for arithmetic.
+    """
+    result_types = {
+        ('Vector', 'Vector'): Vector,
+        ('Matrix', 'Matrix'): Matrix
+    }
+    operation_node_type = _v.operation_node_type.OPERATION_BINARY_ELEMENT_MULT_TYPE
+
+
+class ElementDiv(Node):
+    """
+    Derived node class for element-wise division. Provides convenience magic
+    methods for arithmetic.
+    """
+    result_types = {
+        ('Vector', 'Vector'): Vector,
+        ('Matrix', 'Matrix'): Matrix
+    }
+    operation_node_type = _v.operation_node_type.OPERATION_BINARY_ELEMENT_DIV_TYPE
 
 
 class Sub(Node):
@@ -667,15 +797,12 @@ class Sub(Node):
     for arithmetic.
     """
     result_types = {
-        ('Vector', 'Vector'): Vector
+        ('Scalar', 'Scalar'): Scalar,
+        ('HostScalar', 'HostScalar'): HostScalar,
+        ('Vector', 'Vector'): Vector,
+        ('Matrix', 'Matrix'): Matrix
     }
     operation_node_type = _v.operation_node_type.OPERATION_BINARY_SUB_TYPE
-
-    def __add__(self, rhs):
-        return Add(self, rhs)
-
-    def __sub__(self, rhs):
-        return Sub(self, rhs)
 
 
 class Dot(Node):
@@ -751,7 +878,7 @@ class Statement:
                         self.statement.index(operand))
                 elif isinstance(operand, Leaf):
                     n.get_vcl_operand_setter(operand)(op_num, operand.vcl_leaf)
-                elif dtype(type(operand)).name in HostScalarTypes.keys():
+                elif np_result_type(operand).name in HostScalarTypes.keys():
                     n.get_vcl_operand_setter(HostScalar(operand))(
                         op_num, operand)
                 op_num += 1

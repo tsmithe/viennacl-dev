@@ -459,6 +459,9 @@ public:
 
   ScalarT operator()(uint32_t row, uint32_t col) const
   {
+    std::cout << row << "," << col
+              << " of " << array.shape(0) << "," << array.shape(1) 
+              << std::endl;
     return bp::extract<ScalarT>(array[row][col]);
   } 
 
