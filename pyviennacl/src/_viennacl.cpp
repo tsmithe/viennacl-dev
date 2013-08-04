@@ -12,11 +12,16 @@
 
 #define VIENNACL_WITH_UBLAS
 //#define VIENNACL_WITH_OPENCL
+#include <viennacl/linalg/cg.hpp>
+#include <viennacl/linalg/bicgstab.hpp>
 #include <viennacl/linalg/direct_solve.hpp>
+#include <viennacl/linalg/gmres.hpp>
 #include <viennacl/linalg/inner_prod.hpp>
+#include <viennacl/linalg/lanczos.hpp>
 #include <viennacl/linalg/norm_1.hpp>
 #include <viennacl/linalg/norm_2.hpp>
 #include <viennacl/linalg/norm_inf.hpp>
+#include <viennacl/linalg/power_iter.hpp>
 #include <viennacl/linalg/prod.hpp>
 #include <viennacl/linalg/sparse_matrix_operations.hpp>
 #include <viennacl/compressed_matrix.hpp>
@@ -379,19 +384,71 @@ cpu_scalar_t vcl_scalar_to_float(vcl_scalar_t const& vcl_s)
   return cpu_s;
 }
 
-// Vector
+// Vector -- std::vector
+
+template <class SCALARTYPE>
+bp::list std_vector_to_list(std::vector<SCALARTYPE> const& v)
+{
+  bp::list l;
+  for (unsigned int i = 0; i < v.size(); ++i)
+    l.append((SCALARTYPE)v[i]);
+  
+  return l;
+}
+
+template <class SCALARTYPE>
+np::ndarray std_vector_to_ndarray(std::vector<SCALARTYPE> const& v)
+{
+  return np::from_object(std_vector_to_list<SCALARTYPE>(v),
+			 np::dtype::get_builtin<SCALARTYPE>());
+}
+
+template <class SCALARTYPE>
+boost::shared_ptr<std::vector<SCALARTYPE> >
+std_vector_init_ndarray(np::ndarray const& array)
+{
+  int d = array.get_nd();
+  if (d != 1) {
+    PyErr_SetString(PyExc_TypeError, "Can only create a vector from a 1-D array!");
+    bp::throw_error_already_set();
+  }
+  
+  uint32_t s = (uint32_t) array.shape(0);
+  
+  std::vector<SCALARTYPE> *v = new std::vector<SCALARTYPE>(s);
+  
+  for (uint32_t i=0; i < s; ++i)
+    (*v)[i] = bp::extract<SCALARTYPE>(array[i]);
+  
+  return boost::shared_ptr<std::vector<SCALARTYPE> >(v);
+}
+
+template <class SCALARTYPE>
+boost::shared_ptr<std::vector<SCALARTYPE> >
+std_vector_init_list(bp::list const& l)
+{
+  return std_vector_init_ndarray<SCALARTYPE>
+    (np::from_object(l, np::dtype::get_builtin<SCALARTYPE>()));
+}
+
+template <class SCALARTYPE>
+boost::shared_ptr<std::vector<SCALARTYPE> >
+std_vector_init_scalar(uint32_t length, SCALARTYPE value) {
+  std::vector<SCALARTYPE> *v = new std::vector<SCALARTYPE>(length);
+  for (uint32_t i=0; i < length; ++i)
+    (*v)[i] = value;
+  return boost::shared_ptr<std::vector<SCALARTYPE> >(v);
+}
+
+// Vector -- vcl::vector
 
 template <class SCALARTYPE>
 bp::list vcl_vector_to_list(vcl::vector<SCALARTYPE> const& v)
 {
-  bp::list l;
   std::vector<SCALARTYPE> c(v.size());
   vcl::fast_copy(v.begin(), v.end(), c.begin());
-  
-  for (unsigned int i = 0; i < v.size(); ++i)
-    l.append((SCALARTYPE)c[i]);
-  
-  return l;
+
+  return std_vector_to_list(c);
 }
 
 template <class SCALARTYPE>
@@ -403,7 +460,7 @@ np::ndarray vcl_vector_to_ndarray(vcl::vector<SCALARTYPE> const& v)
 
 template <class SCALARTYPE>
 boost::shared_ptr<vcl::vector<SCALARTYPE> >
-vector_init_ndarray(np::ndarray const& array)
+vcl_vector_init_ndarray(np::ndarray const& array)
 {
   int d = array.get_nd();
   if (d != 1) {
@@ -426,15 +483,15 @@ vector_init_ndarray(np::ndarray const& array)
 
 template <class SCALARTYPE>
 boost::shared_ptr<vcl::vector<SCALARTYPE> >
-vector_init_list(bp::list const& l)
+vcl_vector_init_list(bp::list const& l)
 {
-  return vector_init_ndarray<SCALARTYPE>
+  return vcl_vector_init_ndarray<SCALARTYPE>
     (np::from_object(l, np::dtype::get_builtin<SCALARTYPE>()));
 }
 
 template <class SCALARTYPE>
 boost::shared_ptr<vcl::vector<SCALARTYPE> >
-vector_init_scalar(uint32_t length, SCALARTYPE value) {
+vcl_vector_init_scalar(uint32_t length, SCALARTYPE value) {
   ublas::scalar_vector<SCALARTYPE> s_v(length, value);
   vcl::vector<SCALARTYPE> *v = new vcl::vector<SCALARTYPE>(length);
   vcl::copy(s_v.begin(), s_v.end(), v->begin());
@@ -791,20 +848,6 @@ public:
     return vcl_node;
   }
 
-  /*
-  void set_operand_to_node_index(uint8_t operand, std::size_t i)
-  {
-    switch (operand) {
-    case 0:
-      vcl_node.lhs.node_index = i;
-      break;
-    case 1:
-      vcl_node.rhs.node_index = i;
-      break;
-    }
-  }
-  */
-
 #define CONCAT(...) __VA_ARGS__
 
 #define SET_OPERAND(T, I)					   \
@@ -918,6 +961,11 @@ public:
   Python module initialisation
  *******************************/
 
+#define DISAMBIGUATE_FUNCTION_PTR(RET, OLD_NAME, NEW_NAME, ARGS) \
+  RET (*NEW_NAME) ARGS = &OLD_NAME;
+
+#define DISAMBIGUATE_CLASS_FUNCTION_PTR(CLASS, RET, OLD_NAME, NEW_NAME, ARGS) \
+  RET (CLASS::*NEW_NAME) ARGS = &CLASS::OLD_NAME;
 
 void translate_string_exception(const char* e)
 {
@@ -1003,10 +1051,11 @@ BOOST_PYTHON_MODULE(_viennacl)
     ( NAME )								\
     .def(bp::init<int>())						\
     .def(bp::init<vcl::vector<TYPE> >())				\
-    .def("__init__", bp::make_constructor(vector_init_ndarray<TYPE>))	\
-    .def("__init__", bp::make_constructor(vector_init_list<TYPE>))	\
-    .def("__init__", bp::make_constructor(vector_init_scalar<TYPE>))	\
+    .def("__init__", bp::make_constructor(vcl_vector_init_ndarray<TYPE>)) \
+    .def("__init__", bp::make_constructor(vcl_vector_init_list<TYPE>))	\
+    .def("__init__", bp::make_constructor(vcl_vector_init_scalar<TYPE>))\
     .def("as_ndarray", &vcl_vector_to_ndarray<TYPE>)			\
+    .def("as_list", &vcl_vector_to_list<TYPE>)                          \
     .def("clear", &vcl::vector<TYPE>::clear)				\
     .add_property("size", &vcl::vector<TYPE>::size)			\
     .add_property("internal_size", &vcl::vector<TYPE>::internal_size)	\
@@ -1032,18 +1081,71 @@ BOOST_PYTHON_MODULE(_viennacl)
   bp::def("plane_rotation", pyvcl_do_4ary_op<bp::object,                \
 	  vcl::vector<TYPE>&, vcl::vector<TYPE>&,                       \
 	  TYPE, TYPE,                                                   \
-	  op_plane_rotation, 0>);
+	  op_plane_rotation, 0>);                                       \
+  bp::class_<std::vector<TYPE>,						\
+	     boost::shared_ptr<std::vector<TYPE> > >			\
+    ( "std_" NAME )                                                     \
+    .def(bp::init<int>())						\
+    .def(bp::init<std::vector<TYPE> >())				\
+    .def("__init__", bp::make_constructor(std_vector_init_ndarray<TYPE>)) \
+    .def("__init__", bp::make_constructor(std_vector_init_list<TYPE>))	\
+    .def("__init__", bp::make_constructor(std_vector_init_scalar<TYPE>))\
+    .def("as_ndarray", &std_vector_to_ndarray<TYPE>)                    \
+    .def("as_list", &std_vector_to_list<TYPE>)                          \
+    .add_property("size", &std::vector<TYPE>::size)			\
+    ;
 
   EXPORT_VECTOR_CLASS(float, "vector_float")
   EXPORT_VECTOR_CLASS(double, "vector_double")
 
 
   // --------------------------------------------------
-
+  
   bp::class_<vcl::linalg::lower_tag>("lower_tag");
   bp::class_<vcl::linalg::unit_lower_tag>("unit_lower_tag");
   bp::class_<vcl::linalg::upper_tag>("upper_tag");
   bp::class_<vcl::linalg::unit_upper_tag>("unit_upper_tag");
+
+  DISAMBIGUATE_CLASS_FUNCTION_PTR(vcl::linalg::cg_tag, unsigned int,
+                                  iters, get_cg_iters, () const)
+  DISAMBIGUATE_CLASS_FUNCTION_PTR(vcl::linalg::cg_tag, double,
+                                  error, get_cg_error, () const)
+  bp::class_<vcl::linalg::cg_tag>("cg_tag")
+    .def(bp::init<double, unsigned int>())
+    .add_property("tolerance", &vcl::linalg::cg_tag::tolerance)
+    .add_property("max_iterations", &vcl::linalg::cg_tag::max_iterations)
+    .add_property("iters", get_cg_iters)
+    .add_property("error", get_cg_error)
+    ;
+
+  DISAMBIGUATE_CLASS_FUNCTION_PTR(vcl::linalg::bicgstab_tag, std::size_t,
+                                  iters, get_bicgstab_iters, () const)
+  DISAMBIGUATE_CLASS_FUNCTION_PTR(vcl::linalg::bicgstab_tag, double,
+                                  error, get_bicgstab_error, () const)
+  bp::class_<vcl::linalg::bicgstab_tag>("bicgstab_tag")
+    .def(bp::init<double, std::size_t, std::size_t>())
+    .add_property("tolerance", &vcl::linalg::bicgstab_tag::tolerance)
+    .add_property("max_iterations",
+                  &vcl::linalg::bicgstab_tag::max_iterations)
+    .add_property("max_iterations_before_restart",
+                  &vcl::linalg::bicgstab_tag::max_iterations_before_restart)
+    .add_property("iters", get_bicgstab_iters)
+    .add_property("error", get_bicgstab_error)
+    ;
+
+  DISAMBIGUATE_CLASS_FUNCTION_PTR(vcl::linalg::gmres_tag, unsigned int,
+                                  iters, get_gmres_iters, () const)
+  DISAMBIGUATE_CLASS_FUNCTION_PTR(vcl::linalg::gmres_tag, double,
+                                  error, get_gmres_error, () const)
+  bp::class_<vcl::linalg::gmres_tag>("gmres_tag")
+    .def(bp::init<double, unsigned int, unsigned int>())
+    .add_property("tolerance", &vcl::linalg::gmres_tag::tolerance)
+    .add_property("max_iterations", &vcl::linalg::gmres_tag::max_iterations)
+    .add_property("iters", get_gmres_iters)
+    .add_property("error", get_gmres_error)
+    .add_property("krylov_dim", &vcl::linalg::gmres_tag::krylov_dim)
+    .add_property("max_restarts", &vcl::linalg::gmres_tag::max_restarts)
+    ;
 
   // *** Dense matrix type ***
 
@@ -1121,6 +1223,18 @@ BOOST_PYTHON_MODULE(_viennacl)
     .def("solve", pyvcl_do_3ary_op<viennacl::vector<double>,
 	 vcl_matrix_t, viennacl::vector<double>,
 	 vcl::linalg::unit_upper_tag,
+	 op_solve, 0>)
+    .def("solve", pyvcl_do_3ary_op<viennacl::vector<double>,
+	 vcl_matrix_t, viennacl::vector<double>,
+	 vcl::linalg::cg_tag,
+	 op_solve, 0>)
+    .def("solve", pyvcl_do_3ary_op<viennacl::vector<double>,
+	 vcl_matrix_t, viennacl::vector<double>,
+	 vcl::linalg::bicgstab_tag,
+	 op_solve, 0>)
+    .def("solve", pyvcl_do_3ary_op<viennacl::vector<double>,
+	 vcl_matrix_t, viennacl::vector<double>,
+	 vcl::linalg::gmres_tag,
 	 op_solve, 0>)
 
     .def("solve", pyvcl_do_3ary_op<vcl_matrix_t,
@@ -1239,6 +1353,52 @@ BOOST_PYTHON_MODULE(_viennacl)
     .def(bp::init<>())
     ;
   */
+  // --------------------------------------------------
+
+  // Eigenvalue computations
+
+  DISAMBIGUATE_CLASS_FUNCTION_PTR(vcl::linalg::power_iter_tag, double,
+                                  factor, get_power_iter_factor, () const)
+  DISAMBIGUATE_CLASS_FUNCTION_PTR(vcl::linalg::power_iter_tag, std::size_t,
+                                  max_iterations,
+                                  get_power_iter_max_iterations, () const)
+  bp::class_<vcl::linalg::power_iter_tag>("power_iter_tag")
+    .def(bp::init<double, std::size_t>())
+    .add_property("factor", get_power_iter_factor)
+    .add_property("max_iterations", get_power_iter_max_iterations)
+    ;
+
+  DISAMBIGUATE_CLASS_FUNCTION_PTR(vcl::linalg::lanczos_tag, std::size_t,
+                                  num_eigenvalues,
+                                  get_lanczos_num_eigenvalues, () const)
+  DISAMBIGUATE_CLASS_FUNCTION_PTR(vcl::linalg::lanczos_tag, double,
+                                  factor, get_lanczos_factor, () const)
+  DISAMBIGUATE_CLASS_FUNCTION_PTR(vcl::linalg::lanczos_tag, std::size_t,
+                                  krylov_size, get_lanczos_krylov_size,
+                                  () const)
+  DISAMBIGUATE_CLASS_FUNCTION_PTR(vcl::linalg::lanczos_tag, int,
+                                  method, get_lanczos_method, () const)
+  bp::class_<vcl::linalg::lanczos_tag>("lanczos_tag")
+    .def(bp::init<double, std::size_t, int, std::size_t>())
+    .add_property("num_eigenvalues", get_lanczos_num_eigenvalues)
+    .add_property("factor", get_lanczos_factor)
+    .add_property("krylov_size", get_lanczos_krylov_size)
+    .add_property("method", get_lanczos_method)
+    ;
+
+  DISAMBIGUATE_FUNCTION_PTR(double, 
+                            vcl::linalg::eig, eig_power_iter_double,
+                            (vcl_matrix_t const&, 
+                             vcl::linalg::power_iter_tag const&))
+  bp::def("eig", eig_power_iter_double);
+
+  DISAMBIGUATE_FUNCTION_PTR(std::vector<double>,
+                            vcl::linalg::eig, eig_lanczos_vector_double,
+                            (vcl_matrix_t const&, 
+                             vcl::linalg::lanczos_tag const&))
+  bp::def("eig", eig_lanczos_vector_double);
+
+  // --------------------------------------------------
 
   // Scheduler interface (first attempt)
 
@@ -1314,73 +1474,6 @@ BOOST_PYTHON_MODULE(_viennacl)
     VALUE(vcl::scheduler, HALF_TYPE)
     VALUE(vcl::scheduler, FLOAT_TYPE)
     VALUE(vcl::scheduler, DOUBLE_TYPE)
-
-    /*
-    // host scalars:
-    VALUE(vcl::scheduler, HOST_SCALAR_CHAR_TYPE)
-    VALUE(vcl::scheduler, HOST_SCALAR_UCHAR_TYPE)
-    VALUE(vcl::scheduler, HOST_SCALAR_SHORT_TYPE)
-    VALUE(vcl::scheduler, HOST_SCALAR_USHORT_TYPE)
-    VALUE(vcl::scheduler, HOST_SCALAR_INT_TYPE)
-    VALUE(vcl::scheduler, HOST_SCALAR_UINT_TYPE)
-    VALUE(vcl::scheduler, HOST_SCALAR_LONG_TYPE)
-    VALUE(vcl::scheduler, HOST_SCALAR_ULONG_TYPE)
-    VALUE(vcl::scheduler, HOST_SCALAR_HALF_TYPE)
-    VALUE(vcl::scheduler, HOST_SCALAR_FLOAT_TYPE)
-    VALUE(vcl::scheduler, HOST_SCALAR_DOUBLE_TYPE)
-    
-    // device scalars:
-    VALUE(vcl::scheduler, SCALAR_CHAR_TYPE)
-    VALUE(vcl::scheduler, SCALAR_UCHAR_TYPE)
-    VALUE(vcl::scheduler, SCALAR_SHORT_TYPE)
-    VALUE(vcl::scheduler, SCALAR_USHORT_TYPE)
-    VALUE(vcl::scheduler, SCALAR_INT_TYPE)
-    VALUE(vcl::scheduler, SCALAR_UINT_TYPE)
-    VALUE(vcl::scheduler, SCALAR_LONG_TYPE)
-    VALUE(vcl::scheduler, SCALAR_ULONG_TYPE)
-    VALUE(vcl::scheduler, SCALAR_HALF_TYPE)
-    VALUE(vcl::scheduler, SCALAR_FLOAT_TYPE)
-    VALUE(vcl::scheduler, SCALAR_DOUBLE_TYPE)
-    
-    // vector:
-    VALUE(vcl::scheduler, VECTOR_CHAR_TYPE)
-    VALUE(vcl::scheduler, VECTOR_UCHAR_TYPE)
-    VALUE(vcl::scheduler, VECTOR_SHORT_TYPE)
-    VALUE(vcl::scheduler, VECTOR_USHORT_TYPE)
-    VALUE(vcl::scheduler, VECTOR_INT_TYPE)
-    VALUE(vcl::scheduler, VECTOR_UINT_TYPE)
-    VALUE(vcl::scheduler, VECTOR_LONG_TYPE)
-    VALUE(vcl::scheduler, VECTOR_ULONG_TYPE)
-    VALUE(vcl::scheduler, VECTOR_HALF_TYPE)
-    VALUE(vcl::scheduler, VECTOR_FLOAT_TYPE)
-    VALUE(vcl::scheduler, VECTOR_DOUBLE_TYPE)
-    
-    // matrix, row major:
-    VALUE(vcl::scheduler, MATRIX_ROW_CHAR_TYPE)
-    VALUE(vcl::scheduler, MATRIX_ROW_UCHAR_TYPE)
-    VALUE(vcl::scheduler, MATRIX_ROW_SHORT_TYPE)
-    VALUE(vcl::scheduler, MATRIX_ROW_USHORT_TYPE)
-    VALUE(vcl::scheduler, MATRIX_ROW_INT_TYPE)
-    VALUE(vcl::scheduler, MATRIX_ROW_UINT_TYPE)
-    VALUE(vcl::scheduler, MATRIX_ROW_LONG_TYPE)
-    VALUE(vcl::scheduler, MATRIX_ROW_ULONG_TYPE)
-    VALUE(vcl::scheduler, MATRIX_ROW_HALF_TYPE)
-    VALUE(vcl::scheduler, MATRIX_ROW_FLOAT_TYPE)
-    VALUE(vcl::scheduler, MATRIX_ROW_DOUBLE_TYPE)
-    
-    // matrix, row major:
-    VALUE(vcl::scheduler, MATRIX_COL_CHAR_TYPE)
-    VALUE(vcl::scheduler, MATRIX_COL_UCHAR_TYPE)
-    VALUE(vcl::scheduler, MATRIX_COL_SHORT_TYPE)
-    VALUE(vcl::scheduler, MATRIX_COL_USHORT_TYPE)
-    VALUE(vcl::scheduler, MATRIX_COL_INT_TYPE)
-    VALUE(vcl::scheduler, MATRIX_COL_UINT_TYPE)
-    VALUE(vcl::scheduler, MATRIX_COL_LONG_TYPE)
-    VALUE(vcl::scheduler, MATRIX_COL_ULONG_TYPE)
-    VALUE(vcl::scheduler, MATRIX_COL_HALF_TYPE)
-    VALUE(vcl::scheduler, MATRIX_COL_FLOAT_TYPE)
-    VALUE(vcl::scheduler, MATRIX_COL_DOUBLE_TYPE)
-    */
     ;
 
   /*

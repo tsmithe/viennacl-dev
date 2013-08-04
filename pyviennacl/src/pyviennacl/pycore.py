@@ -1,9 +1,13 @@
-from pyviennacl import _viennacl as _v
+from pyviennacl import (_viennacl as _v,
+                        util)
 from numpy import (ndarray, array, dtype, inf,
                    result_type as np_result_type,
                    int8, int16, int32, int64,
                    uint8, uint16, uint32, uint64,
                    float16, float32, float64)
+import logging
+
+log = logging.getLogger(__name__)
 
 # This dict is used to map NumPy dtypes onto OpenCL/ViennaCL scalar types
 HostScalarTypes = {
@@ -51,10 +55,10 @@ def deprecated(func):
     """
     A decorator to make deprecation really obvious.
     """
-    def new_func(*args):
-        print("THIS FUNCTION CALL IS OR WILL SOON BE DEPRECATED:\n", func)
+    def deprecated_function(*args):
+        log.warning("DEPRECATED FUNCTION CALL: %s" % (func))
         return func(*args)
-    return new_func
+    return deprecated_function
 
 
 class NoResult: 
@@ -94,6 +98,9 @@ class MagicMethods:
     @property
     def norm_inf(self):
         return Norm_Inf(self).result
+
+    def prod(self, rhs):
+        return (self * rhs)
 
     def element_prod(self, rhs):
         return ElementMul(self, rhs)
@@ -977,6 +984,6 @@ class Statement:
         try:
             self.vcl_statement.execute()
         except RuntimeError:
-            print("!!! EXCEPTION EXECUTING:",self.statement[0].express())
+            log.error("EXCEPTION EXECUTING: %s" %(self.statement[0].express()))
             raise
         return self.result
