@@ -46,6 +46,7 @@ namespace viennacl{
 
         class profile : public template_base::profile{
             friend class matrix_product;
+
             std::size_t lmem_used(std::size_t scalartype_size) const {
               std::size_t lmem_used = 0;
               if(use_lhs_shared_)
@@ -55,9 +56,9 @@ namespace viennacl{
               return lmem_used;
             }
 
-            virtual std::ostream & print(std::ostream & s) const{
+            virtual void print(std::ostream & s) const{
                 s << "{vector_type, ms, ks, ns, ml, kl, nl, use_lhs_shared, use_rhs_shared, unroll} = {"
-                  << vectorization_
+                  << vectorization_ << ","
                   << ms_ << ", "
                   << ks_ << ", "
                   << ns_ << ", "
@@ -65,6 +66,15 @@ namespace viennacl{
                   << kl_ << ", "
                   << nl_ << ", "
                   << use_lhs_shared_ << ", " << use_rhs_shared_ << ", " << unroll_ << "}" ;
+            }
+
+            bool invalid_impl(viennacl::ocl::device const & /*dev*/, size_t /*scalartype_size*/) const{
+                return ml_ < ms_
+                        || kl_ < ks_
+                        || nl_ < ns_
+                        || (ms_ % vectorization_) > 0
+                        || (ks_ % vectorization_) > 0
+                        || (ns_ % vectorization_) > 0;
             }
 
           public:
@@ -391,20 +401,27 @@ namespace viennacl{
 
 
           if(profile_.vectorization_>1){
+            if(!assigned->is_row_major() || !lhs->is_row_major())
+              stream << "unsigned int Mv = M / " << utils::to_string(profile_.vectorization_) << ";" << std::endl;
+            if(assigned->is_row_major() || rhs->is_row_major())
+              stream << "unsigned int Nv = N / " << utils::to_string(profile_.vectorization_) << ";" << std::endl;
+            if(lhs->is_row_major() || !rhs->is_row_major())
+              stream << "unsigned int Kv = K / " << utils::to_string(profile_.vectorization_) << ";" << std::endl;
+
             if(assigned->is_row_major())
-              assigned->bind_sizes("M", "N/"+utils::to_string(profile_.vectorization_));
+              assigned->bind_sizes("M", "Nv");
             else
-              assigned->bind_sizes("M/"+utils::to_string(profile_.vectorization_), "N");
+              assigned->bind_sizes("Mv", "N");
 
             if(lhs->is_row_major())
-              lhs->bind_sizes("M", "K/"+utils::to_string(profile_.vectorization_));
+              lhs->bind_sizes("M", "Kv");
             else
-              lhs->bind_sizes("M/"+utils::to_string(profile_.vectorization_), "K");
+              lhs->bind_sizes("Mv", "K");
 
             if(rhs->is_row_major())
-              rhs->bind_sizes("K", "N/"+utils::to_string(profile_.vectorization_));
+              rhs->bind_sizes("K", "Nv");
             else
-              rhs->bind_sizes("K/"+utils::to_string(profile_.vectorization_), "N");
+              rhs->bind_sizes("Kv", "N");
 
           }
           else{
@@ -561,18 +578,15 @@ namespace viennacl{
           for(unsigned int k = 0 ; k < upperbound_1_rhs ; ++k){
             for(unsigned int n=0 ; n < upperbound_2_rhs ; ++n){
               stream << rhs_value_scalartype << " val_rhs_" << k << "_" << n << " = " ;
-              if(use_rhs_shared ) stream << "* ptr_rhs_" << k << "++";
+              if(use_rhs_shared )
+                  stream << "* ptr_rhs_" << k << "++";
               else{
                 if(is_rhs_rowmajor)
-                  stream << "* ptr_rhs_" << k;
+                  stream << "* ptr_rhs_" << k << "++";
                 else
-                  stream  << "* ptr_rhs_" << n;
+                   stream  << "* ptr_rhs_" << n << "++";
               }
               stream << ";";
-              if( !use_rhs_shared ){
-                  if(is_rhs_rowmajor)stream << "++" << "ptr_rhs_" << k << ";" ;
-                  else stream << "++" << "ptr_rhs_" << n << ";" ;
-              }
               stream << std::endl;
             }
           }
