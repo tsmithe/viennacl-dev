@@ -1,6 +1,7 @@
 from pyviennacl import (_viennacl as _v,
                         util)
-from numpy import (ndarray, array, dtype, inf,
+from numpy import (ndarray, array, zeros,
+                   inf, nan, dtype,
                    result_type as np_result_type,
                    int8, int16, int32, int64,
                    uint8, uint16, uint32, uint64,
@@ -190,6 +191,9 @@ class Leaf(MagicMethods):
     def result(self):
         return self
 
+    def copy(self):
+        return type(self)(self)
+
     def express(self, statement=""):
         """
         Construct a human-readable version of a ViennaCL expression tree
@@ -203,7 +207,7 @@ class Leaf(MagicMethods):
         Return a NumPy ndarray containing the data within the underlying
         ViennaCL type.
         """
-        return self.vcl_leaf.as_ndarray()
+        return array(self.vcl_leaf.as_ndarray(), dtype=self.dtype)
 
     @property
     def value(self):
@@ -266,7 +270,7 @@ class ScalarBase(Leaf):
         Return a point-like ndarray containing only the value of this Scalar,
         with the dtype set accordingly.
         """
-        return array(self.value, self.dtype)
+        return array(self.value, dtype=self.dtype)
 
 
 class HostScalar(ScalarBase):
@@ -386,6 +390,23 @@ class Vector(Leaf):
     def dot(self, rhs):
         return Dot(self, rhs)
     inner = dot
+
+    def as_column(self):
+        tmp = self.vcl_leaf.as_ndarray()
+        tmp.resize(self.size, 1)
+        return Matrix(tmp, dtype=self.dtype, layout=COL_MAJOR)
+
+    def as_row(self):
+        tmp = self.vcl_leaf.as_ndarray()
+        tmp.resize(1, self.size)
+        return Matrix(tmp, dtype=self.dtype, layout=ROW_MAJOR)
+
+    def as_diag(self):
+        tmp_v = self.as_ndarray()
+        tmp_m = zeros((self.size, self.size), dtype=self.dtype)
+        for i in range(self.size):
+            tmp_m[i][i] = tmp_v[i]
+        return Matrix(tmp_m, dtype=self.dtype) # Ought to update this to sparse
 
     @deprecated
     def __mul__(self, rhs):
@@ -742,7 +763,7 @@ class Node(MagicMethods):
         return s.execute().value
 
     def as_ndarray(self):
-        return array(self.value, self.dtype)
+        return array(self.value, dtype=self.dtype)
 
 
 class Norm_1(Node):
