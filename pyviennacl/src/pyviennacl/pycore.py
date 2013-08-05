@@ -47,9 +47,18 @@ vcl_container_type_strings = {
     _v.statement_node_type_family.HOST_SCALAR_TYPE_FAMILY: 'host',
     _v.statement_node_type_family.SCALAR_TYPE_FAMILY: 'scalar',
     _v.statement_node_type_family.VECTOR_TYPE_FAMILY: 'vector',
-    _v.statement_node_type_family.MATRIX_ROW_TYPE_FAMILY: 'matrix_row'
+    _v.statement_node_type_family.MATRIX_ROW_TYPE_FAMILY: 'matrix_row',
+    _v.statement_node_type_family.MATRIX_COL_TYPE_FAMILY: 'matrix_col'
 }
 
+# Constants for choosing matrix storage layout
+ROW_MAJOR = 1
+COL_MAJOR = 2
+
+vcl_layout_strings = {
+    ROW_MAJOR: 'row',
+    COL_MAJOR: 'col'
+}
 
 def deprecated(func):
     """
@@ -176,6 +185,10 @@ class Leaf(MagicMethods):
         The result_container_type for a leaf is always its own type.
         """
         return type(self)
+
+    @property
+    def result(self):
+        return self
 
     def express(self, statement=""):
         """
@@ -362,20 +375,23 @@ class Vector(Leaf):
         return self.vcl_leaf.index_norm_inf
 
     @deprecated
-    def outer_prod(self, rhs):
+    def outer(self, rhs):
         if isinstance(rhs, Vector):
-            return Matrix(self.vcl_leaf * rhs.vcl_leaf)
+            return Matrix(self.vcl_leaf.outer(rhs.vcl_leaf),
+                          dtype=self.dtype,
+                          layout=COL_MAJOR) # I don't know why COL_MAJOR...
         else:
             raise TypeError("Cannot calculate the outer-product of non-vector type: %s" % type(rhs))
 
     def dot(self, rhs):
         return Dot(self, rhs)
-    inner_prod = dot
+    inner = dot
 
     @deprecated
     def __mul__(self, rhs):
         if isinstance(rhs, Vector):
-            return Matrix(self.vcl_leaf * rhs.vcl_leaf)
+            #return ElementMul(self, rhs) # TODO: ..NOT YET IMPLEMENTED
+            return Vector(self.vcl_leaf * rhs.vcl_leaf, dtype=self.dtype)
         else:
             op = Mul(self, rhs)
             return op
@@ -390,9 +406,12 @@ class Matrix(Leaf):
     + from a tuple: first two values shape, third scalar value
 
     Also provides convenience functions for arithmetic.
+
+    Default layout is ROW_MAJOR.
+
+    TODO: Expand this documentation.
     """
     ndim = 2
-    statement_node_type_family = _v.statement_node_type_family.MATRIX_ROW_TYPE_FAMILY
 
     def _init_leaf(self, args, kwargs):
         """
@@ -404,6 +423,17 @@ class Matrix(Leaf):
                 raise TypeError("Matrix can only have a 2-d shape")
             args = list(args)
             args.insert(0, kwargs['shape'])
+
+        if 'layout' in kwargs.keys():
+            if kwargs['layout'] == COL_MAJOR:
+                self.layout = COL_MAJOR
+                self.statement_node_type_family = _v.statement_node_type_family.MATRIX_COL_TYPE_FAMILY
+            else:
+                self.layout = ROW_MAJOR
+                self.statement_node_type_family = _v.statement_node_type_family.MATRIX_ROW_TYPE_FAMILY
+        else:
+            self.layout = ROW_MAJOR
+            self.statement_node_type_family = _v.statement_node_type_family.MATRIX_ROW_TYPE_FAMILY
 
         if len(args) == 0:
             def get_leaf(vcl_t):
@@ -444,7 +474,10 @@ class Matrix(Leaf):
         self.statement_node_type = HostScalarTypes[self.dtype.name]
 
         try:
-            vcl_type = getattr(_v, "matrix_" + vcl_dtype_strings[self.statement_node_type])
+            vcl_type = getattr(_v,
+                               "matrix_" + 
+                               vcl_layout_strings[self.layout] + "_" + 
+                               vcl_dtype_strings[self.statement_node_type])
         except (KeyError, AttributeError):
             raise TypeError("dtype %s not supported" % self.statement_node_type)
 
@@ -466,9 +499,9 @@ class Matrix(Leaf):
     @deprecated
     def __mul__(self, rhs):
         if isinstance(rhs, Matrix):
-            return Matrix(self.vcl_leaf * rhs.vcl_leaf)
+            return Matrix(self.vcl_leaf * rhs.vcl_leaf, dtype=self.dtype)
         elif isinstance(rhs, Vector):
-            return Vector(self.vcl_leaf * rhs.vcl_leaf)
+            return Vector(self.vcl_leaf * rhs.vcl_leaf, dtype=self.dtype)
         else:
             op = Mul(self, rhs)
             return op
