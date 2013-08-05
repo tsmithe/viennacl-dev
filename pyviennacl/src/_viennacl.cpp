@@ -10,6 +10,7 @@
 #include <boost/numeric/ublas/vector_sparse.hpp>
 #include <boost/numeric/ublas/vector_of_vector.hpp>
 
+#define VIENNACL_DEBUG_BUILD
 #define VIENNACL_WITH_UBLAS
 #define VIENNACL_WITH_OPENCL
 #include <viennacl/linalg/cg.hpp>

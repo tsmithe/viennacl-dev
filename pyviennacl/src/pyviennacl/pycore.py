@@ -180,6 +180,10 @@ class Leaf(MagicMethods):
         """
         raise NotImplementedError("Help")
 
+    def __getitem__(self, key):
+        # TODO: Implement this in ViennaCL, rather using NumPy..
+        return type(self)(array(self.as_ndarray()[key]), dtype=self.dtype)
+
     @property
     def result_container_type(self):
         """
@@ -345,6 +349,10 @@ class Vector(Leaf):
                     self.dtype = args[0].dtype
                 def get_leaf(vcl_t):
                     return vcl_t(args[0].vcl_leaf)
+            elif isinstance(args[0], ndarray):
+                self.dtype = dtype(args[0])
+                def get_leaf(vcl_t):
+                    return vcl_t(args[0])
             else:
                 # This doesn't do any dtype checking, so beware...
                 def get_leaf(vcl_t):
@@ -468,6 +476,11 @@ class Matrix(Leaf):
             elif isinstance(args[0], tuple) or isinstance(args[0], list):
                 def get_leaf(vcl_t):
                     return vcl_t(args[0][0], args[0][1])
+            elif isinstance(args[0], ndarray):
+                if self.dtype is None:
+                    self.dtype = dtype(args[0])
+                def get_leaf(vcl_t):
+                    return vcl_t(args[0])
             else:
                 # This doesn't do any dtype checking, so beware...
                 def get_leaf(vcl_t):
