@@ -1089,6 +1089,13 @@ BOOST_PYTHON_MODULE(_viennacl)
 
   // --------------------------------------------------
 
+  bp::class_<vcl::range>("range",
+                         bp::init<std::size_t, std::size_t>());
+  bp::class_<vcl::slice>("slice",
+                         bp::init<std::size_t, std::size_t, std::size_t>());
+
+  // DISAMBIGUATE_FUNCTION_PTR(RET, OLD_NAME, NEW_NAME, ARGS)  
+
   // *** Vector types ***
 
 #define EXPORT_VECTOR_CLASS(TYPE, NAME)					\
@@ -1149,12 +1156,6 @@ BOOST_PYTHON_MODULE(_viennacl)
   EXPORT_VECTOR_CLASS(float, "vector_float")
   EXPORT_VECTOR_CLASS(double, "vector_double")
 
-  bp::def("range", &vcl_range<float>);
-  bp::def("range", &vcl_range<double>);
-
-  bp::def("slice", &vcl_slice<float>);
-  bp::def("slice", &vcl_slice<double>);
-
 
   // --------------------------------------------------
   
@@ -1206,7 +1207,7 @@ BOOST_PYTHON_MODULE(_viennacl)
 
   // *** Dense matrix type ***
 
-#define EXPORT_DENSE_MATRIX_CLASS(TYPE, F, CPU_F, NAME)                 \
+#define EXPORT_DENSE_MATRIX_CLASS(TYPE, LAYOUT, F, CPU_F)               \
   bp::class_<vcl::matrix_base<TYPE, F>,                                 \
 	     boost::shared_ptr<vcl::matrix_base<TYPE, F> > >            \
     ("matrix_base", bp::no_init)                                        \
@@ -1309,31 +1310,51 @@ BOOST_PYTHON_MODULE(_viennacl)
   bp::class_<vcl::matrix<TYPE, F>,                                      \
              boost::shared_ptr<vcl::matrix<TYPE, F> >,                  \
              bp::bases<vcl::matrix_base<TYPE, F> > >                    \
-    ( NAME )                                                            \
+    ( "matrix_" #LAYOUT "_" #TYPE )                                     \
     .def(bp::init<vcl::matrix<TYPE, F> >())                             \
     .def(bp::init<uint32_t, uint32_t>())                                \
     .def("__init__", bp::make_constructor(matrix_init_ndarray<TYPE, F>))\
     .def("__init__", bp::make_constructor(matrix_init_scalar<TYPE, F>)) \
-    ;
+    ;                                                                   \
+  DISAMBIGUATE_FUNCTION_PTR(CONCAT(vcl::matrix_range<                   \
+                                   vcl::matrix_base<TYPE, F> >),        \
+                            vcl::project,                               \
+                            project_matrix_##TYPE##_##LAYOUT##_range_range, \
+                            (CONCAT(vcl::matrix_base<TYPE, F>&,         \
+                                    vcl::range const&,                  \
+                                    vcl::range const&)))                \
+  DISAMBIGUATE_FUNCTION_PTR(CONCAT(vcl::matrix_range<               \
+                                   vcl::matrix_base<TYPE, F> >),        \
+                            vcl::project,                               \
+                            project_matrix_range_##TYPE##_##LAYOUT##_range_range, \
+                            (CONCAT(vcl::matrix_range<                  \
+                                    vcl::matrix_base<TYPE, F> >&,         \
+                                    vcl::range const&,                  \
+                                    vcl::range const&)))                \
+  DISAMBIGUATE_FUNCTION_PTR(CONCAT(vcl::matrix_slice<                   \
+                                   vcl::matrix_base<TYPE, F> >),        \
+                            vcl::project,                               \
+                            project_matrix_##TYPE##_##LAYOUT##_slice_slice, \
+                            (CONCAT(vcl::matrix_base<TYPE, F>&,         \
+                                    vcl::slice const&,                  \
+                                    vcl::slice const&)))                \
+  DISAMBIGUATE_FUNCTION_PTR(CONCAT(vcl::matrix_slice<                   \
+                                   vcl::matrix_base<TYPE, F> >),        \
+                            vcl::project,                               \
+                            project_matrix_slice_##TYPE##_##LAYOUT##_slice_slice, \
+                            (CONCAT(vcl::matrix_slice<                  \
+                                    vcl::matrix_base<TYPE, F> >&,       \
+                                    vcl::slice const&,                  \
+                                    vcl::slice const&)))                \
+  bp::def("project", project_matrix_ ##TYPE##_##LAYOUT##_range_range); \
+  bp::def("project", project_matrix_range_##TYPE##_##LAYOUT##_range_range); \
+  bp::def("project", project_matrix_##TYPE##_##LAYOUT##_slice_slice); \
+  bp::def("project", project_matrix_slice_##TYPE##_##LAYOUT##_slice_slice);
 
-  EXPORT_DENSE_MATRIX_CLASS(double, vcl::row_major, ublas::row_major,
-                            "matrix_row_double")
-  EXPORT_DENSE_MATRIX_CLASS(float, vcl::row_major, ublas::row_major,
-                            "matrix_row_float")
-  EXPORT_DENSE_MATRIX_CLASS(double, vcl::column_major, ublas::column_major,
-                            "matrix_col_double")
-  EXPORT_DENSE_MATRIX_CLASS(float, vcl::column_major, ublas::column_major,
-                            "matrix_col_float")
-
-  bp::def("range", &vcl_range<float, vcl::row_major>);
-  bp::def("range", &vcl_range<double, vcl::row_major>);
-  bp::def("range", &vcl_range<float, vcl::column_major>);
-  bp::def("range", &vcl_range<double, vcl::column_major>);
-
-  bp::def("slice", &vcl_slice<float, vcl::row_major>);
-  bp::def("slice", &vcl_slice<double, vcl::row_major>);
-  bp::def("slice", &vcl_slice<float, vcl::column_major>);
-  bp::def("slice", &vcl_slice<double, vcl::column_major>);
+  EXPORT_DENSE_MATRIX_CLASS(double, row, vcl::row_major, ublas::row_major)
+  EXPORT_DENSE_MATRIX_CLASS(float, row, vcl::row_major, ublas::row_major)
+  EXPORT_DENSE_MATRIX_CLASS(double, col, vcl::column_major, ublas::column_major)
+  EXPORT_DENSE_MATRIX_CLASS(float, col, vcl::column_major, ublas::column_major)
 
            
   // --------------------------------------------------
