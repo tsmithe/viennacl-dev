@@ -12,7 +12,7 @@
 
 #define VIENNACL_DEBUG_BUILD
 #define VIENNACL_WITH_UBLAS
-#define VIENNACL_WITH_OPENCL
+//#define VIENNACL_WITH_OPENCL
 #include <viennacl/backend/memory.hpp>
 #include <viennacl/linalg/cg.hpp>
 #include <viennacl/linalg/bicgstab.hpp>

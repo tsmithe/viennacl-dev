@@ -349,14 +349,14 @@ class Vector(Leaf):
                 self.dtype = dtype(args[0])
                 def get_leaf(vcl_t):
                     return vcl_t(args[0])
-            elif isinstance(args[0], int):
-                # This doesn't do any dtype checking, so beware...
-                def get_leaf(vcl_t):
-                    return vcl_t(args[0])
-            else:
+            elif isinstance(args[0], _v.vector_base):
                 # This doesn't do any dtype checking, so beware...
                 def get_leaf(vcl_t):
                     return args[0]
+            else:
+                # This doesn't do any dtype checking, so beware...
+                def get_leaf(vcl_t):
+                    return vcl_t(args[0])
         elif len(args) == 2:
             if self.dtype is None:
                 try:
@@ -384,18 +384,27 @@ class Vector(Leaf):
 
     def __getitem__(self, key):
         if isinstance(key, slice):
-            if key.step is None:
+            if key.start is None:
+                key.start = 0
+            if key.step is None: # range
                 return Vector(_v.range(self.vcl_leaf, 
                                        key.start, key.stop), 
                               dtype=self.dtype)
-            else:
+            else: # slice
                 return Vector(_v.slice(self.vcl_leaf,
                                        key.start, key.step, 
-                                       (key.stop - key.start)),
+                                       int((self.size - (key.start+key.stop))
+                                           /key.step)),
                               dtype=self.dtype)
+        elif isinstance(key, tuple) or isinstance(key, list):
+            if len(key) == 0:
+                return self
+            elif len(key) == 1:
+                return self[key[0]]
+            else:
+                raise IndexError("Too many indices")
         else:
-            # might be tuple of ints, or tuple of slices, or a combo
-            # or something else..
+            # key is probably an int
             return self.as_ndarray()[key]
 
     @property
@@ -540,41 +549,136 @@ class Matrix(Leaf):
         self.internal_size2 = self.vcl_leaf.internal_size2
 
     def __getitem__(self, key):
-        # TODO TODO TODO TODO
-        # TODO TODO TODO TODO
-        # TODO TODO TODO TODO
-        # TODO TODO TODO TODO
         if isinstance(key, tuple) or isinstance(key, list):
             if len(key) == 0:
                 return self
-            elif len(key) == 1: # Then we want a row
-                # We have either (int) or (slice)
-                return Matrix(_v.range(self.vcl_leaf,
-                                       ROW_START, ROW_END,
-                                       COL_START, COL_END),
-                              dtype=self.dtype,
-                              layout=self.layout)
+            elif len(key) == 1: 
+                return self[key[0]]
             elif len(key) == 2:
-                # Then we have one of the following:
-                #  (int, int)
-                #  (int, slice)
-                #  (slice, int)
-                #  (slice, slice)
-                pass
+                if isinstance(key[0], int):
+                    # Choose from row
+                    if isinstance(key[1], int):
+                        #  (int, int) -> scalar
+                        return HostScalar(self.as_ndarray()[key],
+                                          dtype=self.dtype)
+                    elif isinstance(key[1], slice):
+                        #  (int, slice) - range/slice from row -> row vector
+                        if key[1].start is None:
+                            key[1].start = 0
+                        if key[1].step is None:
+                            # range from row
+                            return Matrix(_v.range(self.vcl_leaf,
+                                                   key[0], key[0],
+                                                   key[1].start, key[1].stop),
+                                          dtype=self.dtype,
+                                          layout=self.layout)
+                        else:
+                            # slice from row
+                            return Matrix(_v.slice(self.vcl_leaf,
+                                                   key[0], 1, 1,
+                                                   key[1].start, key[1].step,
+                                                   (key[1].stop-key[1].start)),
+                                          dtype=self.dtype,
+                                          layout=self.layout)
+                    else:
+                        raise TypeError("Did not understand key[1]")
+                elif isinstance(key[0], slice):
+                    # slice of rows
+                    if key[0].start is None:
+                        key[0].start = 0
+                    if isinstance(key[1], int):
+                        #  (slice, int) - range/slice from col -> col vector
+                        if key[0].step is None:
+                            # range from col
+                            return Matrix(_v.range(self.vcl_leaf,
+                                                   key[0].start, key[0].stop,
+                                                   key[1], key[1]),
+                                          dtype=self.dtype,
+                                          layout=self.layout)
+                        else:
+                            # slice from col
+                            return Matrix(_v.slice(self.vcl_leaf,
+                                                   key[0].start, key[0].step,
+                                                   (key[0].stop-key[0].start),
+                                                   key[1], 1, 1),
+                                          dtype=self.dtype,
+                                          layout=self.layout)
+                    elif isinstance(key[1], slice):
+                        #  (slice, slice) - sub-matrix
+                        if key[1].start is None:
+                            key[1].start = 0
+                        if key[0].step is None:
+                            # range from rows
+                            if key[1].step is None:
+                                return Matrix(_v.range(self.vcl_leaf,
+                                                       key[0].start, 
+                                                       key[0].stop,
+                                                       key[1].start,
+                                                       key[1].stop),
+                                              dtype=self.dtype,
+                                              layout=self.layout)
+                            else:
+                                return Matrix(_v.slice(self.vcl_leaf,
+                                                       key[0].start, 1,
+                                                       (key[0].stop-
+                                                        key[0].start),
+                                                       key[1].start,
+                                                       key[1].step,
+                                                       (key[1].stop-
+                                                        key[1].start)),
+                                              dtype=self.dtype,
+                                              layout=self.layout)
+                        else:
+                            # slice from rows
+                            if key[1].step is None:
+                                # range from cols
+                                return Matrix(_v.slice(self.vcl_leaf,
+                                                       key[0].start,
+                                                       key[0].step,
+                                                       (key[0].stop-
+                                                        key[0].start),
+                                                       key[1].start, 1,
+                                                       (key[1].stop-
+                                                        key[1].start)),
+                                              dtype=self.dtype,
+                                              layout=self.layout)
+                            else:
+                                # slice from cols
+                                return Matrix(_v.slice(self.vcl_leaf,
+                                                       key[0].start,
+                                                       key[0].step,
+                                                       (key[0].stop-
+                                                        key[0].start),
+                                                       key[1].start,
+                                                       key[1].step,
+                                                       (key[1].stop-
+                                                        key[1].start)),
+                                              dtype=self.dtype,
+                                              layout=self.layout)
+                    else:
+                        raise TypeError("Did not understand key[1]")
+                else:
+                    raise TypeError("Did not understand key[0]")
         elif isinstance(key, slice):
+            if key.start is None:
+                key.start = 0
             if key.step is None:
                 return Matrix(_v.range(self.vcl_leaf, 
-                                       key.start, key.stop), 
+                                       key.start, key.stop,
+                                       0, self.size2), 
                               dtype=self.dtype,
                               layout=self.layout)
             else:
                 return Matrix(_v.slice(self.vcl_leaf,
                                        key.start, key.step, 
-                                       (key.stop - key.start)),
+                                       (key.stop - key.start),
+                                       0, 1, self.size2),
                               dtype=self.dtype,
                               layout=self.layout)
         elif isinstance(key, int):
-            return self.as_ndarray()[key]
+            return Matrix(self.as_ndarray()[key],
+                          dtype=self.dtype,
+                          layout=self.layout)
         else:
             raise IndexError("Did not understand key")
 
