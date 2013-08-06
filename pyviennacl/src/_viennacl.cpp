@@ -13,6 +13,7 @@
 #define VIENNACL_DEBUG_BUILD
 #define VIENNACL_WITH_UBLAS
 #define VIENNACL_WITH_OPENCL
+#include <viennacl/backend/memory.hpp>
 #include <viennacl/linalg/cg.hpp>
 #include <viennacl/linalg/bicgstab.hpp>
 #include <viennacl/linalg/direct_solve.hpp>
@@ -30,7 +31,9 @@
 #include <viennacl/ell_matrix.hpp>
 #include <viennacl/hyb_matrix.hpp>
 #include <viennacl/matrix.hpp>
+#include <viennacl/matrix_proxy.hpp>
 #include <viennacl/vector.hpp>
+#include <viennacl/vector_proxy.hpp>
 #include <viennacl/scheduler/execute.hpp>
 
 namespace vcl = viennacl;
@@ -55,11 +58,13 @@ typedef ublas::generalized_vector_of_vector<cpu_scalar_t,
 cpu_gvov_matrix_t;
 */
 
+
+// TODO: Use ViennaCL operation tags?
 enum op_t {
-  op_add,              // done in sched: vector, ...
-  op_sub,              // done in sched: vector, ..
+  op_add,
+  op_sub,
   op_mul,
-  op_div,              // done in sched: ..
+  op_div,
   op_iadd,
   op_isub,
   op_imul,
@@ -427,7 +432,7 @@ std_vector_init_scalar(uint32_t length, SCALARTYPE value) {
 // Vector -- vcl::vector
 
 template <class SCALARTYPE>
-bp::list vcl_vector_to_list(vcl::vector<SCALARTYPE> const& v)
+bp::list vcl_vector_to_list(vcl::vector_base<SCALARTYPE> const& v)
 {
   std::vector<SCALARTYPE> c(v.size());
   vcl::fast_copy(v.begin(), v.end(), c.begin());
@@ -436,7 +441,7 @@ bp::list vcl_vector_to_list(vcl::vector<SCALARTYPE> const& v)
 }
 
 template <class SCALARTYPE>
-np::ndarray vcl_vector_to_ndarray(vcl::vector<SCALARTYPE> const& v)
+np::ndarray vcl_vector_to_ndarray(vcl::vector_base<SCALARTYPE> const& v)
 {
   return np::from_object(vcl_vector_to_list<SCALARTYPE>(v),
 			 np::dtype::get_builtin<SCALARTYPE>());
@@ -480,6 +485,26 @@ vcl_vector_init_scalar(uint32_t length, SCALARTYPE value) {
   vcl::vector<SCALARTYPE> *v = new vcl::vector<SCALARTYPE>(length);
   vcl::copy(s_v.begin(), s_v.end(), v->begin());
   return boost::shared_ptr<vcl::vector<SCALARTYPE> >(v);
+}
+
+template <class SCALARTYPE>
+boost::shared_ptr<vcl::vector_base<SCALARTYPE> >
+vcl_range(vcl::vector_base<SCALARTYPE>& vec,
+          std::size_t start, std::size_t end) {
+  vcl::range r(start, end);
+  vcl::vector_range<vcl::vector_base<SCALARTYPE> > *v_r = new vcl::vector_range
+    <vcl::vector_base<SCALARTYPE> >(vec, r);
+  return boost::shared_ptr<vcl::vector_base<SCALARTYPE> >(v_r);
+}
+
+template <class SCALARTYPE>
+boost::shared_ptr<vcl::vector_base<SCALARTYPE> >
+vcl_slice(vcl::vector_base<SCALARTYPE>& vec,
+          std::size_t start, std::size_t stride, std::size_t size) {
+  vcl::slice slice(start, stride, size);
+  vcl::vector_slice<vcl::vector_base<SCALARTYPE> > *v_s = new vcl::vector_slice
+    <vcl::vector_base<SCALARTYPE> >(vec, slice);
+  return boost::shared_ptr<vcl::vector_base<SCALARTYPE> >(v_s);
 }
 
 // Dense matrix
@@ -535,39 +560,81 @@ matrix_init_ndarray(const np::ndarray& array)
   return boost::shared_ptr<vcl::matrix<SCALARTYPE, F> >(mat);
 }
 
-template<class SCALARTYPE, class VCL_F, class CPU_F>
-np::ndarray vcl_matrix_to_ndarray(vcl::matrix<SCALARTYPE, VCL_F> const& m)
-{
+template<class SCALARTYPE>
+bp::tuple get_strides(const vcl::matrix_base<SCALARTYPE, vcl::row_major>& m) {
+  return bp::make_tuple(m.size2()*sizeof(SCALARTYPE), sizeof(SCALARTYPE));
+}
 
-  // TODO: PERFORMANCE IMPROVEMENTS
+template<class SCALARTYPE>
+bp::tuple get_strides(const vcl::matrix_base<SCALARTYPE, vcl::column_major>& m) {
+  return bp::make_tuple(sizeof(SCALARTYPE), m.size1()*sizeof(SCALARTYPE));
+}
+
+template<class SCALARTYPE, class VCL_F, class CPU_F>
+np::ndarray vcl_matrix_to_ndarray(vcl::matrix_base<SCALARTYPE, VCL_F> const& m)
+{
 
   // Could generalise this for future tensor support, and work it into
   // the wrapper class above..
 
-  uint32_t rows = m.size1();
-  uint32_t cols = m.size2();
+  std::size_t rows = m.size1();
+  std::size_t cols = m.size2();
 
-  // A less indirect method here would be to use vcl::backend::memory_read
-  // to fill a chunk of memory that can be read as an np::ndarray..
-  // 
-  // THIS CURRENT METHOD IS TERRIBLY INEFFICIENT
+  SCALARTYPE* data = (SCALARTYPE*)malloc(rows*cols*sizeof(SCALARTYPE));
 
-  ublas::matrix<SCALARTYPE, CPU_F> cpu_m(rows, cols);
-
-  vcl::copy(m, cpu_m);
+  vcl::backend::memory_read(m.handle(), 0,
+                            (rows*cols*sizeof(SCALARTYPE)),
+                            data);
  
-  np::dtype dt = np::dtype::get_builtin<cpu_scalar_t>();
+  np::dtype dt = np::dtype::get_builtin<SCALARTYPE>();
   bp::tuple shape = bp::make_tuple(rows, cols);
+  
+  bp::tuple strides = get_strides<SCALARTYPE>(m);
 
-  np::ndarray array = np::empty(shape, dt);
-
-  for (uint32_t i = 0; i < rows; ++i) {
-    for (uint32_t j = 0; j < cols; ++j) {
-      array[i][j] = cpu_m(i, j);
+  /*
+  for (std::size_t i = 0; i < rows; i++) {
+    for (std::size_t j = 0; j < cols; j++) {
+      printf("%F  ", data[(i*cols)+j]);
     }
+    printf("\n");
   }
 
+  printf("Shape: %lu, %lu\n", rows, cols);
+  printf("Stride: %lu, %lu\n",
+         (std::size_t)bp::extract<std::size_t>(strides[0]),
+         (std::size_t)bp::extract<std::size_t>(strides[1]));
+  printf("DT: %d\n", dt.get_itemsize());
+  */
+
+  np::ndarray array = np::from_data(data, dt, shape,
+                                    strides, bp::object(m));
+
   return array;
+}
+
+template <class SCALARTYPE, class F>
+boost::shared_ptr<vcl::matrix_base<SCALARTYPE, F> >
+vcl_range(vcl::matrix_base<SCALARTYPE, F>& mat,
+          std::size_t row_start, std::size_t row_end,
+          std::size_t col_start, std::size_t col_end) {
+  vcl::range row_r(row_start, row_end);
+  vcl::range col_r(col_start, col_end);
+  vcl::matrix_range<vcl::matrix_base<SCALARTYPE, F> > *mat_r = 
+    new vcl::matrix_range<vcl::matrix_base<SCALARTYPE, F> >(mat, row_r, col_r);
+  return boost::shared_ptr<vcl::matrix_base<SCALARTYPE, F> >(mat_r);
+}
+
+template <class SCALARTYPE, class F>
+boost::shared_ptr<vcl::matrix_base<SCALARTYPE, F> >
+vcl_slice(vcl::matrix_base<SCALARTYPE, F>& mat,
+          std::size_t row_start, std::size_t row_stride, std::size_t row_size,
+          std::size_t col_start, std::size_t col_stride, std::size_t col_size){
+  vcl::slice row_slice(row_start, row_stride, row_size);
+  vcl::slice col_slice(col_start, col_stride, col_size);
+  vcl::matrix_slice<vcl::matrix_base<SCALARTYPE, F> > *mat_slice = 
+    new vcl::matrix_slice<vcl::matrix_base<SCALARTYPE, F> >
+    (mat, row_slice, col_slice);
+  return boost::shared_ptr<vcl::matrix_base<SCALARTYPE, F> >(mat_slice);
 }
 
 // Sparse matrix
@@ -633,6 +700,8 @@ public:
   cpu_compressed_matrix_wrapper(np::ndarray const& array)
   {
 
+    // TODO: THIS IS VERY INEFFICIENT
+    //
     // Doing things this way means we need at least 2x the amount of memory
     // required to store the data for the ndarray, just in order to construct
     // a sparse array on the compute device (which may itself take up
@@ -943,6 +1012,9 @@ void translate_string_exception(const char* e)
 BOOST_PYTHON_MODULE(_viennacl)
 {
 
+  //bp::register_ptr_to_python<boost::shared_ptr<double*> >();
+  //bp::register_ptr_to_python<boost::shared_ptr<float*> >();
+
   bp::register_exception_translator
     <const char*>
     (&translate_string_exception);
@@ -1018,45 +1090,44 @@ BOOST_PYTHON_MODULE(_viennacl)
   // --------------------------------------------------
 
   // *** Vector types ***
-  
+
 #define EXPORT_VECTOR_CLASS(TYPE, NAME)					\
+  bp::class_<vcl::vector_base<TYPE>,                                    \
+	     boost::shared_ptr<vcl::vector_base<TYPE> > >               \
+    ("vector_base", bp::no_init)                                        \
+    .def("as_ndarray", &vcl_vector_to_ndarray<TYPE>)			\
+    .def("as_list", &vcl_vector_to_list<TYPE>)                          \
+    .def("clear", &vcl::vector_base<TYPE>::clear)                       \
+    .add_property("size", &vcl::vector_base<TYPE>::size)                \
+    .add_property("internal_size", &vcl::vector_base<TYPE>::internal_size) \
+    .add_property("index_norm_inf", pyvcl_do_1ary_op<vcl::scalar<TYPE>,	\
+		  vcl::vector_base<TYPE>&,                              \
+		  op_index_norm_inf, 0>)				\
+    .def("__add__", pyvcl_do_2ary_op<vcl::vector<TYPE>,                 \
+	 vcl::vector_base<TYPE>&, vcl::vector_base<TYPE>&,              \
+	 op_add, 0>)							\
+    .def("__iadd__", pyvcl_do_2ary_op<vcl::vector<TYPE>,                \
+	 vcl::vector_base<TYPE>&, vcl::vector_base<TYPE>&,              \
+	 op_iadd, 0>)							\
+    .def("__mul__", pyvcl_do_2ary_op<vcl::vector<TYPE>,                 \
+	 vcl::vector_base<TYPE>&, vcl::vector_base<TYPE>&,              \
+	 op_element_prod, 0>)                                           \
+    .def("outer", pyvcl_do_2ary_op<vcl::matrix<TYPE, vcl::row_major>,   \
+	 vcl::vector_base<TYPE>&, vcl::vector_base<TYPE>&,              \
+	 op_outer_prod, 0>)                                             \
+    .def("outer", pyvcl_do_2ary_op<vcl::matrix<TYPE, vcl::column_major>, \
+	 vcl::vector_base<TYPE>&, vcl::vector_base<TYPE>&,              \
+	 op_outer_prod, 0>)                                             \
+    ;                                                                   \
   bp::class_<vcl::vector<TYPE>,						\
-	     boost::shared_ptr<vcl::vector<TYPE> > >			\
+	     boost::shared_ptr<vcl::vector<TYPE> >,                     \
+             bp::bases<vcl::vector_base<TYPE> > >                       \
     ( NAME )								\
     .def(bp::init<int>())						\
     .def(bp::init<vcl::vector<TYPE> >())				\
     .def("__init__", bp::make_constructor(vcl_vector_init_ndarray<TYPE>)) \
     .def("__init__", bp::make_constructor(vcl_vector_init_list<TYPE>))	\
     .def("__init__", bp::make_constructor(vcl_vector_init_scalar<TYPE>))\
-    .def("as_ndarray", &vcl_vector_to_ndarray<TYPE>)			\
-    .def("as_list", &vcl_vector_to_list<TYPE>)                          \
-    .def("clear", &vcl::vector<TYPE>::clear)				\
-    .add_property("size", &vcl::vector<TYPE>::size)			\
-    .add_property("internal_size", &vcl::vector<TYPE>::internal_size)	\
-    .add_property("norm_1", pyvcl_do_1ary_op<vcl::scalar<TYPE>,		\
-		  vcl::vector<TYPE>&,					\
-		  op_norm_1, 0>)					\
-    .add_property("norm_2", pyvcl_do_1ary_op<vcl::scalar<TYPE>,		\
-		  vcl::vector<TYPE>&,					\
-		  op_norm_2, 0>)					\
-    .add_property("norm_inf", pyvcl_do_1ary_op<vcl::scalar<TYPE>,	\
-		  vcl::vector<TYPE>&,					\
-		  op_norm_inf, 0>)					\
-    .add_property("index_norm_inf", pyvcl_do_1ary_op<vcl::scalar<TYPE>,	\
-		  vcl::vector<TYPE>&,					\
-		  op_index_norm_inf, 0>)				\
-    .def("__add__", pyvcl_do_2ary_op<vcl::vector<TYPE>,			\
-	 vcl::vector<TYPE>&, vcl::vector<TYPE>&,			\
-	 op_add, 0>)							\
-    .def("__mul__", pyvcl_do_2ary_op<vcl::vector<TYPE>,                 \
-	 vcl::vector<TYPE>&, vcl::vector<TYPE>&,			\
-	 op_element_prod, 0>)                                           \
-    .def("outer", pyvcl_do_2ary_op<vcl::matrix<TYPE, vcl::row_major>,   \
-	 vcl::vector<TYPE>&, vcl::vector<TYPE>&,			\
-	 op_outer_prod, 0>)                                             \
-    .def("outer", pyvcl_do_2ary_op<vcl::matrix<TYPE, vcl::column_major>,   \
-	 vcl::vector<TYPE>&, vcl::vector<TYPE>&,			\
-	 op_outer_prod, 0>)                                             \
     ;                                                                   \
   bp::def("plane_rotation", pyvcl_do_4ary_op<bp::object,                \
 	  vcl::vector<TYPE>&, vcl::vector<TYPE>&,                       \
@@ -1077,6 +1148,12 @@ BOOST_PYTHON_MODULE(_viennacl)
 
   EXPORT_VECTOR_CLASS(float, "vector_float")
   EXPORT_VECTOR_CLASS(double, "vector_double")
+
+  bp::def("range", &vcl_range<float>);
+  bp::def("range", &vcl_range<double>);
+
+  bp::def("slice", &vcl_slice<float>);
+  bp::def("slice", &vcl_slice<double>);
 
 
   // --------------------------------------------------
@@ -1130,66 +1207,74 @@ BOOST_PYTHON_MODULE(_viennacl)
   // *** Dense matrix type ***
 
 #define EXPORT_DENSE_MATRIX_CLASS(TYPE, F, CPU_F, NAME)                 \
-  bp::class_<vcl::matrix<TYPE, F>,                                      \
-             boost::shared_ptr<vcl::matrix<TYPE, F> > >                 \
-    ( NAME )                                                            \
-    .def(bp::init<vcl::matrix<TYPE, F> >())                             \
-    .def(bp::init<uint32_t, uint32_t>())                                \
-    .def("__init__", bp::make_constructor(matrix_init_ndarray<TYPE, F>))\
-    .def("__init__", bp::make_constructor(matrix_init_scalar<TYPE, F>)) \
+  bp::class_<vcl::matrix_base<TYPE, F>,                                 \
+	     boost::shared_ptr<vcl::matrix_base<TYPE, F> > >            \
+    ("matrix_base", bp::no_init)                                        \
     .def("as_ndarray", &vcl_matrix_to_ndarray<TYPE, F, CPU_F>)          \
-    .def("clear", &vcl::matrix<TYPE, F>::clear)                         \
-    .add_property("size1", &vcl::matrix<TYPE, F>::size1)                \
-    .add_property("internal_size1", &vcl::matrix<TYPE, F>::internal_size1) \
-    .add_property("size2", &vcl::matrix<TYPE, F>::size2)                \
-    .add_property("internal_size2", &vcl::matrix<TYPE, F>::internal_size2) \
+    .def("clear", &vcl::matrix_base<TYPE, F>::clear)                    \
+    .add_property("size1", &vcl::matrix_base<TYPE, F>::size1)           \
+    .add_property("internal_size1",                                     \
+                  &vcl::matrix_base<TYPE, F>::internal_size1)           \
+    .add_property("size2", &vcl::matrix_base<TYPE, F>::size2)           \
+    .add_property("internal_size2",                                     \
+                  &vcl::matrix_base<TYPE, F>::internal_size2)           \
     .add_property("trans", pyvcl_do_1ary_op<vcl::matrix<TYPE, F>,       \
-                                            vcl::matrix<TYPE, F>&,      \
-		  op_trans, 0>)                                         \
+                  vcl::matrix_base<TYPE, F>&,                           \
+                  op_trans, 0>)                                         \
     .def("__add__", pyvcl_do_2ary_op<vcl::matrix<TYPE, F>,              \
-         vcl::matrix<TYPE, F>&, vcl::matrix<TYPE, F>&,                  \
-         op_add, 0>)                                                    \
+                                     vcl::matrix_base<TYPE, F>&,        \
+                                     vcl::matrix_base<TYPE, F>&,        \
+                                     op_add, 0>)                        \
     .def("__sub__", pyvcl_do_2ary_op<vcl::matrix<TYPE, F>,              \
-         vcl::matrix<TYPE, F>&, vcl::matrix<TYPE, F>&,                  \
-         op_sub, 0>)                                                    \
+                                     vcl::matrix_base<TYPE, F>&,        \
+                                     vcl::matrix_base<TYPE, F>&,        \
+                                     op_sub, 0>)                        \
     .def("__mul__", pyvcl_do_2ary_op<vcl::matrix<TYPE, F>,              \
-	 vcl::matrix<TYPE, F>&, vcl_scalar_t&,                          \
-	 op_mul, 0>)                                                    \
+                                     vcl::matrix_base<TYPE, F>&,        \
+                                     vcl_scalar_t&,                     \
+                                     op_mul, 0>)                        \
     .def("__mul__", pyvcl_do_2ary_op<vcl::vector<TYPE>,                 \
-	 vcl::matrix<TYPE, F>&, vcl::vector<TYPE>&,                     \
-         op_prod, 0>)                                                   \
+                                     vcl::matrix_base<TYPE, F>&,        \
+                                     vcl::vector_base<TYPE>&,           \
+                                     op_prod, 0>)                       \
     .def("__mul__", pyvcl_do_2ary_op<vcl::matrix<TYPE, F>,              \
-	 vcl::matrix<TYPE, F>&, vcl::matrix<TYPE, F>&,                  \
-	 op_prod, 0>)                                                   \
+                                     vcl::matrix_base<TYPE, F>&,        \
+                                     vcl::matrix_base<TYPE, F>&,        \
+                                     op_prod, 0>)                       \
     .def("__truediv__", pyvcl_do_2ary_op<vcl::matrix<TYPE, F>,          \
-	 vcl::matrix<TYPE, F>&, vcl_scalar_t&,                          \
-	 op_div, 0>)                                                    \
+                                         vcl::matrix_base<TYPE, F>&,    \
+                                         vcl_scalar_t&,                 \
+                                         op_div, 0>)                    \
     .def("__iadd__", pyvcl_do_2ary_op<vcl::matrix<TYPE, F>,             \
-	 vcl::matrix<TYPE, F>&, vcl::matrix<TYPE, F>&,                  \
-	 op_iadd, 0>)                                                   \
+                                      vcl::matrix_base<TYPE, F>&,       \
+                                      vcl::matrix_base<TYPE, F>&,       \
+                                      op_iadd, 0>)                      \
     .def("__isub__", pyvcl_do_2ary_op<vcl::matrix<TYPE, F>,             \
-	 vcl::matrix<TYPE, F>&, vcl::matrix<TYPE, F>&,                  \
-	 op_isub, 0>)                                                   \
+                                      vcl::matrix_base<TYPE, F>&,       \
+                                      vcl::matrix_base<TYPE, F>&,       \
+                                      op_isub, 0>)                      \
     .def("__imul__", pyvcl_do_2ary_op<vcl::matrix<TYPE, F>,             \
-	 vcl::matrix<TYPE, F>&, vcl_scalar_t&,                          \
-	 op_imul, 0>)                                                   \
+                                      vcl::matrix_base<TYPE, F>&,       \
+                                      vcl_scalar_t&,                    \
+                                      op_imul, 0>)                      \
     .def("__itruediv__", pyvcl_do_2ary_op<vcl::matrix<TYPE, F>,         \
-	 vcl::matrix<TYPE, F>&, vcl_scalar_t&,                          \
-	 op_idiv, 0>)                                                   \
+                                          vcl::matrix_base<TYPE, F>&,   \
+                                          vcl_scalar_t&,                \
+                                          op_idiv, 0>)                  \
     .def("solve", pyvcl_do_3ary_op<vcl::vector<TYPE>,                   \
-	 vcl::matrix<TYPE, F>&, vcl::vector<TYPE>&,                     \
+	 vcl::matrix_base<TYPE, F>&, vcl::vector_base<TYPE>&,           \
 	 vcl::linalg::lower_tag&,                                       \
 	 op_solve, 0>)                                                  \
     .def("solve", pyvcl_do_3ary_op<vcl::vector<TYPE>,                   \
-	 vcl::matrix<TYPE, F>&, vcl::vector<TYPE>&,                     \
+	 vcl::matrix_base<TYPE, F>&, vcl::vector_base<TYPE>&,           \
 	 vcl::linalg::unit_lower_tag&,                                  \
 	 op_solve, 0>)                                                  \
     .def("solve", pyvcl_do_3ary_op<vcl::vector<TYPE>,                   \
-	 vcl::matrix<TYPE, F>&, vcl::vector<TYPE>&,                     \
+	 vcl::matrix_base<TYPE, F>&, vcl::vector_base<TYPE>&,           \
 	 vcl::linalg::upper_tag&,                                       \
 	 op_solve, 0>)                                                  \
     .def("solve", pyvcl_do_3ary_op<vcl::vector<TYPE>,                   \
-	 vcl::matrix<TYPE, F>&, vcl::vector<TYPE>&,                     \
+	 vcl::matrix_base<TYPE, F>&, vcl::vector_base<TYPE>&,           \
 	 vcl::linalg::unit_upper_tag&,                                  \
 	 op_solve, 0>)                                                  \
     .def("solve", pyvcl_do_3ary_op<vcl::vector<TYPE>,                   \
@@ -1205,21 +1290,30 @@ BOOST_PYTHON_MODULE(_viennacl)
 	 vcl::linalg::gmres_tag&,                                       \
 	 op_solve, 0>)                                                  \
     .def("solve", pyvcl_do_3ary_op<vcl::matrix<TYPE, F>,                \
-	 vcl::matrix<TYPE, F>&, vcl::matrix<TYPE, F>&,                  \
+	 vcl::matrix_base<TYPE, F>&, vcl::matrix_base<TYPE, F>&,        \
 	 vcl::linalg::lower_tag&,                                       \
 	 op_solve, 0>)                                                  \
     .def("solve", pyvcl_do_3ary_op<vcl::matrix<TYPE, F>,                \
-	 vcl::matrix<TYPE, F>&, vcl::matrix<TYPE, F>&,                  \
+	 vcl::matrix_base<TYPE, F>&, vcl::matrix_base<TYPE, F>&,        \
 	 vcl::linalg::unit_lower_tag&,                                  \
 	 op_solve, 0>)                                                  \
     .def("solve", pyvcl_do_3ary_op<vcl::matrix<TYPE, F>,                \
-	 vcl::matrix<TYPE, F>&, vcl::matrix<TYPE, F>&,                  \
+	 vcl::matrix_base<TYPE, F>&, vcl::matrix_base<TYPE, F>&,        \
 	 vcl::linalg::upper_tag&,                                       \
 	 op_solve, 0>)                                                  \
     .def("solve", pyvcl_do_3ary_op<vcl::matrix<TYPE, F>,                \
-	 vcl::matrix<TYPE, F>&, vcl::matrix<TYPE, F>&,                  \
+	 vcl::matrix_base<TYPE, F>&, vcl::matrix_base<TYPE, F>&,        \
 	 vcl::linalg::unit_upper_tag&,                                  \
 	 op_solve, 0>)                                                  \
+    ;                                                                   \
+  bp::class_<vcl::matrix<TYPE, F>,                                      \
+             boost::shared_ptr<vcl::matrix<TYPE, F> >,                  \
+             bp::bases<vcl::matrix_base<TYPE, F> > >                    \
+    ( NAME )                                                            \
+    .def(bp::init<vcl::matrix<TYPE, F> >())                             \
+    .def(bp::init<uint32_t, uint32_t>())                                \
+    .def("__init__", bp::make_constructor(matrix_init_ndarray<TYPE, F>))\
+    .def("__init__", bp::make_constructor(matrix_init_scalar<TYPE, F>)) \
     ;
 
   EXPORT_DENSE_MATRIX_CLASS(double, vcl::row_major, ublas::row_major,
@@ -1230,6 +1324,17 @@ BOOST_PYTHON_MODULE(_viennacl)
                             "matrix_col_double")
   EXPORT_DENSE_MATRIX_CLASS(float, vcl::column_major, ublas::column_major,
                             "matrix_col_float")
+
+  bp::def("range", &vcl_range<float, vcl::row_major>);
+  bp::def("range", &vcl_range<double, vcl::row_major>);
+  bp::def("range", &vcl_range<float, vcl::column_major>);
+  bp::def("range", &vcl_range<double, vcl::column_major>);
+
+  bp::def("slice", &vcl_slice<float, vcl::row_major>);
+  bp::def("slice", &vcl_slice<double, vcl::row_major>);
+  bp::def("slice", &vcl_slice<float, vcl::column_major>);
+  bp::def("slice", &vcl_slice<double, vcl::column_major>);
+
            
   // --------------------------------------------------
 

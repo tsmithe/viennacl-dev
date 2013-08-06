@@ -180,10 +180,6 @@ class Leaf(MagicMethods):
         """
         raise NotImplementedError("Help")
 
-    def __getitem__(self, key):
-        # TODO: Implement this in ViennaCL, rather using NumPy..
-        return type(self)(array(self.as_ndarray()[key]), dtype=self.dtype)
-
     @property
     def result_container_type(self):
         """
@@ -353,10 +349,14 @@ class Vector(Leaf):
                 self.dtype = dtype(args[0])
                 def get_leaf(vcl_t):
                     return vcl_t(args[0])
-            else:
+            elif isinstance(args[0], int):
                 # This doesn't do any dtype checking, so beware...
                 def get_leaf(vcl_t):
                     return vcl_t(args[0])
+            else:
+                # This doesn't do any dtype checking, so beware...
+                def get_leaf(vcl_t):
+                    return args[0]
         elif len(args) == 2:
             if self.dtype is None:
                 try:
@@ -381,6 +381,22 @@ class Vector(Leaf):
         self.size = self.vcl_leaf.size
         self.shape = (self.size,)
         self.internal_size = self.vcl_leaf.internal_size
+
+    def __getitem__(self, key):
+        if isinstance(key, slice):
+            if key.step is None:
+                return Vector(_v.range(self.vcl_leaf, 
+                                       key.start, key.stop), 
+                              dtype=self.dtype)
+            else:
+                return Vector(_v.slice(self.vcl_leaf,
+                                       key.start, key.step, 
+                                       (key.stop - key.start)),
+                              dtype=self.dtype)
+        else:
+            # might be tuple of ints, or tuple of slices, or a combo
+            # or something else..
+            return self.as_ndarray()[key]
 
     @property
     def index_norm_inf(self):
@@ -484,7 +500,7 @@ class Matrix(Leaf):
             else:
                 # This doesn't do any dtype checking, so beware...
                 def get_leaf(vcl_t):
-                    return vcl_t(args[0])
+                    return args[0]
         elif len(args) == 2:
             if isinstance(args[0], tuple) or isinstance(args[0], list):
                 if self.dtype is None:
@@ -518,9 +534,49 @@ class Matrix(Leaf):
         self.vcl_leaf = get_leaf(vcl_type)
         self.size1 = self.vcl_leaf.size1
         self.size2 = self.vcl_leaf.size2
+        self.size = self.size1 * self.size2 # Flat size
         self.shape = (self.size1, self.size2)
         self.internal_size1 = self.vcl_leaf.internal_size1
         self.internal_size2 = self.vcl_leaf.internal_size2
+
+    def __getitem__(self, key):
+        # TODO TODO TODO TODO
+        # TODO TODO TODO TODO
+        # TODO TODO TODO TODO
+        # TODO TODO TODO TODO
+        if isinstance(key, tuple) or isinstance(key, list):
+            if len(key) == 0:
+                return self
+            elif len(key) == 1: # Then we want a row
+                # We have either (int) or (slice)
+                return Matrix(_v.range(self.vcl_leaf,
+                                       ROW_START, ROW_END,
+                                       COL_START, COL_END),
+                              dtype=self.dtype,
+                              layout=self.layout)
+            elif len(key) == 2:
+                # Then we have one of the following:
+                #  (int, int)
+                #  (int, slice)
+                #  (slice, int)
+                #  (slice, slice)
+                pass
+        elif isinstance(key, slice):
+            if key.step is None:
+                return Matrix(_v.range(self.vcl_leaf, 
+                                       key.start, key.stop), 
+                              dtype=self.dtype,
+                              layout=self.layout)
+            else:
+                return Matrix(_v.slice(self.vcl_leaf,
+                                       key.start, key.step, 
+                                       (key.stop - key.start)),
+                              dtype=self.dtype,
+                              layout=self.layout)
+        elif isinstance(key, int):
+            return self.as_ndarray()[key]
+        else:
+            raise IndexError("Did not understand key")
 
     def clear(self):
         return self.vcl_leaf.clear
