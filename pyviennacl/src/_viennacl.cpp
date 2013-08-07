@@ -1151,7 +1151,38 @@ BOOST_PYTHON_MODULE(_viennacl)
     .def("as_ndarray", &std_vector_to_ndarray<TYPE>)                    \
     .def("as_list", &std_vector_to_list<TYPE>)                          \
     .add_property("size", &std::vector<TYPE>::size)			\
-    ;
+    ;                                                                   \
+  DISAMBIGUATE_FUNCTION_PTR(CONCAT(vcl::vector_range<                   \
+                                   vcl::vector_base<TYPE> >),           \
+                            vcl::project,                               \
+                            project_vector_##TYPE##_range,              \
+                            (CONCAT(vcl::vector_base<TYPE>&,            \
+                                    vcl::range const&)))                \
+  DISAMBIGUATE_FUNCTION_PTR(CONCAT(vcl::vector_range<                   \
+                                   vcl::vector_base<TYPE> >),           \
+                            vcl::project,                               \
+                            project_vector_range_##TYPE##_range,        \
+                            (CONCAT(vcl::vector_range<                  \
+                                    vcl::vector_base<TYPE> >&,          \
+                                    vcl::range const&)))                \
+  DISAMBIGUATE_FUNCTION_PTR(CONCAT(vcl::vector_slice<                   \
+                                   vcl::vector_base<TYPE> >),           \
+                            vcl::project,                               \
+                            project_vector_##TYPE##_slice,              \
+                            (CONCAT(vcl::vector_base<TYPE>&,            \
+                                    vcl::slice const&)))                \
+  DISAMBIGUATE_FUNCTION_PTR(CONCAT(vcl::vector_slice<                   \
+                                   vcl::vector_base<TYPE> >),           \
+                            vcl::project,                               \
+                            project_vector_slice_##TYPE##_slice,        \
+                            (CONCAT(vcl::vector_slice<                  \
+                                    vcl::vector_base<TYPE> >&,          \
+                                    vcl::slice const&)))                \
+  bp::def("project", project_vector_##TYPE##_range);                    \
+  bp::def("project", project_vector_range_##TYPE##_range);              \
+  bp::def("project", project_vector_##TYPE##_slice);                    \
+  bp::def("project", project_vector_slice_##TYPE##_slice);
+  // TODO: range/slice interactions
 
   EXPORT_VECTOR_CLASS(float, "vector_float")
   EXPORT_VECTOR_CLASS(double, "vector_double")
@@ -1346,10 +1377,11 @@ BOOST_PYTHON_MODULE(_viennacl)
                                     vcl::matrix_base<TYPE, F> >&,       \
                                     vcl::slice const&,                  \
                                     vcl::slice const&)))                \
-  bp::def("project", project_matrix_ ##TYPE##_##LAYOUT##_range_range); \
+  bp::def("project", project_matrix_##TYPE##_##LAYOUT##_range_range);   \
   bp::def("project", project_matrix_range_##TYPE##_##LAYOUT##_range_range); \
-  bp::def("project", project_matrix_##TYPE##_##LAYOUT##_slice_slice); \
+  bp::def("project", project_matrix_##TYPE##_##LAYOUT##_slice_slice);   \
   bp::def("project", project_matrix_slice_##TYPE##_##LAYOUT##_slice_slice);
+  // TODO: range/slice interactions
 
   EXPORT_DENSE_MATRIX_CLASS(double, row, vcl::row_major, ublas::row_major)
   EXPORT_DENSE_MATRIX_CLASS(float, row, vcl::row_major, ublas::row_major)
