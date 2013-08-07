@@ -562,82 +562,47 @@ matrix_init_ndarray(const np::ndarray& array)
 
 template<class SCALARTYPE>
 bp::tuple get_strides(const vcl::matrix_base<SCALARTYPE, vcl::row_major>& m) {
-  return bp::make_tuple(m.size2()*sizeof(SCALARTYPE), sizeof(SCALARTYPE));
+  return bp::make_tuple((m.stride1()*m.internal_size2())*sizeof(SCALARTYPE), m.stride2()*sizeof(SCALARTYPE));
 }
 
 template<class SCALARTYPE>
 bp::tuple get_strides(const vcl::matrix_base<SCALARTYPE, vcl::column_major>& m) {
-  return bp::make_tuple(sizeof(SCALARTYPE), m.size1()*sizeof(SCALARTYPE));
+  return bp::make_tuple(m.stride1()*sizeof(SCALARTYPE), m.stride2()*m.size1()*sizeof(SCALARTYPE));
+}
+
+template<class SCALARTYPE>
+std::size_t get_offset(vcl::matrix_base<SCALARTYPE, vcl::row_major> const& m) {
+  return m.start1()*m.internal_size2() + m.start2();
+}
+
+template<class SCALARTYPE>
+std::size_t get_offset(vcl::matrix_base<SCALARTYPE, 
+                       vcl::column_major> const& m) {
+  return m.start1() + m.start2()*m.internal_size1();
 }
 
 template<class SCALARTYPE, class VCL_F, class CPU_F>
 np::ndarray vcl_matrix_to_ndarray(vcl::matrix_base<SCALARTYPE, VCL_F> const& m)
 {
 
-  // Could generalise this for future tensor support, and work it into
-  // the wrapper class above..
+  std::size_t size = m.internal_size1() * m.internal_size2() * sizeof(SCALARTYPE);
 
-  std::size_t rows = m.size1();
-  std::size_t cols = m.size2();
+  SCALARTYPE* data = (SCALARTYPE*)malloc(size);
 
-  SCALARTYPE* data = (SCALARTYPE*)malloc(rows*cols*sizeof(SCALARTYPE));
-
-  vcl::backend::memory_read(m.handle(), 0,
-                            (rows*cols*sizeof(SCALARTYPE)),
-                            data);
+  // Read the whole matrix
+  vcl::backend::memory_read(m.handle(), 0, size, data);
  
   np::dtype dt = np::dtype::get_builtin<SCALARTYPE>();
-  bp::tuple shape = bp::make_tuple(rows, cols);
-  
+  bp::tuple shape = bp::make_tuple(m.size1(), m.size2());
+
+  // Delegate determination of strides and start offset to function templates
   bp::tuple strides = get_strides<SCALARTYPE>(m);
-
-  /*
-  for (std::size_t i = 0; i < rows; i++) {
-    for (std::size_t j = 0; j < cols; j++) {
-      printf("%F  ", data[(i*cols)+j]);
-    }
-    printf("\n");
-  }
-
-  printf("Shape: %lu, %lu\n", rows, cols);
-  printf("Stride: %lu, %lu\n",
-         (std::size_t)bp::extract<std::size_t>(strides[0]),
-         (std::size_t)bp::extract<std::size_t>(strides[1]));
-  printf("DT: %d\n", dt.get_itemsize());
-  */
-
-  np::ndarray array = np::from_data(data, dt, shape,
-                                    strides, bp::object(m));
+  np::ndarray array = np::from_data(data + get_offset<SCALARTYPE>(m),
+                                    dt, shape, strides, bp::object(m));
 
   return array;
 }
 
-/*
-template <class SCALARTYPE, class F>
-boost::shared_ptr<vcl::matrix_base<SCALARTYPE, F> >
-vcl_range(vcl::matrix_base<SCALARTYPE, F>& mat,
-          std::size_t row_start, std::size_t row_end,
-          std::size_t col_start, std::size_t col_end) {
-  vcl::range row_r(row_start, row_end);
-  vcl::range col_r(col_start, col_end);
-  vcl::matrix_range<vcl::matrix_base<SCALARTYPE, F> > *mat_r = 
-    new vcl::matrix_range<vcl::matrix_base<SCALARTYPE, F> >(mat, row_r, col_r);
-  return boost::shared_ptr<vcl::matrix_base<SCALARTYPE, F> >(mat_r);
-}
-
-template <class SCALARTYPE, class F>
-boost::shared_ptr<vcl::matrix_base<SCALARTYPE, F> >
-vcl_slice(vcl::matrix_base<SCALARTYPE, F>& mat,
-          std::size_t row_start, std::size_t row_stride, std::size_t row_size,
-          std::size_t col_start, std::size_t col_stride, std::size_t col_size){
-  vcl::slice row_slice(row_start, row_stride, row_size);
-  vcl::slice col_slice(col_start, col_stride, col_size);
-  vcl::matrix_slice<vcl::matrix_base<SCALARTYPE, F> > *mat_slice = 
-    new vcl::matrix_slice<vcl::matrix_base<SCALARTYPE, F> >
-    (mat, row_slice, col_slice);
-  return boost::shared_ptr<vcl::matrix_base<SCALARTYPE, F> >(mat_slice);
-}
-*/
 
 // Sparse matrix
 
@@ -920,18 +885,20 @@ public:
   SET_OPERAND(vcl::scalar<double>*, scalar_double)
 
   // NB: need to add remaining vector types as they become available
-  SET_OPERAND(vcl::vector<float>*, vector_float)
-  SET_OPERAND(vcl::vector<double>*, vector_double)
+  SET_OPERAND(vcl::vector_base<float>*, vector_float)
+  SET_OPERAND(vcl::vector_base<double>*, vector_double)
 
   // NB: need to add remaining matrix_row types as they become available
-  SET_OPERAND(vcl::matrix<float>*, matrix_row_float)
-  SET_OPERAND(vcl::matrix<double>*, matrix_row_double)
+  SET_OPERAND(CONCAT(vcl::matrix_base<float, vcl::row_major>*),
+              matrix_row_float)
+  SET_OPERAND(CONCAT(vcl::matrix_base<double, vcl::row_major>*),
+              matrix_row_double)
   
   // NB: need to add remaining matrix_col types as they become available
   SET_OPERAND(CONCAT(vcl::matrix_base<float, vcl::column_major>*),
-    matrix_col_float)
+              matrix_col_float)
   SET_OPERAND(CONCAT(vcl::matrix_base<double, vcl::column_major>*),
-    matrix_col_double)
+              matrix_col_double)
 
 };
 #undef SET_OPERAND

@@ -464,10 +464,6 @@ namespace viennacl
   {
     assert(r1.size() <= A.size1() && r2.size() <= A.size2() && bool("Size of slice invalid!"));
 
-    printf("start:  %lu, %lu\n", r1.start(), r2.start());
-    printf("stride: %lu, %lu\n", r1.stride(), r2.stride());
-    printf("size:   %lu, %lu\n", r1.size(), r2.size());
-
     return matrix_slice<MatrixType>(A, r1, r2);
   }
 

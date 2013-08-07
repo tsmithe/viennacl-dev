@@ -154,7 +154,6 @@ class View:
     # TODO: DOCSTRINGS
     def __init__(self, key, axis_size):
         start, stop, step = key.indices(axis_size)
-        print(start, stop, step, int(math.ceil((stop-start)/step)))
 
         if step == 1:
             # then range -- or slice!
