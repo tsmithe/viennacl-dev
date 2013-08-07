@@ -316,8 +316,8 @@ namespace viennacl
       matrix_slice(MatrixType & A,
                    slice const & row_slice,
                    slice const & col_slice) : base_type(A.handle(),
-                                                        row_slice.size(), row_slice.start(), row_slice.stride(), A.internal_size1(),
-                                                        col_slice.size(), col_slice.start(), col_slice.stride(), A.internal_size2()) {}
+                                                        row_slice.size(), A.start1() + A.stride1() * row_slice.start(), A.stride1() * row_slice.stride(), A.internal_size1(),
+                                                        col_slice.size(), A.start2() + A.stride2() * col_slice.start(), A.stride2() * col_slice.stride(), A.internal_size2()) {}
 
       using base_type::operator=;
 
@@ -463,6 +463,10 @@ namespace viennacl
   matrix_slice<MatrixType> project(MatrixType & A, viennacl::slice const & r1, viennacl::slice const & r2)
   {
     assert(r1.size() <= A.size1() && r2.size() <= A.size2() && bool("Size of slice invalid!"));
+
+    printf("start:  %lu, %lu\n", r1.start(), r2.start());
+    printf("stride: %lu, %lu\n", r1.stride(), r2.stride());
+    printf("size:   %lu, %lu\n", r1.size(), r2.size());
 
     return matrix_slice<MatrixType>(A, r1, r2);
   }

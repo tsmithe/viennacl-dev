@@ -6,7 +6,7 @@ from numpy import (ndarray, array, zeros,
                    int8, int16, int32, int64,
                    uint8, uint16, uint32, uint64,
                    float16, float32, float64)
-import logging
+import logging, math
 
 log = logging.getLogger(__name__)
 
@@ -150,6 +150,26 @@ class MagicMethods:
         return op
 
 
+class View:
+    # TODO: DOCSTRINGS
+    def __init__(self, key, axis_size):
+        start, stop, step = key.indices(axis_size)
+        print(start, stop, step, int(math.ceil((stop-start)/step)))
+
+        if step == 1:
+            # then range -- or slice!
+            self.vcl_view = _v.slice(start, 1, (stop-start))
+        else:
+            # then slice
+            self.vcl_view = _v.slice(start, step,
+                                     int(math.ceil((stop-start)/step)))
+
+        self.slice = key
+        self.start = start
+        self.stop = stop
+        self.step = step
+
+
 class Leaf(MagicMethods):
     """
     This is the base class for all ``leaves`` in the ViennaCL expression tree
@@ -170,6 +190,12 @@ class Leaf(MagicMethods):
             self.dtype = dt
         else:
             self.dtype = None
+            
+        if 'view_of' in kwargs.keys():
+            self.view_of = kwargs['view_of']
+        if 'view' in kwargs.keys():
+            self.view = kwargs['view']
+
         self._init_leaf(args, kwargs)
 
     def _init_leaf(self, args, kwargs):
@@ -384,18 +410,12 @@ class Vector(Leaf):
 
     def __getitem__(self, key):
         if isinstance(key, slice):
-            if key.start is None:
-                key.start = 0
-            if key.step is None: # range
-                return Vector(_v.range(self.vcl_leaf, 
-                                       key.start, key.stop), 
-                              dtype=self.dtype)
-            else: # slice
-                return Vector(_v.slice(self.vcl_leaf,
-                                       key.start, key.step, 
-                                       int((self.size - (key.start+key.stop))
-                                           /key.step)),
-                              dtype=self.dtype)
+            view = View(key, self.size)
+            return Vector(_v.project(self.vcl_leaf,
+                                     view.vcl_view),
+                          dtype=self.dtype,
+                          view_of=self,
+                          view=(view,))
         elif isinstance(key, tuple) or isinstance(key, list):
             if len(key) == 0:
                 return self
@@ -563,122 +583,57 @@ class Matrix(Leaf):
                                           dtype=self.dtype)
                     elif isinstance(key[1], slice):
                         #  (int, slice) - range/slice from row -> row vector
-                        if key[1].start is None:
-                            key[1].start = 0
-                        if key[1].step is None:
-                            # range from row
-                            return Matrix(_v.range(self.vcl_leaf,
-                                                   key[0], key[0],
-                                                   key[1].start, key[1].stop),
-                                          dtype=self.dtype,
-                                          layout=self.layout)
-                        else:
-                            # slice from row
-                            return Matrix(_v.slice(self.vcl_leaf,
-                                                   key[0], 1, 1,
-                                                   key[1].start, key[1].step,
-                                                   (key[1].stop-key[1].start)),
-                                          dtype=self.dtype,
-                                          layout=self.layout)
+                        view1 = View(slice(0, key[0]), self.size1)
+                        view2 = View(key[1], self.size2)
+                        return Matrix(_v.project(self.vcl_leaf,
+                                                 view1.vcl_view,
+                                                 view2.vcl_view),
+                                      dtype=self.dtype,
+                                      layout=self.layout,
+                                      view_of=self,
+                                      view=(view1, view2))
                     else:
                         raise TypeError("Did not understand key[1]")
                 elif isinstance(key[0], slice):
                     # slice of rows
-                    if key[0].start is None:
-                        key[0].start = 0
                     if isinstance(key[1], int):
                         #  (slice, int) - range/slice from col -> col vector
-                        if key[0].step is None:
-                            # range from col
-                            return Matrix(_v.range(self.vcl_leaf,
-                                                   key[0].start, key[0].stop,
-                                                   key[1], key[1]),
-                                          dtype=self.dtype,
-                                          layout=self.layout)
-                        else:
-                            # slice from col
-                            return Matrix(_v.slice(self.vcl_leaf,
-                                                   key[0].start, key[0].step,
-                                                   (key[0].stop-key[0].start),
-                                                   key[1], 1, 1),
-                                          dtype=self.dtype,
-                                          layout=self.layout)
+                        view1 = View(key[0], self.size1)
+                        view2 = View(slice(0, key[1]), self.size2)
+                        return Matrix(_v.project(self.vcl_leaf,
+                                                 view1.vcl_view,
+                                                 view2.vcl_view),
+                                      dtype=self.dtype,
+                                      layout=self.layout,
+                                      view_of=self,
+                                      view=(view1, view2))
                     elif isinstance(key[1], slice):
                         #  (slice, slice) - sub-matrix
-                        if key[1].start is None:
-                            key[1].start = 0
-                        if key[0].step is None:
-                            # range from rows
-                            if key[1].step is None:
-                                return Matrix(_v.range(self.vcl_leaf,
-                                                       key[0].start, 
-                                                       key[0].stop,
-                                                       key[1].start,
-                                                       key[1].stop),
-                                              dtype=self.dtype,
-                                              layout=self.layout)
-                            else:
-                                return Matrix(_v.slice(self.vcl_leaf,
-                                                       key[0].start, 1,
-                                                       (key[0].stop-
-                                                        key[0].start),
-                                                       key[1].start,
-                                                       key[1].step,
-                                                       (key[1].stop-
-                                                        key[1].start)),
-                                              dtype=self.dtype,
-                                              layout=self.layout)
-                        else:
-                            # slice from rows
-                            if key[1].step is None:
-                                # range from cols
-                                return Matrix(_v.slice(self.vcl_leaf,
-                                                       key[0].start,
-                                                       key[0].step,
-                                                       (key[0].stop-
-                                                        key[0].start),
-                                                       key[1].start, 1,
-                                                       (key[1].stop-
-                                                        key[1].start)),
-                                              dtype=self.dtype,
-                                              layout=self.layout)
-                            else:
-                                # slice from cols
-                                return Matrix(_v.slice(self.vcl_leaf,
-                                                       key[0].start,
-                                                       key[0].step,
-                                                       (key[0].stop-
-                                                        key[0].start),
-                                                       key[1].start,
-                                                       key[1].step,
-                                                       (key[1].stop-
-                                                        key[1].start)),
-                                              dtype=self.dtype,
-                                              layout=self.layout)
+                        view1 = View(key[0], self.size1)
+                        view2 = View(key[1], self.size2)
+                        return Matrix(_v.project(self.vcl_leaf,
+                                                 view1.vcl_view,
+                                                 view2.vcl_view),
+                                      dtype=self.dtype,
+                                      layout=self.layout,
+                                      view_of=self,
+                                      view=(view1, view2))
                     else:
                         raise TypeError("Did not understand key[1]")
                 else:
                     raise TypeError("Did not understand key[0]")
         elif isinstance(key, slice):
-            if key.start is None:
-                key.start = 0
-            if key.step is None:
-                return Matrix(_v.range(self.vcl_leaf, 
-                                       key.start, key.stop,
-                                       0, self.size2), 
-                              dtype=self.dtype,
-                              layout=self.layout)
-            else:
-                return Matrix(_v.slice(self.vcl_leaf,
-                                       key.start, key.step, 
-                                       (key.stop - key.start),
-                                       0, 1, self.size2),
-                              dtype=self.dtype,
-                              layout=self.layout)
-        elif isinstance(key, int):
-            return Matrix(self.as_ndarray()[key],
+            view1 = View(key, self.size1)
+            view2 = View(slice(0, 1, self.size2), self.size2)
+            return Matrix(_v.project(self.vcl_leaf,
+                                     view1.vcl_view,
+                                     view2.vcl_view),
                           dtype=self.dtype,
-                          layout=self.layout)
+                          layout=self.layout,
+                          view_of=self,
+                          view=(view1, view2))
+        elif isinstance(key, int):
+            return self[slice(key)]
         else:
             raise IndexError("Did not understand key")
 

@@ -612,6 +612,7 @@ np::ndarray vcl_matrix_to_ndarray(vcl::matrix_base<SCALARTYPE, VCL_F> const& m)
   return array;
 }
 
+/*
 template <class SCALARTYPE, class F>
 boost::shared_ptr<vcl::matrix_base<SCALARTYPE, F> >
 vcl_range(vcl::matrix_base<SCALARTYPE, F>& mat,
@@ -636,6 +637,7 @@ vcl_slice(vcl::matrix_base<SCALARTYPE, F>& mat,
     (mat, row_slice, col_slice);
   return boost::shared_ptr<vcl::matrix_base<SCALARTYPE, F> >(mat_slice);
 }
+*/
 
 // Sparse matrix
 
@@ -1126,6 +1128,14 @@ BOOST_PYTHON_MODULE(_viennacl)
 	 vcl::vector_base<TYPE>&, vcl::vector_base<TYPE>&,              \
 	 op_outer_prod, 0>)                                             \
     ;                                                                   \
+  bp::class_<vcl::vector_range<vcl::vector_base<TYPE> >,                \
+             boost::shared_ptr<vcl::vector_range<vcl::vector_base<TYPE> > >, \
+             bp::bases<vcl::vector_base<TYPE> > >                       \
+    ("vector_range", bp::no_init);                                      \
+  bp::class_<vcl::vector_slice<vcl::vector_base<TYPE> >,                \
+             boost::shared_ptr<vcl::vector_slice<vcl::vector_base<TYPE> > >, \
+             bp::bases<vcl::vector_base<TYPE> > >                       \
+    ("vector_slice", bp::no_init);                                      \
   bp::class_<vcl::vector<TYPE>,						\
 	     boost::shared_ptr<vcl::vector<TYPE> >,                     \
              bp::bases<vcl::vector_base<TYPE> > >                       \
@@ -1338,6 +1348,16 @@ BOOST_PYTHON_MODULE(_viennacl)
 	 vcl::linalg::unit_upper_tag&,                                  \
 	 op_solve, 0>)                                                  \
     ;                                                                   \
+  bp::class_<vcl::matrix_range<vcl::matrix_base<TYPE, F> >,             \
+             boost::shared_ptr<vcl::matrix_range<vcl::matrix_base<TYPE, \
+                                                                  F> > >, \
+             bp::bases<vcl::matrix_base<TYPE, F> > >                    \
+    ("matrix_range", bp::no_init);                                      \
+  bp::class_<vcl::matrix_slice<vcl::matrix_base<TYPE, F> >,             \
+             boost::shared_ptr<vcl::matrix_slice<vcl::matrix_base<TYPE, \
+                                                                  F> > >, \
+             bp::bases<vcl::matrix_base<TYPE, F> > >                    \
+    ("matrix_slice", bp::no_init);                                      \
   bp::class_<vcl::matrix<TYPE, F>,                                      \
              boost::shared_ptr<vcl::matrix<TYPE, F> >,                  \
              bp::bases<vcl::matrix_base<TYPE, F> > >                    \
