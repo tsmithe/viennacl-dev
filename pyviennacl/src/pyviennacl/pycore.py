@@ -151,6 +151,10 @@ class MagicMethods:
 
 
 class View:
+    start = None
+    stop = None
+    step = None
+
     # TODO: DOCSTRINGS
     def __init__(self, key, axis_size):
         start, stop, step = key.indices(axis_size)
@@ -175,11 +179,14 @@ class Leaf(MagicMethods):
     system. A leaf is any type that can store data for use in an operation,
     such as a scalar, a vector, or a matrix.
     """
+    shape = None # No shape yet -- not even 0 dimensions
 
     def __init__(self, *args, **kwargs):
         """
         Do initialisation tasks common to all Leaf subclasses, then pass
         control onto the overridden _init_leaf function.
+
+        TODO: UPDATE THIS
 
         At the moment, the only task done here is to attempt to set the
         dtype and statement_node_type attributes accordingly.
@@ -196,6 +203,18 @@ class Leaf(MagicMethods):
             self.view = kwargs['view']
 
         self._init_leaf(args, kwargs)
+
+    def __setitem__(self, key, value):
+        if isinstance(value, Node):
+            value = value.result
+        if type(self[key]) != type(value):
+            raise TypeError("Cannot assign %s to %s" % (type(value),
+                                                        type(self[key])))
+        if self[key].dtype != value.dtype:
+            raise TypeError("Cannot assign across different dtypes!")
+        if self[key].shape != value.shape:
+            raise TypeError("Cannot assign across different shapes!")
+        Assign(self[key], value).execute()
 
     def _init_leaf(self, args, kwargs):
         """
