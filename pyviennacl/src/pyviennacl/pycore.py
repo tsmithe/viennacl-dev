@@ -8,6 +8,12 @@ from numpy import (ndarray, array, zeros,
                    float16, float32, float64)
 import logging, math
 
+try:
+    from scipy import sparse
+    WITH_SCIPY = 1
+except:
+    WITH_SCIPY = 0
+
 log = logging.getLogger(__name__)
 
 # This dict is used to map NumPy dtypes onto OpenCL/ViennaCL scalar types
