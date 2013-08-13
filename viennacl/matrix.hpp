@@ -38,11 +38,11 @@ namespace viennacl
 {
 
   template<typename SCALARTYPE>
-  class symbolic_matrix_base
+  class implicit_matrix_base
   {
     protected:
       typedef vcl_size_t        size_type;
-      symbolic_matrix_base(size_type size1, size_type size2, std::pair<SCALARTYPE, bool> value, bool diag) : size1_(size1), size2_(size2), value_(value), diag_(diag){ }
+      implicit_matrix_base(size_type size1, size_type size2, std::pair<SCALARTYPE, bool> value, bool diag) : size1_(size1), size2_(size2), value_(value), diag_(diag){ }
     public:
       typedef SCALARTYPE const & const_reference;
       typedef SCALARTYPE cpu_value_type;
@@ -436,14 +436,16 @@ namespace viennacl
           internal_size1_ = viennacl::tools::align_to_multiple<size_type>(size1_, alignment);
           internal_size2_ = viennacl::tools::align_to_multiple<size_type>(size2_, alignment);
           if (internal_size() > 0)
+          {
             viennacl::backend::memory_create(elements_, sizeof(SCALARTYPE)*internal_size(), m.context());
+            clear();
+          }
         }
+        else
+          viennacl::linalg::matrix_assign(*this, SCALARTYPE(0));
 
         if (internal_size() > 0)
-        {
-          clear();
           viennacl::linalg::matrix_diagonal_assign(*this, m(0,0));
-        }
 
         return *this;
       }
@@ -461,11 +463,13 @@ namespace viennacl
           internal_size1_ = viennacl::tools::align_to_multiple<size_type>(size1_, alignment);
           internal_size2_ = viennacl::tools::align_to_multiple<size_type>(size2_, alignment);
           if (internal_size() > 0)
+          {
             viennacl::backend::memory_create(elements_, sizeof(SCALARTYPE)*internal_size(), m.context());
+            clear();
+          }
         }
-
-        if (internal_size() > 0)
-          clear();
+        else
+          viennacl::linalg::matrix_assign(*this, SCALARTYPE(0));
 
         return *this;
       }
@@ -483,12 +487,14 @@ namespace viennacl
           internal_size1_ = viennacl::tools::align_to_multiple<size_type>(size1_, alignment);
           internal_size2_ = viennacl::tools::align_to_multiple<size_type>(size2_, alignment);
           if (internal_size() > 0)
+          {
             viennacl::backend::memory_create(elements_, sizeof(SCALARTYPE)*internal_size(), m.context());
+            clear();
+          }
         }
 
         if (internal_size() > 0)
         {
-          clear();
           viennacl::linalg::matrix_assign(*this, m(0,0));
         }
 

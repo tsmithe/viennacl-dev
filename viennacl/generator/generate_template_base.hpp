@@ -59,7 +59,9 @@ namespace viennacl{
           k.local_work_size(1,lsize2);
         }
 
-        virtual void print(std::ostream & s) const = 0;
+        virtual void print(std::ostream & s) const{
+          s << csv_representation();
+        }
 
         virtual void core(std::size_t kernel_id, utils::kernel_generation_stream& stream, statements_type const & statements, std::vector<detail::mapping_type> const & mapping) const = 0;
 
@@ -74,6 +76,8 @@ namespace viennacl{
         virtual void set_local_sizes(std::size_t & x, std::size_t & y, std::size_t kernel_id) const = 0;
 
         unsigned int vectorization() const { return vectorization_; }
+
+        virtual std::string csv_representation() const = 0;
 
         /** @brief returns whether or not the profile leads to undefined behavior on particular device
          *  @param dev the given device*/
@@ -111,7 +115,7 @@ namespace viennacl{
 
         std::size_t num_kernels() const{ return num_kernels_; }
 
-        virtual void operator()(utils::kernel_generation_stream & stream, statements_type const & statements) const {
+        virtual void operator()(utils::kernel_generation_stream & stream, viennacl::ocl::device const & device, statements_type const & statements) const {
           std::vector<detail::mapping_type> mapping(statements.size());
 
           ///Get Prototype, initialize mapping
@@ -135,7 +139,13 @@ namespace viennacl{
 
           //Generate
           for(std::size_t n = 0 ; n < num_kernels() ; ++n){
-            stream << "__kernel void " << "kernel_" << n << "(" << std::endl;
+
+            std::size_t size1, size2, size3=1;
+            set_local_sizes(size1,size2,n);
+            stream << "__kernel ";
+//            stream << "__attribute__((vec_type_hint()))" << std::endl;
+            stream << " __attribute__((reqd_work_group_size(" << size1 << "," << size2 << "," << size3 << ")))" << std::endl;
+            stream << "void " << "kernel_" << device.id() << "_" << n << "(" << std::endl;
             stream << prototype << std::endl;
             stream << ")" << std::endl;
 

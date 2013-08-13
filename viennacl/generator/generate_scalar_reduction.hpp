@@ -51,7 +51,7 @@ namespace viennacl{
           for(statements_type::const_iterator it = statements.begin() ; it != statements.end() ; ++it){
             if (it->second.lhs.type_family == scheduler::SCALAR_TYPE_FAMILY)
             {
-              switch(it->second.lhs.type){
+              switch(it->second.lhs.numeric_type){
                 case scheduler::FLOAT_TYPE:
                   res.push_back("float");
                   break;
@@ -85,7 +85,7 @@ namespace viennacl{
               std::size_t size_of_scalartype;
               const char * scalartype_name;
               if (array[0].lhs.type_family != scheduler::SCALAR_TYPE_FAMILY) throw "not implemented";
-              switch(array[0].lhs.type){
+              switch(array[0].lhs.numeric_type){
                 case scheduler::FLOAT_TYPE: scalartype_name = "float"; size_of_scalartype = sizeof(float); break;
                 case scheduler::DOUBLE_TYPE: scalartype_name = "double"; size_of_scalartype = sizeof(double); break;
                 default: throw "not implemented"; break;
@@ -110,18 +110,18 @@ namespace viennacl{
               //The LHS of the prod is a vector
               if(current_node->lhs.type_family==scheduler::VECTOR_TYPE_FAMILY)
               {
-                vector_size = utils::call_on_vector(current_node->lhs, utils::size_fun());
+                vector_size = utils::call_on_vector(current_node->lhs, utils::internal_size_fun());
               }
               else{
                 //The LHS of the prod is a vector expression
                 current_node = &exprs[current_node->lhs.node_index];
                 if(current_node->lhs.type_family==scheduler::VECTOR_TYPE_FAMILY)
                 {
-                  vector_size = cl_uint(utils::call_on_vector(current_node->lhs, utils::size_fun()));
+                  vector_size = cl_uint(utils::call_on_vector(current_node->lhs, utils::internal_size_fun()));
                 }
                 else if(current_node->rhs.type_family==scheduler::VECTOR_TYPE_FAMILY)
                 {
-                  vector_size = cl_uint(utils::call_on_vector(current_node->lhs, utils::size_fun()));
+                  vector_size = cl_uint(utils::call_on_vector(current_node->lhs, utils::internal_size_fun()));
                 }
                 else{
                   assert(false && bool("unexpected expression tree"));
@@ -132,18 +132,23 @@ namespace viennacl{
           }
         }
 
-        virtual void print(std::ostream & s) const{
-          s << "Scalar Reduction : { vector_type, group_size, num_groups, global_decomposition } = {"
-            << vectorization_
-            << ", " << group_size_
-            << ", " << num_groups_
-            << ", " << global_decomposition_
-            << "}";
-        }
-
       public:
         /** @brief The user constructor */
         scalar_reduction(unsigned int vectorization, unsigned int group_size, unsigned int num_groups, bool global_decomposition) : profile_base(vectorization, 2), group_size_(group_size), num_groups_(num_groups), global_decomposition_(global_decomposition){ }
+
+
+        static std::string csv_format() {
+          return "Vec,LSize,NumGroups,GlobalDecomposition";
+        }
+
+        std::string csv_representation() const{
+          std::ostringstream oss;
+          oss << vectorization_
+                 << "," << group_size_
+                 << "," << num_groups_
+                 << "," << global_decomposition_;
+          return oss.str();
+        }
 
         unsigned int num_groups() const { return num_groups_; }
 

@@ -44,7 +44,7 @@ namespace viennacl{
 
     namespace detail{
 
-      class representation_functor{
+      class representation_functor : public traversal_functor{
         private:
           unsigned int get_id(void * handle) const{
             unsigned int i = 0;
@@ -80,7 +80,6 @@ namespace viennacl{
             *ptr_++='h'; //host
             *ptr_++='s'; //scalar
             *ptr_++=utils::first_letter_of_type<ScalarType>::value();
-            append_id(ptr_, get_id((void*)&scal));
           }
 
           //Scalar mapping
@@ -95,7 +94,7 @@ namespace viennacl{
           template<class ScalarType>
           result_type operator()(vector_base<ScalarType> const & vec) const {
             *ptr_++='v'; //vector
-            if(vec.start()>0)
+            if(viennacl::traits::start(vec)>0)
               *ptr_++='r';
             if(vec.stride()>1)
               *ptr_++='s';
@@ -103,10 +102,10 @@ namespace viennacl{
             append_id(ptr_, get_id((void*)&vec));
           }
 
-          //Symbolic vector mapping
+          //Implicit vector mapping
           template<class ScalarType>
-          result_type operator()(symbolic_vector_base<ScalarType> const & vec) const {
-            *ptr_++='s'; //symbolic
+          result_type operator()(implicit_vector_base<ScalarType> const & vec) const {
+            *ptr_++='i'; //implicit
             *ptr_++='v'; //vector
             if(vec.is_value_static())
               *ptr_++='v'; //value
@@ -119,23 +118,23 @@ namespace viennacl{
           template<class ScalarType, class Layout>
           result_type operator()(matrix_base<ScalarType, Layout> const & mat) const {
             *ptr_++='m'; //vector
-            if(mat.start1()>0)
+            if(viennacl::traits::start1(mat)>0)
               *ptr_++='r';
-            if(mat.stride1()>1)
+            if(viennacl::traits::stride1(mat)>1)
               *ptr_++='s';
-            if(mat.start2()>0)
+            if(viennacl::traits::start2(mat)>0)
               *ptr_++='r';
-            if(mat.stride2()>1)
+            if(viennacl::traits::stride2(mat)>1)
               *ptr_++='s';
             *ptr_++=utils::first_letter_of_type<ScalarType>::value();
             *ptr_++=utils::first_letter_of_type<Layout>::value();
             append_id(ptr_, get_id((void*)&mat));
           }
 
-          //Symbolic matrix mapping
+          //Implicit matrix mapping
           template<class ScalarType>
-          result_type operator()(symbolic_matrix_base<ScalarType> const & mat) const {
-            *ptr_++='s'; //symbolic
+          result_type operator()(implicit_matrix_base<ScalarType> const & mat) const {
+            *ptr_++='i'; //implicit
             *ptr_++='m'; //matrix
             if(mat.is_value_static())
               *ptr_++='v'; //value

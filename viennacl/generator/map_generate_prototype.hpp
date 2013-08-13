@@ -25,9 +25,6 @@
 
 #include <set>
 
-#include "viennacl/vector.hpp"
-#include "viennacl/matrix.hpp"
-
 #include "viennacl/forwards.h"
 #include "viennacl/scheduler/forwards.h"
 #include "viennacl/generator/forwards.h"
@@ -44,7 +41,7 @@ namespace viennacl{
 
     namespace detail{
 
-      class map_functor{
+      class map_functor : public traversal_functor{
           std::string create_name(unsigned int & current_arg, std::map<void *, std::size_t> & memory, void * handle) const{
             if(handle==NULL)
               return "arg" + utils::to_string(current_arg_++);
@@ -74,7 +71,7 @@ namespace viennacl{
           template<class ScalarType>
           result_type operator()(ScalarType const & scal) const {
             mapped_host_scalar * p = new mapped_host_scalar(utils::type_to_string<ScalarType>::value());
-            p->name_ = create_name(current_arg_, memory_, (void*)&scal);
+            p->name_ = create_name(current_arg_, memory_, NULL);
             return container_ptr_type(p);
           }
 
@@ -98,10 +95,10 @@ namespace viennacl{
             return container_ptr_type(p);
           }
 
-          //Symbolic vector mapping
+          //Implicit vector mapping
           template<class ScalarType>
-          result_type operator()(symbolic_vector_base<ScalarType> const & vec) const {
-            mapped_symbolic_vector * p = new mapped_symbolic_vector(utils::type_to_string<ScalarType>::value());
+          result_type operator()(implicit_vector_base<ScalarType> const & vec) const {
+            mapped_implicit_vector * p = new mapped_implicit_vector(utils::type_to_string<ScalarType>::value());
 
             if(vec.is_value_static()==false)
               p->value_name_ = create_name(current_arg_, memory_, NULL);
@@ -127,10 +124,10 @@ namespace viennacl{
             return container_ptr_type(p);
           }
 
-          //Symbolic matrix mapping
+          //Implicit matrix mapping
           template<class ScalarType>
-          result_type operator()(symbolic_matrix_base<ScalarType> const & mat) const {
-            mapped_symbolic_matrix * p = new mapped_symbolic_matrix(utils::type_to_string<ScalarType>::value());
+          result_type operator()(implicit_matrix_base<ScalarType> const & mat) const {
+            mapped_implicit_matrix * p = new mapped_implicit_matrix(utils::type_to_string<ScalarType>::value());
 
             if(mat.is_value_static()==false)
               p->value_name_ = create_name(current_arg_, memory_, NULL);

@@ -46,18 +46,23 @@ namespace viennacl{
           return m_*(k_+1)*scalartype_size;
         }
 
-        virtual void print(std::ostream & s) const{
-          s << "Scalar Reduction : { vector_type, m, k, num_groups} = {"
-            << vectorization_
-            << ", " << m_
-            << ", " << k_
-            << ", " << num_groups_
-            << "}";
-        }
-
       public:
         /** @brief The user constructor */
         vector_reduction(unsigned int vectorization, unsigned int m, unsigned int k, unsigned int num_groups) : profile_base(vectorization, 1), m_(m), k_(k), num_groups_(num_groups){ }
+
+
+        static std::string csv_format() {
+          return "Vec,M,K,NumGroups";
+        }
+
+        std::string csv_representation() const{
+          std::ostringstream oss;
+          oss << vectorization_
+                 << "," << m_
+                 << "," << k_
+                 << "," << num_groups_;
+          return oss.str();
+        }
 
         void set_local_sizes(std::size_t & s1, std::size_t & s2, std::size_t /*kernel_id*/) const{
           s1 = m_;
@@ -83,28 +88,25 @@ namespace viennacl{
               if(iit->op.type==scheduler::OPERATION_BINARY_MAT_VEC_PROD_TYPE){
                 scheduler::statement_node const * current_node = &(*iit);
                 //The LHS of the prod is a matrix
-                if(current_node->lhs.type_family==scheduler::MATRIX_ROW_TYPE_FAMILY
-                   ||current_node->lhs.type_family==scheduler::MATRIX_COL_TYPE_FAMILY)
+                if(current_node->lhs.type_family==scheduler::MATRIX_TYPE_FAMILY)
                 {
-                  kernel.arg(n_arg++, cl_uint(utils::call_on_matrix(current_node->lhs, utils::size1_fun())));
-                  kernel.arg(n_arg++, cl_uint(utils::call_on_matrix(current_node->lhs, utils::size2_fun())));
+                  kernel.arg(n_arg++, cl_uint(utils::call_on_matrix(current_node->lhs, utils::internal_size1_fun())));
+                  kernel.arg(n_arg++, cl_uint(utils::call_on_matrix(current_node->lhs, utils::internal_size2_fun())));
                   return;
                 }
                 else{
                   //The LHS of the prod is a matrix expression
                   current_node = &exprs[current_node->lhs.node_index];
-                  if(current_node->lhs.type_family==scheduler::MATRIX_ROW_TYPE_FAMILY
-                     ||current_node->lhs.type_family==scheduler::MATRIX_COL_TYPE_FAMILY)
+                  if(current_node->lhs.type_family==scheduler::MATRIX_TYPE_FAMILY)
                   {
-                    kernel.arg(n_arg++, cl_uint(utils::call_on_matrix(current_node->lhs, utils::size1_fun())));
-                    kernel.arg(n_arg++, cl_uint(utils::call_on_matrix(current_node->lhs, utils::size2_fun())));
+                    kernel.arg(n_arg++, cl_uint(utils::call_on_matrix(current_node->lhs, utils::internal_size1_fun())));
+                    kernel.arg(n_arg++, cl_uint(utils::call_on_matrix(current_node->lhs, utils::internal_size2_fun())));
                     return;
                   }
-                  else if(current_node->rhs.type_family==scheduler::MATRIX_ROW_TYPE_FAMILY
-                          ||current_node->rhs.type_family==scheduler::MATRIX_COL_TYPE_FAMILY)
+                  else if(current_node->rhs.type_family==scheduler::MATRIX_TYPE_FAMILY)
                   {
-                    kernel.arg(n_arg++, cl_uint(utils::call_on_matrix(current_node->lhs, utils::size1_fun())));
-                    kernel.arg(n_arg++, cl_uint(utils::call_on_matrix(current_node->lhs, utils::size2_fun())));
+                    kernel.arg(n_arg++, cl_uint(utils::call_on_matrix(current_node->lhs, utils::internal_size1_fun())));
+                    kernel.arg(n_arg++, cl_uint(utils::call_on_matrix(current_node->lhs, utils::internal_size2_fun())));
                     return;
                   }
                   else{

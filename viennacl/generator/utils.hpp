@@ -39,8 +39,8 @@ namespace viennacl{
 
     template<class Fun>
     static typename Fun::result_type call_on_host_scalar(scheduler::lhs_rhs_element element, Fun const & fun){
-        assert(element.type_family == scheduler::HOST_SCALAR_TYPE_FAMILY && bool("Must be called on a host scalar"));
-        switch(element.type){
+        assert(element.type_family == scheduler::SCALAR_TYPE_FAMILY && bool("Must be called on a host scalar"));
+        switch(element.numeric_type){
         case scheduler::FLOAT_TYPE :
             return fun(element.host_float);
         case scheduler::DOUBLE_TYPE :
@@ -53,7 +53,7 @@ namespace viennacl{
     template<class Fun>
     static typename Fun::result_type call_on_scalar(scheduler::lhs_rhs_element element, Fun const & fun){
         assert(element.type_family == scheduler::SCALAR_TYPE_FAMILY && bool("Must be called on a scalar"));
-        switch(element.type){
+        switch(element.numeric_type){
         case scheduler::FLOAT_TYPE :
             return fun(*element.scalar_float);
         case scheduler::DOUBLE_TYPE :
@@ -66,7 +66,7 @@ namespace viennacl{
     template<class Fun>
     static typename Fun::result_type call_on_vector(scheduler::lhs_rhs_element element, Fun const & fun){
         assert(element.type_family == scheduler::VECTOR_TYPE_FAMILY && bool("Must be called on a vector"));
-        switch(element.type){
+        switch(element.numeric_type){
         case scheduler::FLOAT_TYPE :
             return fun(*element.vector_float);
         case scheduler::DOUBLE_TYPE :
@@ -77,13 +77,14 @@ namespace viennacl{
     }
 
     template<class Fun>
-    static typename Fun::result_type call_on_symbolic_vector(scheduler::lhs_rhs_element element, Fun const & fun){
-        assert(element.type_family == scheduler::SYMBOLIC_VECTOR_TYPE_FAMILY && bool("Must be called on a symbolic_vector"));
-        switch(element.type){
+    static typename Fun::result_type call_on_implicit_vector(scheduler::lhs_rhs_element element, Fun const & fun){
+        assert(element.type_family == scheduler::VECTOR_TYPE_FAMILY   && bool("Must be called on a implicit_vector"));
+        assert(element.subtype     == scheduler::IMPLICIT_VECTOR_TYPE && bool("Must be called on a implicit_vector"));
+        switch(element.numeric_type){
         case scheduler::FLOAT_TYPE :
-            return fun(*element.symbolic_vector_float);
+            return fun(*element.implicit_vector_float);
         case scheduler::DOUBLE_TYPE :
-            return fun(*element.symbolic_vector_double);
+            return fun(*element.implicit_vector_double);
         default :
             throw "not implemented";
         }
@@ -91,10 +92,10 @@ namespace viennacl{
 
     template<class Fun>
     static typename Fun::result_type call_on_matrix(scheduler::lhs_rhs_element element, Fun const & fun){
-        assert((element.type_family == scheduler::MATRIX_ROW_TYPE_FAMILY || element.type_family == scheduler::MATRIX_COL_TYPE_FAMILY) && bool("Must be called on a matrix"));
-        if (element.type_family == scheduler::MATRIX_ROW_TYPE_FAMILY)
+        assert(element.type_family == scheduler::MATRIX_TYPE_FAMILY && bool("Must be called on a matrix"));
+        if (element.subtype == scheduler::DENSE_ROW_MATRIX_TYPE)
         {
-            switch(element.type){
+            switch(element.numeric_type){
             case scheduler::FLOAT_TYPE :
                 return fun(*element.matrix_row_float);
             case scheduler::DOUBLE_TYPE :
@@ -105,7 +106,7 @@ namespace viennacl{
         }
         else
         {
-            switch(element.type){
+            switch(element.numeric_type){
             case scheduler::FLOAT_TYPE :
                 return fun(*element.matrix_col_float);
             case scheduler::DOUBLE_TYPE :
@@ -118,13 +119,14 @@ namespace viennacl{
 
 
     template<class Fun>
-    static typename Fun::result_type call_on_symbolic_matrix(scheduler::lhs_rhs_element element, Fun const & fun){
-        assert(element.type_family == scheduler::SYMBOLIC_MATRIX_TYPE_FAMILY && bool("Must be called on a matrix_vector"));
-        switch(element.type){
+    static typename Fun::result_type call_on_implicit_matrix(scheduler::lhs_rhs_element element, Fun const & fun){
+        assert(element.type_family == scheduler::MATRIX_TYPE_FAMILY   && bool("Must be called on a matrix_vector"));
+        assert(element.subtype     == scheduler::IMPLICIT_MATRIX_TYPE && bool("Must be called on a matrix_vector"));
+        switch(element.numeric_type){
         case scheduler::FLOAT_TYPE :
-            return fun(*element.symbolic_matrix_float);
+            return fun(*element.implicit_matrix_float);
         case scheduler::DOUBLE_TYPE :
-            return fun(*element.symbolic_matrix_double);
+            return fun(*element.implicit_matrix_double);
         default :
             throw "not implemented";
         }
@@ -133,20 +135,21 @@ namespace viennacl{
       template<class Fun>
       static typename Fun::result_type call_on_element(scheduler::lhs_rhs_element const & element, Fun const & fun){
         switch(element.type_family){
-          case scheduler::HOST_SCALAR_TYPE_FAMILY:
-            return call_on_host_scalar(element, fun);
           case scheduler::SCALAR_TYPE_FAMILY:
-            return call_on_scalar(element, fun);
+            if (element.subtype == scheduler::HOST_SCALAR_TYPE)
+              return call_on_host_scalar(element, fun);
+            else
+              return call_on_scalar(element, fun);
           case scheduler::VECTOR_TYPE_FAMILY :
-            return call_on_vector(element, fun);
-          case scheduler::SYMBOLIC_VECTOR_TYPE_FAMILY :
-            return call_on_symbolic_vector(element, fun);
-          case scheduler::MATRIX_ROW_TYPE_FAMILY:
-            return call_on_matrix(element,fun);
-          case scheduler::MATRIX_COL_TYPE_FAMILY:
-            return call_on_matrix(element,fun);
-          case scheduler::SYMBOLIC_MATRIX_TYPE_FAMILY :
-            return call_on_symbolic_matrix(element, fun);
+            if (element.subtype == scheduler::IMPLICIT_VECTOR_TYPE)
+              return call_on_implicit_vector(element, fun);
+            else
+              return call_on_vector(element, fun);
+          case scheduler::MATRIX_TYPE_FAMILY:
+            if (element.subtype == scheduler::IMPLICIT_MATRIX_TYPE)
+              return call_on_implicit_matrix(element, fun);
+            else
+              return call_on_matrix(element,fun);
           default:
             throw "not implemented";
         }
@@ -159,10 +162,10 @@ namespace viennacl{
           template<class T> result_type operator()(T const &t) const { return sizeof(typename viennacl::result_of::cpu_value_type<T>::type); }
       };
 
-      struct size_fun{
+      struct internal_size_fun{
           typedef std::size_t result_type;
           template<class T>
-          result_type operator()(T const &t) const { return viennacl::traits::size(t); }
+          result_type operator()(T const &t) const { return viennacl::traits::internal_size(t); }
       };
 
       struct handle_fun{
@@ -171,22 +174,22 @@ namespace viennacl{
           result_type operator()(T const &t) const { return t.handle().opencl_handle(); }
       };
 
-      struct size1_fun{
+      struct internal_size1_fun{
           typedef std::size_t result_type;
           template<class T>
-          result_type operator()(T const &t) const { return viennacl::traits::size1(t); }
+          result_type operator()(T const &t) const { return viennacl::traits::internal_size1(t); }
       };
 
-      struct size2_fun{
+      struct internal_size2_fun{
           typedef std::size_t result_type;
           template<class T>
-          result_type operator()(T const &t) const { return viennacl::traits::size2(t); }
+          result_type operator()(T const &t) const { return viennacl::traits::internal_size2(t); }
       };
 
 //      static std::size_t size(scheduler::statement_node_type type, scheduler::lhs_rhs_element element){
 //        return call_on_vector(type, element, size_fun());
 //      }
-      
+
 //      static std::size_t size1(scheduler::statement_node_type type, scheduler::lhs_rhs_element element){
 //        return call_on_matrix(type, element, size1_fun());
 //      }
