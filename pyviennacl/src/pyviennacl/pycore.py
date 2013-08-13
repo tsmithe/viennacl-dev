@@ -236,7 +236,7 @@ class Leaf(MagicMethods):
         """
         By default, leaf subclasses inherit a no-op further init function.
         
-        If you're derived from Leaf, then you probably want to override this.
+        If you're deriving from Leaf, then you probably want to override this.
         """
         raise NotImplementedError("Help")
 
@@ -508,6 +508,124 @@ class Vector(Leaf):
         else:
             op = Mul(self, rhs)
             return op
+
+
+class HostCompressedMatrix(Leaf):
+    """
+    TODO: CPU compressed_matrix...
+    """
+    ndim = 2
+    statement_node_type_family = None # Not a ViennaCL type
+
+    def _init_leaf(self, args, kwargs):
+        if 'shape' in kwargs.keys():
+            if len(kwargs['shape']) != 2:
+                raise TypeError("Matrix can only have a 2-d shape")
+            args = list(args)
+            args.insert(0, kwargs['shape'])
+
+        if 'layout' in kwargs.keys():
+            if kwargs['layout'] == COL_MAJOR:
+                raise TypeError("COL_MAJOR sparse layout not yet supported")
+                self.layout = COL_MAJOR
+                self.statement_node_subtype = _v.statement_node_subtype.DENSE_COL_MATRIX_TYPE
+            else:
+                self.layout = ROW_MAJOR
+                self.statement_node_subtype = _v.statement_node_subtype.DENSE_ROW_MATRIX_TYPE
+        else:
+            self.layout = ROW_MAJOR
+            self.statement_node_subtype = _v.statement_node_subtype.DENSE_ROW_MATRIX_TYPE
+
+        # TODO: DEAL WITH args HERE
+        def get_leaf(vcl_t):
+            return vcl_t()
+
+        if self.dtype is None: # ie, still None, even after checks -- so guess
+            self.dtype = dtype(float64)
+
+        self.statement_node_numeric_type = HostScalarTypes[self.dtype.name]
+
+        try:
+            #vcl_type = getattr(_v,
+            #                   "matrix_" + 
+            #                   vcl_layout_strings[self.layout] + "_" + 
+            #                   vcl_statement_node_numeric_type_strings[
+            #                       self.statement_node_numeric_type])
+            vcl_type = _v.cpu_compressed_matrix_double
+        except (KeyError, AttributeError):
+            raise TypeError("dtype %s not supported" % self.statement_node_numeric_type)
+
+        self.vcl_leaf = get_leaf(vcl_type)
+        self.nnz = self.vcl_leaf.nnz
+        self.size1 = self.vcl_leaf.size1
+        self.size2 = self.vcl_leaf.size2
+        self.size = self.size1 * self.size2 # Flat size
+        self.shape = (self.size1, self.size2)
+
+    def __getitem__(self, key):
+        # TODO: extend beyond tuple keys
+        return self.vcl_leaf.get(key[0], key[1])
+
+    def __setitem__(self, key, value):
+        """
+        TODO:
+        + Set a key-value pair (key as 2-tuple)
+        + More key possibilities
+        """
+        return self.vcl_leaf.set(key[0], key[1], value)
+
+    def to_device(self):
+        return DeviceCompressedMatrix(self)
+
+
+class DeviceCompressedMatrix(Leaf):
+    """
+    TODO: VCL compressed_matrix...
+    """
+    ndim = 2
+    statement_node_type_family = None # Not supported in scheduler yet
+
+    def _init_leaf(self, args, kwargs):
+        """
+        TODO: DOCSTRING
+
+        Two initial possibilities:
+        + First, construct host matrix. From that, lazily construct VCL matrix.
+        + Take a HostCompressedMatrix, and construct thus a VCL sparse matrix.
+
+        NB: *Lazily* construct VCL compressed matrix, when needed.
+        """
+        if len(args) == 1:
+            temp = args[0]
+            self.layout = temp.layout
+            self.dtype = temp.dtype
+            self.vcl_leaf = temp.vcl_leaf.as_compressed_matrix()
+        else:
+            self.layout = ROW_MAJOR
+            self.dtype = dtype(float64)
+            self.vcl_leaf = _v.cpu_compressed_matrix_double().as_compressed_matrix()
+
+        self.nnz = self.vcl_leaf.nnz
+        self.size1 = self.vcl_leaf.size1
+        self.size2 = self.vcl_leaf.size2
+        self.shape = (self.size1, self.size2)
+
+    def __getitem__(self, key):
+        # TODO: EXTEND THIS
+        temp = _v.cpu_compressed_matrix_double(self.vcl_leaf)
+        return temp.get(key[0], key[1])
+
+    def __setitem__(self, key, value):
+        # TODO: EXTEND THIS
+        # NB: THIS CURRENTLY INVALIDATES THE GIVEN VCL MATRIX
+        temp = _v.cpu_compressed_matrix_double(self.vcl_leaf)
+        temp.set(key[0], key[1], value)
+        del self.vcl_leaf
+        self.vcl_leaf = temp.as_compressed_matrix()
+
+    def as_ndarray(self):
+        temp = _v.cpu_compressed_matrix_double(self.vcl_leaf)
+        return temp.as_ndarray()
 
 
 class Matrix(Leaf):

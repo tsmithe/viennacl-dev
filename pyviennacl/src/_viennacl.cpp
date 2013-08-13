@@ -13,6 +13,7 @@
 #define VIENNACL_DEBUG_BUILD
 #define VIENNACL_WITH_UBLAS
 #define VIENNACL_WITH_OPENCL
+
 #include <viennacl/backend/memory.hpp>
 #include <viennacl/linalg/cg.hpp>
 #include <viennacl/linalg/bicgstab.hpp>
@@ -27,7 +28,7 @@
 #include <viennacl/linalg/prod.hpp>
 #include <viennacl/linalg/sparse_matrix_operations.hpp>
 #include <viennacl/compressed_matrix.hpp>
-//#include <viennacl/coordinate_matrix.hpp>
+#include <viennacl/coordinate_matrix.hpp>
 #include <viennacl/ell_matrix.hpp>
 #include <viennacl/hyb_matrix.hpp>
 #include <viennacl/matrix.hpp>
@@ -244,23 +245,23 @@ ReturnT pyvcl_do_4ary_op(Operand1T a, Operand2T b,
 // These macros define specialisations of the pyvcl_worker class
 // which is used to dispatch viennacl operations.
 
-#define OP_TEMPLATE template <class ReturnT, \
+#define OP_TEMPLATE template <class ReturnT,                    \
                               class Operand1T, class Operand2T, \
                               class Operand3T, class Operand4T, \
                               int PyObjs>
-#define PYVCL_WORKER_STRUCT(OP) OP_TEMPLATE \
-                              struct pyvcl_worker<ReturnT, \
-                              Operand1T, Operand2T, \
-                              Operand3T, Operand4T, \
-                              OP, PyObjs>
-#define DO_OP_FUNC(OP) PYVCL_WORKER_STRUCT(OP) { \
-                              static ReturnT do_op(pyvcl_op<ReturnT, \
-                              Operand1T, Operand2T, \
-                              Operand3T, Operand4T, \
-                              OP, PyObjs>& o)
+#define PYVCL_WORKER_STRUCT(OP) OP_TEMPLATE                \
+  struct pyvcl_worker<ReturnT,                             \
+                      Operand1T, Operand2T,                \
+                      Operand3T, Operand4T,                \
+                      OP, PyObjs>
+#define DO_OP_FUNC(OP) PYVCL_WORKER_STRUCT(OP) {                     \
+  static ReturnT do_op(pyvcl_op<ReturnT,                             \
+                       Operand1T, Operand2T,                         \
+                       Operand3T, Operand4T,                         \
+                       OP, PyObjs>& o)
 
 // And the actual operations follow below.
-  
+
 DO_OP_FUNC(op_add) { return o.operand1 + o.operand2; } };
 DO_OP_FUNC(op_sub) { return o.operand1 - o.operand2; } };
 DO_OP_FUNC(op_mul) { return o.operand1 * o.operand2; } };
@@ -480,7 +481,8 @@ vcl_vector_init_list(bp::list const& l)
 
 template <class SCALARTYPE>
 boost::shared_ptr<vcl::vector<SCALARTYPE> >
-vcl_vector_init_scalar(uint32_t length, SCALARTYPE value) {
+vcl_vector_init_scalar(uint32_t length, SCALARTYPE value)
+{
   ublas::scalar_vector<SCALARTYPE> s_v(length, value);
   vcl::vector<SCALARTYPE> *v = new vcl::vector<SCALARTYPE>(length);
   vcl::copy(s_v.begin(), s_v.end(), v->begin());
@@ -490,7 +492,8 @@ vcl_vector_init_scalar(uint32_t length, SCALARTYPE value) {
 template <class SCALARTYPE>
 boost::shared_ptr<vcl::vector_base<SCALARTYPE> >
 vcl_range(vcl::vector_base<SCALARTYPE>& vec,
-          std::size_t start, std::size_t end) {
+          std::size_t start, std::size_t end)
+{
   vcl::range r(start, end);
   vcl::vector_range<vcl::vector_base<SCALARTYPE> > *v_r = new vcl::vector_range
     <vcl::vector_base<SCALARTYPE> >(vec, r);
@@ -500,7 +503,8 @@ vcl_range(vcl::vector_base<SCALARTYPE>& vec,
 template <class SCALARTYPE>
 boost::shared_ptr<vcl::vector_base<SCALARTYPE> >
 vcl_slice(vcl::vector_base<SCALARTYPE>& vec,
-          std::size_t start, std::size_t stride, std::size_t size) {
+          std::size_t start, std::size_t stride, std::size_t size)
+{
   vcl::slice slice(start, stride, size);
   vcl::vector_slice<vcl::vector_base<SCALARTYPE> > *v_s = new vcl::vector_slice
     <vcl::vector_base<SCALARTYPE> >(vec, slice);
@@ -532,7 +536,8 @@ public:
 
 template<class SCALARTYPE, class F>
 boost::shared_ptr<vcl::matrix<SCALARTYPE, F> >
-matrix_init_scalar(uint32_t n, uint32_t m, cpu_scalar_t value) {
+matrix_init_scalar(uint32_t n, uint32_t m, cpu_scalar_t value)
+{
   ublas::scalar_matrix<SCALARTYPE> s_m(n, m, value);
   ublas::matrix<SCALARTYPE> cpu_m(s_m);
   vcl::matrix<SCALARTYPE, F>* mat = new vcl::matrix<SCALARTYPE, F>(n, m);
@@ -606,6 +611,7 @@ np::ndarray vcl_matrix_to_ndarray(vcl::matrix_base<SCALARTYPE, VCL_F> const& m)
 
 // Sparse matrix
 
+template <class ScalarType>
 class cpu_compressed_matrix_wrapper
 {
   // TODO: This is just a quick first implementation. Later, I may well want 
@@ -613,7 +619,7 @@ class cpu_compressed_matrix_wrapper
   bp::list places;
 
 public:
-  ublas::compressed_matrix<double, ublas::row_major> cpu_compressed_matrix;
+  ublas::compressed_matrix<ScalarType, ublas::row_major> cpu_compressed_matrix;
 
   bp::list const& update_places()
   {
@@ -632,20 +638,20 @@ public:
 
   cpu_compressed_matrix_wrapper()
   {
-    cpu_compressed_matrix = ublas::compressed_matrix<double, ublas::row_major>
+    cpu_compressed_matrix = ublas::compressed_matrix<ScalarType, ublas::row_major>
       (0,0,0);
   }
 
   cpu_compressed_matrix_wrapper(uint32_t _size1, uint32_t _size2)
   {
-    cpu_compressed_matrix = ublas::compressed_matrix<double, ublas::row_major>
+    cpu_compressed_matrix = ublas::compressed_matrix<ScalarType, ublas::row_major>
       (_size1, _size2);
   }
 
   cpu_compressed_matrix_wrapper(uint32_t _size1, uint32_t _size2, uint32_t _nnz)
   {
     cpu_compressed_matrix = 
-      ublas::compressed_matrix<double, ublas::row_major>(_size1, _size2, _nnz);
+      ublas::compressed_matrix<ScalarType, ublas::row_major>(_size1, _size2, _nnz);
   }
 
   cpu_compressed_matrix_wrapper(cpu_compressed_matrix_wrapper const& w)
@@ -657,7 +663,7 @@ public:
   template<class SparseT>
   cpu_compressed_matrix_wrapper(SparseT const& vcl_sparse_matrix)
   {
-    cpu_compressed_matrix = ublas::compressed_matrix<double, ublas::row_major>
+    cpu_compressed_matrix = ublas::compressed_matrix<ScalarType, ublas::row_major>
       (vcl_sparse_matrix.size1(), vcl_sparse_matrix.size2());
     vcl::copy(vcl_sparse_matrix, cpu_compressed_matrix);
     
@@ -688,12 +694,12 @@ public:
     uint32_t n = array.shape(0);
     uint32_t m = array.shape(1);
     
-    cpu_compressed_matrix = ublas::compressed_matrix<double, ublas::row_major>
-      (n, m);
+    cpu_compressed_matrix = ublas::compressed_matrix<ScalarType, 
+                                                     ublas::row_major>(n, m);
     
     for (uint32_t i = 0; i < n; ++i) {
       for (uint32_t j = 0; j < m; ++j) {
-	cpu_scalar_t val = bp::extract<cpu_scalar_t>(array[i][j]);
+	ScalarType val = bp::extract<ScalarType>(array[i][j]);
 	if (val != 0) {
 	  cpu_compressed_matrix(i, j) = val;
 	  places.append(bp::make_tuple(i, j));
@@ -706,14 +712,16 @@ public:
   np::ndarray as_ndarray()
   {
 
-    np::dtype dt = np::dtype::get_builtin<cpu_scalar_t>();
+    // TODO: This is currently a naive implementation
+
+    np::dtype dt = np::dtype::get_builtin<ScalarType>();
     bp::tuple shape = bp::make_tuple(size1(), size2());
     
     np::ndarray array = np::empty(shape, dt);
   
     for (uint32_t i = 0; i < size1(); ++i) {
       for (uint32_t j = 0; j < size2(); ++j) {
-	array[i][j] = (cpu_scalar_t) cpu_compressed_matrix(i, j);
+	array[i][j] = (ScalarType) cpu_compressed_matrix(i, j);
       }
     }
 
@@ -782,7 +790,7 @@ public:
     return cpu_compressed_matrix.size2();
   }
 
-  bp::object set(uint32_t n, uint32_t m, cpu_scalar_t val) 
+  bp::object set(uint32_t n, uint32_t m, ScalarType val) 
   {
     if (n >= size1() or m >= size2())
       resize(n+1, m+1);
@@ -800,7 +808,7 @@ public:
   }
 
   // Need this because bp cannot deal with operator()
-  cpu_scalar_t get(uint32_t n, uint32_t m)
+  ScalarType get(uint32_t n, uint32_t m)
   {
     return cpu_compressed_matrix(n, m);
   }
@@ -1002,6 +1010,8 @@ BOOST_PYTHON_MODULE(_viennacl)
   // --------------------------------------------------
 
   // *** Scalar type ***
+
+  // TODO: EXPOSE ALL NUMERIC TYPES
 
   bp::class_<vcl_scalar_t>("scalar_double")
     // Utility functions
@@ -1345,12 +1355,12 @@ BOOST_PYTHON_MODULE(_viennacl)
                             (CONCAT(vcl::matrix_base<TYPE, F>&,         \
                                     vcl::range const&,                  \
                                     vcl::range const&)))                \
-  DISAMBIGUATE_FUNCTION_PTR(CONCAT(vcl::matrix_range<               \
+ DISAMBIGUATE_FUNCTION_PTR(CONCAT(vcl::matrix_range<                    \
                                    vcl::matrix_base<TYPE, F> >),        \
                             vcl::project,                               \
                             project_matrix_range_##TYPE##_##LAYOUT##_range_range, \
                             (CONCAT(vcl::matrix_range<                  \
-                                    vcl::matrix_base<TYPE, F> >&,         \
+                                    vcl::matrix_base<TYPE, F> >&,       \
                                     vcl::range const&,                  \
                                     vcl::range const&)))                \
   DISAMBIGUATE_FUNCTION_PTR(CONCAT(vcl::matrix_slice<                   \
@@ -1384,23 +1394,27 @@ BOOST_PYTHON_MODULE(_viennacl)
 
   // *** Sparse matrix types ***
 
-  bp::class_<cpu_compressed_matrix_wrapper>("cpu_compressed_matrix")
+  bp::class_<cpu_compressed_matrix_wrapper<double> >
+    ("cpu_compressed_matrix_double")
     .def(bp::init<>())
     .def(bp::init<uint32_t, uint32_t>())
     .def(bp::init<uint32_t, uint32_t, uint32_t>())
-    .def(bp::init<cpu_compressed_matrix_wrapper>())
+    .def(bp::init<cpu_compressed_matrix_wrapper<double> >())
     .def(bp::init<vcl::compressed_matrix<double> >())
     //.def(bp::init<vcl_coordinate_matrix_t>())
     .def(bp::init<np::ndarray>())
-    .add_property("nnz", &cpu_compressed_matrix_wrapper::nnz)
-    .add_property("size1", &cpu_compressed_matrix_wrapper::size1)
-    .add_property("size2", &cpu_compressed_matrix_wrapper::size2)
-    .def("set", &cpu_compressed_matrix_wrapper::set)
-    .def("get", &cpu_compressed_matrix_wrapper::get)
-    .def("as_ndarray", &cpu_compressed_matrix_wrapper::as_ndarray)
+    .add_property("nnz", &cpu_compressed_matrix_wrapper<double>::nnz)
+    .add_property("size1", &cpu_compressed_matrix_wrapper<double>::size1)
+    .add_property("size2", &cpu_compressed_matrix_wrapper<double>::size2)
+    .def("set", &cpu_compressed_matrix_wrapper<double>::set)
+    .def("get", &cpu_compressed_matrix_wrapper<double>::get)
+    .def("as_ndarray", &cpu_compressed_matrix_wrapper<double>::as_ndarray)
     .def("as_compressed_matrix",
-	 &cpu_compressed_matrix_wrapper::as_vcl_sparse_matrix_with_size
-	 <vcl::compressed_matrix<double> >)
+         &cpu_compressed_matrix_wrapper<double>
+         ::as_vcl_sparse_matrix_with_size<vcl::compressed_matrix<double> >)
+    /*.def("as_coordinate_matrix",
+         &cpu_compressed_matrix_wrapper<double>
+         ::as_vcl_sparse_matrix<vcl::coordinate_matrix<double> >)*/
     ;
 
   bp::class_<vcl::compressed_matrix<double> >
@@ -1421,41 +1435,22 @@ BOOST_PYTHON_MODULE(_viennacl)
 	 vcl::compressed_matrix<double>&, vcl::vector<double>&,
 	 op_prod, 0>)
     
-    /*
-    .def("inplace_solve", pyvcl_do_3ary_op<vcl_compressed_matrix_t,
-	 vcl_compressed_matrix_t&, vcl_vector_t&,
+    .def("inplace_solve", pyvcl_do_3ary_op<vcl::compressed_matrix<double>,
+	 vcl::compressed_matrix<double>&, vcl::vector<double>&,
 	 vcl::linalg::lower_tag,
 	 op_inplace_solve, 0>)
-    .def("inplace_solve", pyvcl_do_3ary_op<vcl_compressed_matrix_t,
-	 vcl_compressed_matrix_t&, vcl_vector_t&,
+    .def("inplace_solve", pyvcl_do_3ary_op<vcl::compressed_matrix<double>,
+	 vcl::compressed_matrix<double>&, vcl::vector<double>&,
 	 vcl::linalg::unit_lower_tag,
 	 op_inplace_solve, 0>)
-    .def("inplace_solve", pyvcl_do_3ary_op<vcl_compressed_matrix_t,
-	 vcl_compressed_matrix_t&, vcl_vector_t&,
+    .def("inplace_solve", pyvcl_do_3ary_op<vcl::compressed_matrix<double>,
+	 vcl::compressed_matrix<double>&, vcl::vector<double>&,
 	 vcl::linalg::unit_upper_tag,
 	 op_inplace_solve, 0>)
-    .def("inplace_solve", pyvcl_do_3ary_op<vcl_compressed_matrix_t,
-	 vcl_compressed_matrix_t&, vcl_vector_t&,
+    .def("inplace_solve", pyvcl_do_3ary_op<vcl::compressed_matrix<double>,
+	 vcl::compressed_matrix<double>&, vcl::vector<double>&,
 	 vcl::linalg::upper_tag,
 	 op_inplace_solve, 0>)
-    */
-
-    /*.def("solve", pyvcl_do_3ary_op<vcl::matrix<SCALARTYPE, F>,
-	 vcl::matrix<SCALARTYPE, F>, vcl::matrix<SCALARTYPE, F>,
-	 vcl::linalg::lower_tag,
-	 op_solve, 0>)
-    .def("solve", pyvcl_do_3ary_op<vcl::matrix<SCALARTYPE, F>,
-	 vcl::matrix<SCALARTYPE, F>, vcl::matrix<SCALARTYPE, F>,
-	 vcl::linalg::unit_lower_tag,
-	 op_solve, 0>)
-    .def("solve", pyvcl_do_3ary_op<vcl::matrix<SCALARTYPE, F>,
-	 vcl::matrix<SCALARTYPE, F>, vcl::matrix<SCALARTYPE, F>,
-	 vcl::linalg::upper_tag,
-	 op_solve, 0>)
-    .def("solve", pyvcl_do_3ary_op<vcl::matrix<SCALARTYPE, F>,
-	 vcl::matrix<SCALARTYPE, F>, vcl::matrix<SCALARTYPE, F>,
-	 vcl::linalg::unit_upper_tag,
-	 op_solve, 0>)*/
     ;
 
   // --------------------------------------------------
