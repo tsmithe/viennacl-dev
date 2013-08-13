@@ -12,11 +12,11 @@ def dobench2(size1, size2, dtype=np.float64, ndim=1):
         y = p.Vector(size1, 0.0, dtype=dtype)
         u = p.Vector(size1, 0.1, dtype=dtype)
         v = p.Vector(size1, 0.2, dtype=dtype)        
-    p.Statement(p.Assign(y, u+v)).execute()
+    p.Statement(p.Assign(y, u*v)).execute()
     p.backend_finish()
     t1 = time.time()
-    for n in range(1000):
-        p.Statement(p.Assign(y, u+v)).execute()
+    for n in range(100):
+        p.Statement(p.Assign(y, u*v)).execute()
     p.backend_finish()
     t2 = time.time()
     return (t2 - t1)
@@ -34,11 +34,11 @@ def dobench4(size1, size2, dtype=np.float64, ndim=1):
         v = p.Vector(size1, 0.2, dtype=dtype)
         w = p.Vector(size1, 0.3, dtype=dtype)
         x = p.Vector(size1, 0.4, dtype=dtype)
-    p.Statement(p.Assign(y, u+v+w+x)).execute()
+    p.Statement(p.Assign(y, u*v*w*x)).execute()
     p.backend_finish()
     t1 = time.time()
-    for n in range(1000):
-        p.Statement(p.Assign(y, u+v+w+x)).execute()
+    for n in range(100):
+        p.Statement(p.Assign(y, u*v*w*x)).execute()
     p.backend_finish()
     t2 = time.time()
     return (t2 - t1)
@@ -53,7 +53,7 @@ def dobench_vcl2(size1, size2, ndim=1):
     y = u+v
     p.backend_finish()
     t1 = time.time()
-    for n in range(1000):
+    for n in range(100):
         y = u+v
     p.backend_finish()
     t2 = time.time()
@@ -73,7 +73,7 @@ def dobench_vcl4(size1, size2, ndim=1):
     y = u+v+w+x
     p.backend_finish()
     t1 = time.time()
-    for n in range(1000):
+    for n in range(100):
         y = u+v+w+x
     p.backend_finish()
     t2 = time.time()
@@ -82,42 +82,42 @@ def dobench_vcl4(size1, size2, ndim=1):
 
 def dobench_numpy2(size1, size2, dtype=np.float64, ndim=1):
     if ndim == 2:
-        u = np.ones((size1, size2), dtype) * 0.1
-        v = np.ones((size1, size2), dtype) * 0.2
+        u = np.matrix(np.ones((size1, size2), dtype) * 0.1)
+        v = np.matrix(np.ones((size1, size2), dtype) * 0.2)
     elif ndim == 1:
-        u = np.ones((size1, ), dtype) * 0.1
-        v = np.ones((size1, ), dtype) * 0.2
-    y = u+v
+        u = np.matrix(np.ones((size1, ), dtype) * 0.1)
+        v = np.matrix(np.ones((size1, ), dtype) * 0.2)
+    y = u*v
     t1 = time.time()
-    for n in range(1000):
-        y = u+v
+    for n in range(100):
+        y = u*v
     t2 = time.time()
     return (t2 - t1)
 
 def dobench_numpy4(size1, size2, dtype=np.float64, ndim=1):
     if ndim == 2:
-        u = np.array([[0.1] * size1] * size2, dtype)
-        v = np.array([[0.2] * size1] * size2, dtype)
-        w = np.array([[0.3] * size1] * size2, dtype)
-        x = np.array([[0.4] * size1] * size2, dtype)
+        u = np.matrix([[0.1] * size1] * size2, dtype)
+        v = np.matrix([[0.2] * size1] * size2, dtype)
+        w = np.matrix([[0.3] * size1] * size2, dtype)
+        x = np.matrix([[0.4] * size1] * size2, dtype)
     elif ndim == 1:
-        u = np.array([0.1] * size1, dtype)
-        v = np.array([0.2] * size1, dtype)
-        w = np.array([0.3] * size1, dtype)
-        x = np.array([0.4] * size1, dtype)
-    y = u+v+w+x
+        u = np.matrix([0.1] * size1, dtype)
+        v = np.matrix([0.2] * size1, dtype)
+        w = np.matrix([0.3] * size1, dtype)
+        x = np.matrix([0.4] * size1, dtype)
+    y = u*v*w*x
     t1 = time.time()
-    for n in range(1000):
-        y = u+v+w+x
+    for n in range(100):
+        y = u*v*w*x
     t2 = time.time()
     return (t2 - t1)
 
      
-dt = np.float64
-ndim = 1
+dt = np.float32
+ndim = 2
 print("dtype: %s; ndim = %d; size = 2**n" % (np.dtype(dt).name, ndim))
 print()
-print("n\ty = x1 + x2\t\ty = x1 + x2 + x3 + x4\t\t(1000 times)")
+print("n\ty = x1 + x2\t\ty = x1 + x2 + x3 + x4\t\t(100 times)")
 for n in range(1,30):
     print("%d\t%s\t%s\t\tpyviennacl" % (n, 
                                         dobench2(2**n, 2**n, dt, ndim),0))#,

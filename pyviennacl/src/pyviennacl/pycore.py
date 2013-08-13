@@ -10,52 +10,62 @@ import logging, math
 
 try:
     from scipy import sparse
-    WITH_SCIPY = 1
+    WITH_SCIPY = True
 except:
-    WITH_SCIPY = 0
+    WITH_SCIPY = False
 
 log = logging.getLogger(__name__)
 
-# This dict is used to map NumPy dtypes onto OpenCL/ViennaCL scalar types
-HostScalarTypes = {
-    'int8': _v.statement_node_type.CHAR_TYPE,
-    'int16': _v.statement_node_type.SHORT_TYPE,
-    'int32': _v.statement_node_type.INT_TYPE,
-    'int64': _v.statement_node_type.LONG_TYPE,
-    'uint8': _v.statement_node_type.UCHAR_TYPE,
-    'uint16': _v.statement_node_type.USHORT_TYPE,
-    'uint32': _v.statement_node_type.UINT_TYPE,
-    'uint64': _v.statement_node_type.ULONG_TYPE,
-    'float16': _v.statement_node_type.HALF_TYPE,
-    'float32': _v.statement_node_type.FLOAT_TYPE,
-    'float64': _v.statement_node_type.DOUBLE_TYPE,
-    'float': _v.statement_node_type.DOUBLE_TYPE
-}
-
-# This dict maps ViennaCL scalar types onto the C++ strings used for them
-vcl_dtype_strings = {
-    _v.statement_node_type.COMPOSITE_OPERATION_TYPE: 'index',
-    _v.statement_node_type.CHAR_TYPE: 'char',
-    _v.statement_node_type.UCHAR_TYPE: 'uchar',
-    _v.statement_node_type.SHORT_TYPE: 'short',
-    _v.statement_node_type.USHORT_TYPE: 'ushort',
-    _v.statement_node_type.INT_TYPE: 'int',
-    _v.statement_node_type.UINT_TYPE: 'uint',
-    _v.statement_node_type.LONG_TYPE: 'long',
-    _v.statement_node_type.ULONG_TYPE: 'ulong',
-    _v.statement_node_type.HALF_TYPE: 'half',
-    _v.statement_node_type.FLOAT_TYPE: 'float',
-    _v.statement_node_type.DOUBLE_TYPE: 'double',
-}
-
 # This dict maps ViennaCL container type families onto the strings used for them
-vcl_container_type_strings = {
-    _v.statement_node_type_family.COMPOSITE_OPERATION_FAMILY: 'node',
-    _v.statement_node_type_family.HOST_SCALAR_TYPE_FAMILY: 'host',
-    _v.statement_node_type_family.SCALAR_TYPE_FAMILY: 'scalar',
-    _v.statement_node_type_family.VECTOR_TYPE_FAMILY: 'vector',
-    _v.statement_node_type_family.MATRIX_ROW_TYPE_FAMILY: 'matrix_row',
-    _v.statement_node_type_family.MATRIX_COL_TYPE_FAMILY: 'matrix_col'
+#vcl_statement_node_type_family_strings = {
+#    _v.statement_node_type_family.COMPOSITE_OPERATION_FAMILY: 'node',
+#    _v.statement_node_type_family.SCALAR_TYPE_FAMILY: None,
+#    _v.statement_node_type_family.VECTOR_TYPE_FAMILY: None,
+#    _v.statement_node_type_family.MATRIX_TYPE_FAMILY: None
+#}
+
+# This dict maps ViennaCL container subtypes onto the strings used for them
+vcl_statement_node_subtype_strings = {
+    _v.statement_node_subtype.INVALID_SUBTYPE: None,
+    _v.statement_node_subtype.HOST_SCALAR_TYPE: 'host',
+    _v.statement_node_subtype.DEVICE_SCALAR_TYPE: 'scalar',
+    _v.statement_node_subtype.DENSE_VECTOR_TYPE: 'vector',
+    _v.statement_node_subtype.IMPLICIT_VECTOR_TYPE: 'implicit_vector',
+    _v.statement_node_subtype.DENSE_ROW_MATRIX_TYPE: 'matrix_row',
+    _v.statement_node_subtype.DENSE_COL_MATRIX_TYPE: 'matrix_col',
+    _v.statement_node_subtype.IMPLICIT_MATRIX_TYPE: 'implicit_matrix'
+}
+
+# This dict maps ViennaCL numeric types onto the C++ strings used for them
+vcl_statement_node_numeric_type_strings = {
+    _v.statement_node_numeric_type.INVALID_NUMERIC_TYPE: 'index',
+    _v.statement_node_numeric_type.CHAR_TYPE: 'char',
+    _v.statement_node_numeric_type.UCHAR_TYPE: 'uchar',
+    _v.statement_node_numeric_type.SHORT_TYPE: 'short',
+    _v.statement_node_numeric_type.USHORT_TYPE: 'ushort',
+    _v.statement_node_numeric_type.INT_TYPE: 'int',
+    _v.statement_node_numeric_type.UINT_TYPE: 'uint',
+    _v.statement_node_numeric_type.LONG_TYPE: 'long',
+    _v.statement_node_numeric_type.ULONG_TYPE: 'ulong',
+    _v.statement_node_numeric_type.HALF_TYPE: 'half',
+    _v.statement_node_numeric_type.FLOAT_TYPE: 'float',
+    _v.statement_node_numeric_type.DOUBLE_TYPE: 'double',
+}
+
+# This dict is used to map NumPy dtypes onto OpenCL/ViennaCL numeric types
+HostScalarTypes = {
+    'int8': _v.statement_node_numeric_type.CHAR_TYPE,
+    'int16': _v.statement_node_numeric_type.SHORT_TYPE,
+    'int32': _v.statement_node_numeric_type.INT_TYPE,
+    'int64': _v.statement_node_numeric_type.LONG_TYPE,
+    'uint8': _v.statement_node_numeric_type.UCHAR_TYPE,
+    'uint16': _v.statement_node_numeric_type.USHORT_TYPE,
+    'uint32': _v.statement_node_numeric_type.UINT_TYPE,
+    'uint64': _v.statement_node_numeric_type.ULONG_TYPE,
+    'float16': _v.statement_node_numeric_type.HALF_TYPE,
+    'float32': _v.statement_node_numeric_type.FLOAT_TYPE,
+    'float64': _v.statement_node_numeric_type.DOUBLE_TYPE,
+    'float': _v.statement_node_numeric_type.DOUBLE_TYPE
 }
 
 # Constants for choosing matrix storage layout
@@ -273,6 +283,7 @@ class ScalarBase(Leaf):
     Because scalars are leaves in the ViennaCL expression graph, this class
     derives from the Leaf base class.
     """
+    statement_node_type_family = _v.statement_node_type_family.SCALAR_TYPE_FAMILY
     ndim = 0 # Scalars are point-like, and thus 0-dimensional
 
     def _init_leaf(self, args, kwargs):
@@ -296,7 +307,7 @@ class ScalarBase(Leaf):
             self.dtype = np_result_type(self._value)
 
         try:
-            self.statement_node_type = HostScalarTypes[self.dtype.name]
+            self.statement_node_numeric_type = HostScalarTypes[self.dtype.name]
         except KeyError:
             raise TypeError("dtype %s not supported" % self.dtype.name)
         except:
@@ -331,8 +342,8 @@ class HostScalar(ScalarBase):
 
     It derives from ScalarBase.
     """
-    statement_node_type_family = _v.statement_node_type_family.HOST_SCALAR_TYPE_FAMILY
-
+    statement_node_subtype = _v.statement_node_subtype.HOST_SCALAR_TYPE
+    
     def _init_scalar(self):
         self.vcl_leaf = self._value
 
@@ -346,13 +357,13 @@ class Scalar(ScalarBase):
 
     It derives from ScalarBase.
     """
-    statement_node_type_family = _v.statement_node_type_family.SCALAR_TYPE_FAMILY
+    statement_node_subtype = _v.statement_node_subtype.DEVICE_SCALAR_TYPE
 
     def _init_scalar(self):
         try:
-            vcl_type = getattr(_v, "scalar_" + vcl_dtype_strings[self.statement_node_type])
+            vcl_type = getattr(_v, "scalar_" + vcl_dtype_strings[self.statement_node_numeric_type])
         except (KeyError, AttributeError):
-            raise TypeError("ViennaCL type %s not supported" % self.statement_node_type)
+            raise TypeError("ViennaCL type %s not supported" % self.statement_node_numeric_type)
         self.vcl_leaf = vcl_type(self._value)
 
     @property
@@ -373,6 +384,7 @@ class Vector(Leaf):
     """
     ndim = 1
     statement_node_type_family = _v.statement_node_type_family.VECTOR_TYPE_FAMILY
+    statement_node_subtype = _v.statement_node_subtype.DENSE_VECTOR_TYPE
 
     def _init_leaf(self, args, kwargs):
         """
@@ -421,12 +433,15 @@ class Vector(Leaf):
         if self.dtype is None: # ie, still None, even after checks -- so guess
             self.dtype = dtype(float64)
 
-        self.statement_node_type = HostScalarTypes[self.dtype.name]
+        self.statement_node_numeric_type = HostScalarTypes[self.dtype.name]
 
         try:
-            vcl_type = getattr(_v, "vector_" + vcl_dtype_strings[self.statement_node_type])
+            vcl_type = getattr(_v,
+                               "vector_" + vcl_dtype_strings[
+                                   self.statement_node_numeric_type])
         except (KeyError, AttributeError):
-            raise TypeError("dtype %s not supported" % self.statement_node_type)
+            raise TypeError(
+                "dtype %s not supported" % self.statement_node_numeric_type)
         self.vcl_leaf = get_leaf(vcl_type)
         self.size = self.vcl_leaf.size
         self.shape = (self.size,)
@@ -485,7 +500,7 @@ class Vector(Leaf):
             tmp_m[i][i] = tmp_v[i]
         return Matrix(tmp_m, dtype=self.dtype) # Ought to update this to sparse
 
-    @deprecated
+    #@deprecated
     def __mul__(self, rhs):
         if isinstance(rhs, Vector):
             #return ElementMul(self, rhs) # TODO: ..NOT YET IMPLEMENTED
@@ -510,6 +525,7 @@ class Matrix(Leaf):
     TODO: Expand this documentation.
     """
     ndim = 2
+    statement_node_type_family = _v.statement_node_type_family.MATRIX_TYPE_FAMILY
 
     def _init_leaf(self, args, kwargs):
         """
@@ -525,13 +541,13 @@ class Matrix(Leaf):
         if 'layout' in kwargs.keys():
             if kwargs['layout'] == COL_MAJOR:
                 self.layout = COL_MAJOR
-                self.statement_node_type_family = _v.statement_node_type_family.MATRIX_COL_TYPE_FAMILY
+                self.statement_node_subtype = _v.statement_node_subtype.DENSE_COL_MATRIX_TYPE
             else:
                 self.layout = ROW_MAJOR
-                self.statement_node_type_family = _v.statement_node_type_family.MATRIX_ROW_TYPE_FAMILY
+                self.statement_node_subtype = _v.statement_node_subtype.DENSE_ROW_MATRIX_TYPE
         else:
             self.layout = ROW_MAJOR
-            self.statement_node_type_family = _v.statement_node_type_family.MATRIX_ROW_TYPE_FAMILY
+            self.statement_node_subtype = _v.statement_node_subtype.DENSE_ROW_MATRIX_TYPE
 
         if len(args) == 0:
             def get_leaf(vcl_t):
@@ -574,15 +590,16 @@ class Matrix(Leaf):
         if self.dtype is None: # ie, still None, even after checks -- so guess
             self.dtype = dtype(float64)
 
-        self.statement_node_type = HostScalarTypes[self.dtype.name]
+        self.statement_node_numeric_type = HostScalarTypes[self.dtype.name]
 
         try:
             vcl_type = getattr(_v,
                                "matrix_" + 
                                vcl_layout_strings[self.layout] + "_" + 
-                               vcl_dtype_strings[self.statement_node_type])
+                               vcl_statement_node_numeric_type_strings[
+                                   self.statement_node_numeric_type])
         except (KeyError, AttributeError):
-            raise TypeError("dtype %s not supported" % self.statement_node_type)
+            raise TypeError("dtype %s not supported" % self.statement_node_numeric_type)
 
         self.vcl_leaf = get_leaf(vcl_type)
         self.size1 = self.vcl_leaf.size1
@@ -669,7 +686,7 @@ class Matrix(Leaf):
         return self.vcl_leaf.trans
     trans = T
 
-    @deprecated
+    #@deprecated
     def __mul__(self, rhs):
         if isinstance(rhs, Matrix):
             return Matrix(self.vcl_leaf * rhs.vcl_leaf, dtype=self.dtype)
@@ -692,7 +709,8 @@ class Node(MagicMethods):
     """
     
     statement_node_type_family = _v.statement_node_type_family.COMPOSITE_OPERATION_FAMILY
-    statement_node_type = _v.statement_node_type.COMPOSITE_OPERATION_TYPE
+    statement_node_subtype = _v.statement_node_subtype.INVALID_SUBTYPE
+    statement_node_numeric_type = _v.statement_node_numeric_type.INVALID_NUMERIC_TYPE
 
     def __init__(self, *args):
         """
@@ -741,20 +759,24 @@ class Node(MagicMethods):
             # Set up the ViennaCL statement_node with two operands
             self.vcl_node = _v.statement_node(
                 self.operands[0].statement_node_type_family,   # lhs
-                self.operands[0].statement_node_type,          # lhs
+                self.operands[0].statement_node_subtype,       # lhs
+                self.operands[0].statement_node_numeric_type,  # lhs
                 self.operation_node_type_family,               # op
                 self.operation_node_type,                      # op
                 self.operands[1].statement_node_type_family,   # rhs
-                self.operands[1].statement_node_type)          # rhs
+                self.operands[1].statement_node_subtype,       # rhs
+                self.operands[1].statement_node_numeric_type)  # rhs
         else:
             # Set up the ViennaCL statement_node with one operand, twice..
             self.vcl_node = _v.statement_node(
                 self.operands[0].statement_node_type_family,   # lhs
-                self.operands[0].statement_node_type,          # lhs
+                self.operands[0].statement_node_subtype,       # lhs
+                self.operands[0].statement_node_numeric_type,  # lhs
                 self.operation_node_type_family,               # op
                 self.operation_node_type,                      # op
                 self.operands[0].statement_node_type_family,   # rhs
-                self.operands[0].statement_node_type)          # rhs
+                self.operands[0].statement_node_subtype,       # rhs
+                self.operands[0].statement_node_numeric_type)  # rhs
 
     def _extra_init(self):
         pass
@@ -769,9 +791,11 @@ class Node(MagicMethods):
         """
         vcl_operand_setter = [
             "set_operand_to_",
-            vcl_container_type_strings[operand.statement_node_type_family],
+            vcl_statement_node_subtype_strings[
+                operand.statement_node_subtype],
             "_",
-            vcl_dtype_strings[operand.statement_node_type] ]
+            vcl_statement_node_numeric_type_strings[
+                operand.statement_node_numeric_type] ]
         return getattr(self.vcl_node,
                        "".join(vcl_operand_setter))
 

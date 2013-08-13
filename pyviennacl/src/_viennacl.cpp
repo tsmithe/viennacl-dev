@@ -12,7 +12,7 @@
 
 #define VIENNACL_DEBUG_BUILD
 #define VIENNACL_WITH_UBLAS
-//#define VIENNACL_WITH_OPENCL
+#define VIENNACL_WITH_OPENCL
 #include <viennacl/backend/memory.hpp>
 #include <viennacl/linalg/cg.hpp>
 #include <viennacl/linalg/bicgstab.hpp>
@@ -826,18 +826,22 @@ public:
   { }
 
   statement_node_wrapper(vcl::scheduler::statement_node_type_family lhs_family,
-			 vcl::scheduler::statement_node_type lhs_type,
+			 vcl::scheduler::statement_node_subtype lhs_subtype,
+			 vcl::scheduler::statement_node_numeric_type lhs_numeric_type,
 			 vcl::scheduler::operation_node_type_family op_family,
 			 vcl::scheduler::operation_node_type op_type,
 			 vcl::scheduler::statement_node_type_family rhs_family,
-			 vcl::scheduler::statement_node_type rhs_type)
+			 vcl::scheduler::statement_node_subtype rhs_subtype,
+			 vcl::scheduler::statement_node_numeric_type rhs_numeric_type)
   {
     vcl_node.op.type_family = op_family;
     vcl_node.op.type = op_type;
     vcl_node.lhs.type_family = lhs_family;
-    vcl_node.lhs.type = lhs_type;
+    vcl_node.lhs.subtype = lhs_subtype;
+    vcl_node.lhs.numeric_type = lhs_numeric_type;
     vcl_node.rhs.type_family = rhs_family;
-    vcl_node.rhs.type = rhs_type;
+    vcl_node.rhs.subtype = rhs_subtype;
+    vcl_node.rhs.numeric_type = rhs_numeric_type;
   }
 
   vcl::scheduler::statement_node& get_vcl_statement_node()
@@ -862,7 +866,7 @@ public:
       vcl_node.rhs.I  = I;					   \
       break;							   \
     default:							   \
-      throw vcl::scheduler::statement_not_supported_exception \
+      throw vcl::scheduler::statement_not_supported_exception      \
 	("Only support operands 0 or 1");			   \
     }								   \
   }
@@ -1590,15 +1594,26 @@ BOOST_PYTHON_MODULE(_viennacl)
   bp::enum_<vcl::scheduler::statement_node_type_family>
     ("statement_node_type_family")
     VALUE(vcl::scheduler, COMPOSITE_OPERATION_FAMILY)
-    VALUE(vcl::scheduler, HOST_SCALAR_TYPE_FAMILY)
     VALUE(vcl::scheduler, SCALAR_TYPE_FAMILY)
     VALUE(vcl::scheduler, VECTOR_TYPE_FAMILY)
-    VALUE(vcl::scheduler, MATRIX_ROW_TYPE_FAMILY)
-    VALUE(vcl::scheduler, MATRIX_COL_TYPE_FAMILY)
+    VALUE(vcl::scheduler, MATRIX_TYPE_FAMILY)
     ;
 
-  bp::enum_<vcl::scheduler::statement_node_type>("statement_node_type")
-    VALUE(vcl::scheduler, COMPOSITE_OPERATION_TYPE)
+  bp::enum_<vcl::scheduler::statement_node_subtype>
+    ("statement_node_subtype")
+    VALUE(vcl::scheduler, INVALID_SUBTYPE)
+    VALUE(vcl::scheduler, HOST_SCALAR_TYPE)
+    VALUE(vcl::scheduler, DEVICE_SCALAR_TYPE)
+    VALUE(vcl::scheduler, DENSE_VECTOR_TYPE)
+    VALUE(vcl::scheduler, IMPLICIT_VECTOR_TYPE)
+    VALUE(vcl::scheduler, DENSE_ROW_MATRIX_TYPE)
+    VALUE(vcl::scheduler, DENSE_COL_MATRIX_TYPE)
+    VALUE(vcl::scheduler, IMPLICIT_MATRIX_TYPE)
+    ;
+
+  bp::enum_<vcl::scheduler::statement_node_numeric_type>
+    ("statement_node_numeric_type")
+    VALUE(vcl::scheduler, INVALID_NUMERIC_TYPE)
 
     VALUE(vcl::scheduler, CHAR_TYPE)
     VALUE(vcl::scheduler, UCHAR_TYPE)
@@ -1640,11 +1655,13 @@ DISAMBIGUATE_CLASS_FUNCTION_PTR(statement_node_wrapper,         // class
   bp::class_<statement_node_wrapper>("statement_node",
 				     bp::init<statement_node_wrapper>())
     .def(bp::init<vcl::scheduler::statement_node_type_family,  // lhs
-	 vcl::scheduler::statement_node_type,                  // lhs
+	 vcl::scheduler::statement_node_subtype,               // lhs
+	 vcl::scheduler::statement_node_numeric_type,          // lhs
 	 vcl::scheduler::operation_node_type_family,           // op
 	 vcl::scheduler::operation_node_type,                  // op
 	 vcl::scheduler::statement_node_type_family,           // rhs
-	 vcl::scheduler::statement_node_type>())               // rhs
+	 vcl::scheduler::statement_node_subtype,               // rhs
+	 vcl::scheduler::statement_node_numeric_type>())       // rhs
     SET_OPERAND(node_index)
     SET_OPERAND(host_char)
     SET_OPERAND(host_uchar)
