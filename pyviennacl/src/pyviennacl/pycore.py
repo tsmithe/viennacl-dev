@@ -26,7 +26,7 @@ log = logging.getLogger(__name__)
 
 # This dict maps ViennaCL container subtypes onto the strings used for them
 vcl_statement_node_subtype_strings = {
-    _v.statement_node_subtype.INVALID_SUBTYPE: None,
+    _v.statement_node_subtype.INVALID_SUBTYPE: 'node',
     _v.statement_node_subtype.HOST_SCALAR_TYPE: 'host',
     _v.statement_node_subtype.DEVICE_SCALAR_TYPE: 'scalar',
     _v.statement_node_subtype.DENSE_VECTOR_TYPE: 'vector',
@@ -361,7 +361,7 @@ class Scalar(ScalarBase):
 
     def _init_scalar(self):
         try:
-            vcl_type = getattr(_v, "scalar_" + vcl_dtype_strings[self.statement_node_numeric_type])
+            vcl_type = getattr(_v, "scalar_" + vcl_statement_node_numeric_type_strings[self.statement_node_numeric_type])
         except (KeyError, AttributeError):
             raise TypeError("ViennaCL type %s not supported" % self.statement_node_numeric_type)
         self.vcl_leaf = vcl_type(self._value)
@@ -437,7 +437,7 @@ class Vector(Leaf):
 
         try:
             vcl_type = getattr(_v,
-                               "vector_" + vcl_dtype_strings[
+                               "vector_" + vcl_statement_node_numeric_type_strings[
                                    self.statement_node_numeric_type])
         except (KeyError, AttributeError):
             raise TypeError(
@@ -510,61 +510,86 @@ class Vector(Leaf):
             return op
 
 
-class HostCompressedMatrix(Leaf):
+class SparseMatrixBase(Leaf):
     """
-    TODO: CPU compressed_matrix...
+    TODO: docstring
     """
     ndim = 2
     statement_node_type_family = None # Not a ViennaCL type
 
     def _init_leaf(self, args, kwargs):
-        if 'shape' in kwargs.keys():
-            if len(kwargs['shape']) != 2:
-                raise TypeError("Matrix can only have a 2-d shape")
-            args = list(args)
-            args.insert(0, kwargs['shape'])
+        #if 'shape' in kwargs.keys():
+        #    if len(kwargs['shape']) != 2:
+        #        raise TypeError("Matrix can only have a 2-d shape")
+        #    args = list(args)
+        #    args.insert(0, kwargs['shape'])
 
         if 'layout' in kwargs.keys():
             if kwargs['layout'] == COL_MAJOR:
                 raise TypeError("COL_MAJOR sparse layout not yet supported")
                 self.layout = COL_MAJOR
-                self.statement_node_subtype = _v.statement_node_subtype.DENSE_COL_MATRIX_TYPE
             else:
                 self.layout = ROW_MAJOR
-                self.statement_node_subtype = _v.statement_node_subtype.DENSE_ROW_MATRIX_TYPE
         else:
             self.layout = ROW_MAJOR
-            self.statement_node_subtype = _v.statement_node_subtype.DENSE_ROW_MATRIX_TYPE
 
-        # TODO: DEAL WITH args HERE
-        def get_leaf(vcl_t):
-            return vcl_t()
+        self._init_sparse(args, kwargs)
 
-        if self.dtype is None: # ie, still None, even after checks -- so guess
-            self.dtype = dtype(float64)
+        # TODO: DEAL WITH args HERE IN ORDER CORRECTLY TO CONSTRUCT CPU SPARSE
+        def get_cpu_leaf(cpu_t):
+            return cpu_t()
 
         self.statement_node_numeric_type = HostScalarTypes[self.dtype.name]
 
         try:
-            #vcl_type = getattr(_v,
-            #                   "matrix_" + 
-            #                   vcl_layout_strings[self.layout] + "_" + 
-            #                   vcl_statement_node_numeric_type_strings[
-            #                       self.statement_node_numeric_type])
-            vcl_type = _v.cpu_compressed_matrix_double
+            self.cpu_leaf_type = getattr(
+                _v,
+                "cpu_compressed_matrix_" + 
+                vcl_statement_node_numeric_type_strings[
+                    self.statement_node_numeric_type])
         except (KeyError, AttributeError):
             raise TypeError("dtype %s not supported" % self.statement_node_numeric_type)
 
-        self.vcl_leaf = get_leaf(vcl_type)
-        self.nnz = self.vcl_leaf.nnz
-        self.size1 = self.vcl_leaf.size1
-        self.size2 = self.vcl_leaf.size2
-        self.size = self.size1 * self.size2 # Flat size
-        self.shape = (self.size1, self.size2)
+        self.cpu_leaf = get_cpu_leaf(self.cpu_leaf_type)
+        self.base = self
+
+    @property
+    def nonzeros(self):
+        return self.cpu_leaf.nonzeros
+
+    @property
+    def nnz(self):
+        return self.cpu_leaf.nnz
+
+    @property
+    def size1(self):
+        return self.cpu_leaf.size1
+
+    @property
+    def size2(self):
+        return self.cpu_leaf.size2
+
+    @property
+    def size(self):
+        return self.size1 * self.size2 # Flat size
+
+    @property
+    def shape(self):
+        return (self.size1, self.size2)
+
+    def resize(self, size1, size2):
+        return self.cpu_leaf.resize(size1, size2)
+
+    def as_ndarray(self):
+        return self.cpu_leaf.as_ndarray()
 
     def __getitem__(self, key):
         # TODO: extend beyond tuple keys
-        return self.vcl_leaf.get(key[0], key[1])
+        if not isinstance(key, tuple):
+            raise KeyError("Key must be a 2-tuple")
+        if len(key) != 2:
+            raise KeyError("Key must be a 2-tuple")
+        return self.cpu_leaf.get(key[0], key[1])
 
     def __setitem__(self, key, value):
         """
@@ -572,20 +597,37 @@ class HostCompressedMatrix(Leaf):
         + Set a key-value pair (key as 2-tuple)
         + More key possibilities
         """
-        return self.vcl_leaf.set(key[0], key[1], value)
+        if not isinstance(key, tuple):
+            raise KeyError("Key must be a 2-tuple")
+        if len(key) != 2:
+            raise KeyError("Key must be a 2-tuple")
+        self.cpu_leaf.set(key[0], key[1], (self[key] + value))
+        self.nnz # Updates nonzero list
 
-    def to_device(self):
-        return DeviceCompressedMatrix(self)
+    def __delitem__(self, key):
+        if not isinstance(key, tuple):
+            raise KeyError("Key must be a 2-tuple")
+        if len(key) != 2:
+            raise KeyError("Key must be a 2-tuple")
+        self[key] = 0
+        self.nnz # Updates nonzero list
+
+    def __str__(self):
+        out = []
+        for coord in self.nonzeros:
+            out += ["(", "{}".format(coord[0]), ",", "{}".format(coord[1]),
+                    ")\t\t", "{}".format(self[coord]), "\n"]
+        out = out[:-1]
+        return "".join(out)
 
 
-class DeviceCompressedMatrix(Leaf):
+class CompressedMatrix(SparseMatrixBase):
     """
     TODO: VCL compressed_matrix...
     """
-    ndim = 2
     statement_node_type_family = None # Not supported in scheduler yet
 
-    def _init_leaf(self, args, kwargs):
+    def _init_sparse(self, args, kwargs):
         """
         TODO: DOCSTRING
 
@@ -595,37 +637,12 @@ class DeviceCompressedMatrix(Leaf):
 
         NB: *Lazily* construct VCL compressed matrix, when needed.
         """
-        if len(args) == 1:
-            temp = args[0]
-            self.layout = temp.layout
-            self.dtype = temp.dtype
-            self.vcl_leaf = temp.vcl_leaf.as_compressed_matrix()
-        else:
-            self.layout = ROW_MAJOR
-            self.dtype = dtype(float64)
-            self.vcl_leaf = _v.cpu_compressed_matrix_double().as_compressed_matrix()
+        self.dtype = dtype(float64)
 
-        self.nnz = self.vcl_leaf.nnz
-        self.size1 = self.vcl_leaf.size1
-        self.size2 = self.vcl_leaf.size2
-        self.shape = (self.size1, self.size2)
-
-    def __getitem__(self, key):
-        # TODO: EXTEND THIS
-        temp = _v.cpu_compressed_matrix_double(self.vcl_leaf)
-        return temp.get(key[0], key[1])
-
-    def __setitem__(self, key, value):
-        # TODO: EXTEND THIS
-        # NB: THIS CURRENTLY INVALIDATES THE GIVEN VCL MATRIX
-        temp = _v.cpu_compressed_matrix_double(self.vcl_leaf)
-        temp.set(key[0], key[1], value)
-        del self.vcl_leaf
-        self.vcl_leaf = temp.as_compressed_matrix()
-
-    def as_ndarray(self):
-        temp = _v.cpu_compressed_matrix_double(self.vcl_leaf)
-        return temp.as_ndarray()
+        # TODO: THIS ISN'T SEMANTICALLY QUITE RIGHT..
+        def get_vcl_t():
+            return self.cpu_leaf.as_compressed_matrix
+        self.vcl_leaf_type = property(get_vcl_t)
 
 
 class Matrix(Leaf):
@@ -1181,27 +1198,27 @@ class Mul(Node):
     }
 
     def _extra_init(self):
-        if isinstance(self.operands[0], Matrix): # Matrix * ...
-            if isinstance(self.operands[1], Matrix):
+        if self.operands[0].result_container_type == Matrix: # Matrix * ...
+            if self.operands[1].result_container_type == Matrix:
                 self.operation_node_type = _v.operation_node_type.OPERATION_BINARY_MAT_MAT_PROD_TYPE
-            elif isinstance(self.operands[1], Vector):
+            elif self.operands[1].result_container_type == Vector:
                 self.operation_node_type = _v.operation_node_type.OPERATION_BINARY_MAT_VEC_PROD_TYPE
-            elif isinstance(self.operands[1], Scalar):
+            elif self.operands[1].result_container_type == Scalar:
                 self.operation_node_type = _v.operation_node_type.OPERATION_BINARY_MULT_TYPE
-            elif isinstance(self.operands[1], HostScalar):
-                self.operation_node_type = _v.operation_node_type.OPERATION_BINARY_MULT_TYPE
-            else:
-                self.operation_node_type = None
-        elif isinstance(self.operands[0], Vector): # Vector * ...
-            if isinstance(self.operands[1], Scalar):
-                self.operation_node_type = _v.operation_node_type.OPERATION_BINARY_MULT_TYPE
-            elif isinstance(self.operands[1], HostScalar):
+            elif self.operands[1].result_container_type == HostScalar:
                 self.operation_node_type = _v.operation_node_type.OPERATION_BINARY_MULT_TYPE
             else:
                 self.operation_node_type = None
-        #elif isinstance(self.operands[0], Scalar): 
+        elif self.operands[0].result_container_type == Vector: # Vector * ...
+            if self.operands[1].result_container_type == Scalar:
+                self.operation_node_type = _v.operation_node_type.OPERATION_BINARY_MULT_TYPE
+            elif self.operands[1].result_container_type == HostScalar:
+                self.operation_node_type = _v.operation_node_type.OPERATION_BINARY_MULT_TYPE
+            else:
+                self.operation_node_type = None
+        #elif self.operands[0].result_container_type == Scalar: 
         #    pass
-        #elif isinstance(self.operands[0], HostScalar):
+        #elif self.operands[0].result_container_type == HostScalar:
         #    pass
         else:
             self.operation_node_type = None
@@ -1221,7 +1238,7 @@ class Div(Node):
     operation_node_type = _v.operation_node_type.OPERATION_BINARY_DIV_TYPE
 
 
-class ElementMul(Node):
+class ElementProd(Node):
     """
     Derived node class for element-wise multiplication. Provides convenience
     magic methods for arithmetic.
@@ -1230,7 +1247,7 @@ class ElementMul(Node):
         ('Vector', 'Vector'): Vector,
         ('Matrix', 'Matrix'): Matrix
     }
-    operation_node_type = _v.operation_node_type.OPERATION_BINARY_ELEMENT_MULT_TYPE
+    operation_node_type = _v.operation_node_type.OPERATION_BINARY_ELEMENT_PROD_TYPE
 
 
 class ElementDiv(Node):
@@ -1290,6 +1307,7 @@ class Statement:
         if isinstance(node, Assign):
             self.result = node.operands[0]
         else:
+            print("shape:", node.result_shape)
             self.result = node.result_container_type(
                 shape = node.result_shape,
                 dtype = node.dtype )

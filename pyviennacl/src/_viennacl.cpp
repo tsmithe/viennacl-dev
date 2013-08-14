@@ -616,42 +616,25 @@ class cpu_compressed_matrix_wrapper
 {
   // TODO: This is just a quick first implementation. Later, I may well want 
   // TODO: a version that doesn't depend on boost.python types.
-  bp::list places;
+  typedef ublas::compressed_matrix<ScalarType, ublas::row_major> ublas_sparse_t;
+  ublas_sparse_t cpu_compressed_matrix;
 
 public:
-  ublas::compressed_matrix<ScalarType, ublas::row_major> cpu_compressed_matrix;
-
-  bp::list const& update_places()
-  {
-
-    for (uint32_t i = 0; i < size1(); ++i) {
-      for (uint32_t j = 0; j < size2(); ++j) {
-	if (cpu_compressed_matrix(i, j) != 0) {
-	  places.append(bp::make_tuple(i, j));
-	}
-      }
-    }
-
-    return places;
-
-  }
+  bp::list places;
 
   cpu_compressed_matrix_wrapper()
   {
-    cpu_compressed_matrix = ublas::compressed_matrix<ScalarType, ublas::row_major>
-      (0,0,0);
+    cpu_compressed_matrix = ublas_sparse_t(0,0,0);
   }
 
   cpu_compressed_matrix_wrapper(uint32_t _size1, uint32_t _size2)
   {
-    cpu_compressed_matrix = ublas::compressed_matrix<ScalarType, ublas::row_major>
-      (_size1, _size2);
+    cpu_compressed_matrix = ublas_sparse_t(_size1, _size2);
   }
 
   cpu_compressed_matrix_wrapper(uint32_t _size1, uint32_t _size2, uint32_t _nnz)
   {
-    cpu_compressed_matrix = 
-      ublas::compressed_matrix<ScalarType, ublas::row_major>(_size1, _size2, _nnz);
+    cpu_compressed_matrix = ublas_sparse_t(_size1, _size2, _nnz);
   }
 
   cpu_compressed_matrix_wrapper(cpu_compressed_matrix_wrapper const& w)
@@ -663,8 +646,8 @@ public:
   template<class SparseT>
   cpu_compressed_matrix_wrapper(SparseT const& vcl_sparse_matrix)
   {
-    cpu_compressed_matrix = ublas::compressed_matrix<ScalarType, ublas::row_major>
-      (vcl_sparse_matrix.size1(), vcl_sparse_matrix.size2());
+    cpu_compressed_matrix = ublas_sparse_t(vcl_sparse_matrix.size1(),
+                                           vcl_sparse_matrix.size2());
     vcl::copy(vcl_sparse_matrix, cpu_compressed_matrix);
     
     update_places();
@@ -672,18 +655,6 @@ public:
 
   cpu_compressed_matrix_wrapper(np::ndarray const& array)
   {
-
-    // TODO: THIS IS VERY INEFFICIENT
-    //
-    // Doing things this way means we need at least 2x the amount of memory
-    // required to store the data for the ndarray, just in order to construct
-    // a sparse array on the compute device (which may itself take up
-    // substantially less memory than the original densely stored ndarray..)
-    //
-    // Ultimately, it would be better to wrap the ndarray with the features
-    // required by vcl::copy -- but this is a good first go, in that it is
-    // a straightforward implementation, and is functional enough to use
-    // and for which to write regression tests.
 
     int d = array.get_nd();
     if (d != 2) {
@@ -694,8 +665,7 @@ public:
     uint32_t n = array.shape(0);
     uint32_t m = array.shape(1);
     
-    cpu_compressed_matrix = ublas::compressed_matrix<ScalarType, 
-                                                     ublas::row_major>(n, m);
+    cpu_compressed_matrix = ublas_sparse_t(n, m);
     
     for (uint32_t i = 0; i < n; ++i) {
       for (uint32_t j = 0; j < m; ++j) {
@@ -712,17 +682,16 @@ public:
   np::ndarray as_ndarray()
   {
 
-    // TODO: This is currently a naive implementation
-
     np::dtype dt = np::dtype::get_builtin<ScalarType>();
     bp::tuple shape = bp::make_tuple(size1(), size2());
     
-    np::ndarray array = np::empty(shape, dt);
+    np::ndarray array = np::zeros(shape, dt);
   
-    for (uint32_t i = 0; i < size1(); ++i) {
-      for (uint32_t j = 0; j < size2(); ++j) {
-	array[i][j] = (ScalarType) cpu_compressed_matrix(i, j);
-      }
+    for (std::size_t i = 0; i < bp::len(places); ++i) {
+      bp::tuple coord = bp::extract<bp::tuple>(places[i]);
+      uint32_t x = bp::extract<uint32_t>(coord[0]);
+      uint32_t y = bp::extract<uint32_t>(coord[1]);
+      array[x][y] = get(x, y);
     }
 
     return array;
@@ -743,6 +712,33 @@ public:
     SparseT vcl_sparse_matrix(size1(), size2(), nnz());
     vcl::copy(cpu_compressed_matrix, vcl_sparse_matrix);
     return vcl_sparse_matrix;
+  }
+
+  void update_places()
+  {
+    typedef typename ublas_sparse_t::iterator1 it1;
+    typedef typename ublas_sparse_t::iterator2 it2;
+
+    for (it1 i = cpu_compressed_matrix.begin1();
+         i != cpu_compressed_matrix.end1(); ++i) {
+      for (it2 j = i.begin(); j != i.end(); ++j) {
+
+	if (cpu_compressed_matrix(j.index1(), j.index2()) != 0) {
+          bp::tuple coord = bp::make_tuple(j.index1(), j.index2());
+          if (not places.count(coord)) {
+            places.append(coord);
+          } else {
+            while (places.count(coord) > 1) {
+              places.remove(coord);
+            }
+          }          
+        }
+
+      }
+    }
+
+    nnz();
+
   }
 
   uint32_t nnz()
@@ -769,17 +765,6 @@ public:
 
   }
 
-  bp::object resize(uint32_t _size1, uint32_t _size2)
-  {
-  
-    if ((_size1 == size1()) and (_size2 == size2()))
-      return bp::object();
-
-    cpu_compressed_matrix.resize(_size1, _size2, false);
-
-    return bp::object();
-  }
-
   uint32_t size1() const
   {
     return cpu_compressed_matrix.size1();
@@ -790,21 +775,44 @@ public:
     return cpu_compressed_matrix.size2();
   }
 
-  bp::object set(uint32_t n, uint32_t m, ScalarType val) 
+  void resize(uint32_t _size1, uint32_t _size2)
+  {
+  
+    if (_size1 < size1())
+      _size1 = size1();
+
+    if (_size2 < size2())
+      _size2 = size2();
+
+    if ((_size1 == size1()) and (_size2 == size2()))
+      return;
+
+    // TODO NB: ublas compressed matrix does not support preserve on resize
+    //          so this below is annoyingly hacky...
+
+    cpu_compressed_matrix_wrapper temp(*this);
+    cpu_compressed_matrix.resize(_size1, _size2, false); // preserve == false!
+
+    for (std::size_t i = 0; i < bp::len(places); ++i) {
+      bp::tuple coord = bp::extract<bp::tuple>(places[i]);
+      uint32_t x = bp::extract<uint32_t>(coord[0]);
+      uint32_t y = bp::extract<uint32_t>(coord[1]);
+      cpu_compressed_matrix(x, y) = temp.get(x, y);
+    }
+
+  }
+
+  void set(uint32_t n, uint32_t m, ScalarType val) 
   {
     if (n >= size1() or m >= size2())
       resize(n+1, m+1);
 
     // We want to keep track of which places are filled.
-    // If you access an unfilled location, then this increments the place list.
-    // But the nnz() function checks for zeros at places referenced in that
-    // list, so such increments don't matter, except for time wasted.
-    bp::tuple loc = bp::make_tuple(n, m);
-    if (not places.count(loc))
-      places.append(loc);
+    bp::tuple coord = bp::make_tuple(n, m);
+    if (not places.count(coord))
+      places.append(coord);
 
     cpu_compressed_matrix(n, m) = val;
-    return bp::object();
   }
 
   // Need this because bp cannot deal with operator()
@@ -1403,9 +1411,11 @@ BOOST_PYTHON_MODULE(_viennacl)
     .def(bp::init<vcl::compressed_matrix<double> >())
     //.def(bp::init<vcl_coordinate_matrix_t>())
     .def(bp::init<np::ndarray>())
+    .def_readonly("nonzeros", &cpu_compressed_matrix_wrapper<double>::places)
     .add_property("nnz", &cpu_compressed_matrix_wrapper<double>::nnz)
     .add_property("size1", &cpu_compressed_matrix_wrapper<double>::size1)
     .add_property("size2", &cpu_compressed_matrix_wrapper<double>::size2)
+    .def("resize", &cpu_compressed_matrix_wrapper<double>::resize)
     .def("set", &cpu_compressed_matrix_wrapper<double>::set)
     .def("get", &cpu_compressed_matrix_wrapper<double>::get)
     .def("as_ndarray", &cpu_compressed_matrix_wrapper<double>::as_ndarray)
@@ -1581,7 +1591,7 @@ BOOST_PYTHON_MODULE(_viennacl)
     VALUE(vcl::scheduler, OPERATION_BINARY_MAT_MAT_PROD_TYPE)
     VALUE(vcl::scheduler, OPERATION_BINARY_MULT_TYPE)// scalar * vector/matrix
     VALUE(vcl::scheduler, OPERATION_BINARY_DIV_TYPE) // vector/matrix / scalar
-    VALUE(vcl::scheduler, OPERATION_BINARY_ELEMENT_MULT_TYPE)
+    VALUE(vcl::scheduler, OPERATION_BINARY_ELEMENT_PROD_TYPE)
     VALUE(vcl::scheduler, OPERATION_BINARY_ELEMENT_DIV_TYPE)
     VALUE(vcl::scheduler, OPERATION_BINARY_INNER_PROD_TYPE)
     ;
