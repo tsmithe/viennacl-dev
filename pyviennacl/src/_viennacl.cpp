@@ -137,35 +137,28 @@ struct pyvcl_op
       extraction: operand2, operand3, and operand4.
       
     */
-    
+
+    /*    
     if (PyObjs & 8) {
       operand1 = static_cast<Operand1T>
 	(bp::extract<Operand1T>((bp::api::object)opand1));
-    } else {
-      operand1 = opand1;
     }
     
     if (PyObjs & 4) {
       operand2 = static_cast<Operand2T>
 	(bp::extract<Operand2T>((bp::api::object)opand2));
-    } else {
-      operand2 = opand2;
     }
     
     if (PyObjs & 2) {
       operand3 = static_cast<Operand3T>
 	(bp::extract<Operand3T>((bp::api::object)opand3));
-    } else {
-      operand3 = opand3;
     }
     
     if (PyObjs & 1) {
       operand4 = static_cast<Operand4T>
 	(bp::extract<Operand4T>((bp::api::object)opand4));
-    } else {
-      operand4 = opand4;
     }
-    
+    //*/
   }    
 
   // Should I just use operator(), I wonder..
@@ -368,7 +361,7 @@ DO_OP_FUNC(op_inplace_solve)
 // Scalar
 
 /** @brief Returns a double describing the VCL_T */
-cpu_scalar_t vcl_scalar_to_float(vcl_scalar_t const& vcl_s)
+cpu_scalar_t vcl_scalar_to_float(const vcl_scalar_t& vcl_s)
 {
   cpu_scalar_t cpu_s = vcl_s;
   return cpu_s;
@@ -377,7 +370,7 @@ cpu_scalar_t vcl_scalar_to_float(vcl_scalar_t const& vcl_s)
 // Vector -- std::vector
 
 template <class SCALARTYPE>
-bp::list std_vector_to_list(std::vector<SCALARTYPE> const& v)
+bp::list std_vector_to_list(const std::vector<SCALARTYPE>& v)
 {
   bp::list l;
   for (unsigned int i = 0; i < v.size(); ++i)
@@ -387,7 +380,7 @@ bp::list std_vector_to_list(std::vector<SCALARTYPE> const& v)
 }
 
 template <class SCALARTYPE>
-np::ndarray std_vector_to_ndarray(std::vector<SCALARTYPE> const& v)
+np::ndarray std_vector_to_ndarray(const std::vector<SCALARTYPE>& v)
 {
   return np::from_object(std_vector_to_list<SCALARTYPE>(v),
 			 np::dtype::get_builtin<SCALARTYPE>());
@@ -395,7 +388,7 @@ np::ndarray std_vector_to_ndarray(std::vector<SCALARTYPE> const& v)
 
 template <class SCALARTYPE>
 boost::shared_ptr<std::vector<SCALARTYPE> >
-std_vector_init_ndarray(np::ndarray const& array)
+std_vector_init_ndarray(const np::ndarray& array)
 {
   int d = array.get_nd();
   if (d != 1) {
@@ -415,7 +408,7 @@ std_vector_init_ndarray(np::ndarray const& array)
 
 template <class SCALARTYPE>
 boost::shared_ptr<std::vector<SCALARTYPE> >
-std_vector_init_list(bp::list const& l)
+std_vector_init_list(const bp::list& l)
 {
   return std_vector_init_ndarray<SCALARTYPE>
     (np::from_object(l, np::dtype::get_builtin<SCALARTYPE>()));
@@ -433,7 +426,7 @@ std_vector_init_scalar(uint32_t length, SCALARTYPE value) {
 // Vector -- vcl::vector
 
 template <class SCALARTYPE>
-bp::list vcl_vector_to_list(vcl::vector_base<SCALARTYPE> const& v)
+bp::list vcl_vector_to_list(const vcl::vector_base<SCALARTYPE>& v)
 {
   std::vector<SCALARTYPE> c(v.size());
   vcl::fast_copy(v.begin(), v.end(), c.begin());
@@ -442,7 +435,7 @@ bp::list vcl_vector_to_list(vcl::vector_base<SCALARTYPE> const& v)
 }
 
 template <class SCALARTYPE>
-np::ndarray vcl_vector_to_ndarray(vcl::vector_base<SCALARTYPE> const& v)
+np::ndarray vcl_vector_to_ndarray(const vcl::vector_base<SCALARTYPE>& v)
 {
   return np::from_object(vcl_vector_to_list<SCALARTYPE>(v),
 			 np::dtype::get_builtin<SCALARTYPE>());
@@ -450,7 +443,7 @@ np::ndarray vcl_vector_to_ndarray(vcl::vector_base<SCALARTYPE> const& v)
 
 template <class SCALARTYPE>
 boost::shared_ptr<vcl::vector<SCALARTYPE> >
-vcl_vector_init_ndarray(np::ndarray const& array)
+vcl_vector_init_ndarray(const np::ndarray& array)
 {
   int d = array.get_nd();
   if (d != 1) {
@@ -473,7 +466,7 @@ vcl_vector_init_ndarray(np::ndarray const& array)
 
 template <class SCALARTYPE>
 boost::shared_ptr<vcl::vector<SCALARTYPE> >
-vcl_vector_init_list(bp::list const& l)
+vcl_vector_init_list(const bp::list& l)
 {
   return vcl_vector_init_ndarray<SCALARTYPE>
     (np::from_object(l, np::dtype::get_builtin<SCALARTYPE>()));
@@ -576,18 +569,18 @@ bp::tuple get_strides(const vcl::matrix_base<SCALARTYPE, vcl::column_major>& m) 
 }
 
 template<class SCALARTYPE>
-std::size_t get_offset(vcl::matrix_base<SCALARTYPE, vcl::row_major> const& m) {
+std::size_t get_offset(const vcl::matrix_base<SCALARTYPE, vcl::row_major>& m) {
   return m.start1()*m.internal_size2() + m.start2();
 }
 
 template<class SCALARTYPE>
-std::size_t get_offset(vcl::matrix_base<SCALARTYPE, 
-                       vcl::column_major> const& m) {
+std::size_t get_offset(const vcl::matrix_base<SCALARTYPE, 
+                       vcl::column_major>& m) {
   return m.start1() + m.start2()*m.internal_size1();
 }
 
 template<class SCALARTYPE, class VCL_F, class CPU_F>
-np::ndarray vcl_matrix_to_ndarray(vcl::matrix_base<SCALARTYPE, VCL_F> const& m)
+np::ndarray vcl_matrix_to_ndarray(const vcl::matrix_base<SCALARTYPE, VCL_F>& m)
 {
 
   std::size_t size = m.internal_size1() * m.internal_size2() * sizeof(SCALARTYPE);
@@ -637,14 +630,14 @@ public:
     cpu_compressed_matrix = ublas_sparse_t(_size1, _size2, _nnz);
   }
 
-  cpu_compressed_matrix_wrapper(cpu_compressed_matrix_wrapper const& w)
+  cpu_compressed_matrix_wrapper(const cpu_compressed_matrix_wrapper& w)
     : cpu_compressed_matrix(w.cpu_compressed_matrix)
   {
     update_places();
   }
 
   template<class SparseT>
-  cpu_compressed_matrix_wrapper(SparseT const& vcl_sparse_matrix)
+  cpu_compressed_matrix_wrapper(const SparseT& vcl_sparse_matrix)
   {
     cpu_compressed_matrix = ublas_sparse_t(vcl_sparse_matrix.size1(),
                                            vcl_sparse_matrix.size2());
@@ -653,7 +646,7 @@ public:
     update_places();
   }
 
-  cpu_compressed_matrix_wrapper(np::ndarray const& array)
+  cpu_compressed_matrix_wrapper(const np::ndarray& array)
   {
 
     int d = array.get_nd();
@@ -1029,6 +1022,7 @@ BOOST_PYTHON_MODULE(_viennacl)
     .def(bp::init<int>())
     .def("as_double", &vcl_scalar_to_float)
 
+    /*
     // Scalar-scalar operations
     .def("__add__", pyvcl_do_2ary_op<vcl_scalar_t,
 	 cpu_scalar_t&, vcl_scalar_t&,
@@ -1063,7 +1057,7 @@ BOOST_PYTHON_MODULE(_viennacl)
     .def("__mul__", pyvcl_do_2ary_op<vcl_vector_t,
 	 vcl_scalar_t&, vcl_vector_t&,
 	 op_mul, 0>)
-    */
+    * /
 
     // Scalar-matrix operations
     .def("__mul__", pyvcl_do_2ary_op<vcl::matrix<float, vcl::row_major>,
@@ -1078,6 +1072,7 @@ BOOST_PYTHON_MODULE(_viennacl)
     .def("__mul__", pyvcl_do_2ary_op<vcl::matrix<double, vcl::column_major>,
 	 vcl_scalar_t&, vcl::matrix<double, vcl::column_major>&,
 	 op_mul, 0>)
+    */
     ;
 
   // --------------------------------------------------
@@ -1158,27 +1153,27 @@ BOOST_PYTHON_MODULE(_viennacl)
                             vcl::project,                               \
                             project_vector_##TYPE##_range,              \
                             (CONCAT(vcl::vector_base<TYPE>&,            \
-                                    vcl::range const&)))                \
+                                    const vcl::range&)))                \
   DISAMBIGUATE_FUNCTION_PTR(CONCAT(vcl::vector_range<                   \
                                    vcl::vector_base<TYPE> >),           \
                             vcl::project,                               \
                             project_vector_range_##TYPE##_range,        \
                             (CONCAT(vcl::vector_range<                  \
                                     vcl::vector_base<TYPE> >&,          \
-                                    vcl::range const&)))                \
+                                    const vcl::range&)))                \
   DISAMBIGUATE_FUNCTION_PTR(CONCAT(vcl::vector_slice<                   \
                                    vcl::vector_base<TYPE> >),           \
                             vcl::project,                               \
                             project_vector_##TYPE##_slice,              \
                             (CONCAT(vcl::vector_base<TYPE>&,            \
-                                    vcl::slice const&)))                \
+                                    const vcl::slice&)))                \
   DISAMBIGUATE_FUNCTION_PTR(CONCAT(vcl::vector_slice<                   \
                                    vcl::vector_base<TYPE> >),           \
                             vcl::project,                               \
                             project_vector_slice_##TYPE##_slice,        \
                             (CONCAT(vcl::vector_slice<                  \
                                     vcl::vector_base<TYPE> >&,          \
-                                    vcl::slice const&)))                \
+                                    const vcl::slice&)))                \
   bp::def("project", project_vector_##TYPE##_range);                    \
   bp::def("project", project_vector_range_##TYPE##_range);              \
   bp::def("project", project_vector_##TYPE##_slice);                    \
@@ -1363,31 +1358,31 @@ BOOST_PYTHON_MODULE(_viennacl)
                             vcl::project,                               \
                             project_matrix_##TYPE##_##LAYOUT##_range_range, \
                             (CONCAT(vcl::matrix_base<TYPE, F>&,         \
-                                    vcl::range const&,                  \
-                                    vcl::range const&)))                \
+                                    const vcl::range&,                  \
+                                    const vcl::range&)))                \
  DISAMBIGUATE_FUNCTION_PTR(CONCAT(vcl::matrix_range<                    \
                                    vcl::matrix_base<TYPE, F> >),        \
                             vcl::project,                               \
                             project_matrix_range_##TYPE##_##LAYOUT##_range_range, \
                             (CONCAT(vcl::matrix_range<                  \
                                     vcl::matrix_base<TYPE, F> >&,       \
-                                    vcl::range const&,                  \
-                                    vcl::range const&)))                \
+                                    const vcl::range&,                  \
+                                    const vcl::range&)))                \
   DISAMBIGUATE_FUNCTION_PTR(CONCAT(vcl::matrix_slice<                   \
                                    vcl::matrix_base<TYPE, F> >),        \
                             vcl::project,                               \
                             project_matrix_##TYPE##_##LAYOUT##_slice_slice, \
                             (CONCAT(vcl::matrix_base<TYPE, F>&,         \
-                                    vcl::slice const&,                  \
-                                    vcl::slice const&)))                \
+                                    const vcl::slice&,                  \
+                                    const vcl::slice&)))                \
   DISAMBIGUATE_FUNCTION_PTR(CONCAT(vcl::matrix_slice<                   \
                                    vcl::matrix_base<TYPE, F> >),        \
                             vcl::project,                               \
                             project_matrix_slice_##TYPE##_##LAYOUT##_slice_slice, \
                             (CONCAT(vcl::matrix_slice<                  \
                                     vcl::matrix_base<TYPE, F> >&,       \
-                                    vcl::slice const&,                  \
-                                    vcl::slice const&)))                \
+                                    const vcl::slice&,                  \
+                                    const vcl::slice&)))                \
   bp::def("project", project_matrix_##TYPE##_##LAYOUT##_range_range);   \
   bp::def("project", project_matrix_range_##TYPE##_##LAYOUT##_range_range); \
   bp::def("project", project_matrix_##TYPE##_##LAYOUT##_slice_slice);   \
@@ -1457,9 +1452,9 @@ BOOST_PYTHON_MODULE(_viennacl)
 		  make_function(&vcl::coordinate_matrix<double>::nnz,
 			      bp::return_value_policy<bp::return_by_value>()))
 
-    /*
-    .def("prod", pyvcl_do_2ary_op<vcl::coordinate_matrix<double>,
-	 vcl::coordinate_matrix<double>&, vcl::coordinate_matrix<double>&,
+    //*
+    .def("prod", pyvcl_do_2ary_op<vcl::vector<double>,
+	 vcl::coordinate_matrix<double>&, vcl::vector<double>&,
 	 op_prod, 0>)
 
     /* 
@@ -1496,6 +1491,27 @@ BOOST_PYTHON_MODULE(_viennacl)
     .add_property("nnz",
 		  make_function(&vcl::ell_matrix<double>::nnz,
 			      bp::return_value_policy<bp::return_by_value>()))
+
+    .def("prod", pyvcl_do_2ary_op<vcl::vector<double>,
+	 vcl::ell_matrix<double>&, vcl::vector<double>&,
+	 op_prod, 0>)
+    ;
+
+  bp::class_<vcl::hyb_matrix<double>, 
+             boost::shared_ptr<vcl::hyb_matrix<double> >,
+             boost::noncopyable >
+    ("hyb_matrix", bp::no_init)
+    .add_property("size1",
+		  make_function(&vcl::hyb_matrix<double>::size1,
+			      bp::return_value_policy<bp::return_by_value>()))
+
+    .add_property("size2",
+		  make_function(&vcl::hyb_matrix<double>::size2,
+			      bp::return_value_policy<bp::return_by_value>()))
+
+    .def("prod", pyvcl_do_2ary_op<vcl::vector<double>,
+	 vcl::hyb_matrix<double>&, vcl::vector<double>&,
+	 op_prod, 0>)
     ;
 
   bp::class_<cpu_compressed_matrix_wrapper<double> >
@@ -1505,7 +1521,9 @@ BOOST_PYTHON_MODULE(_viennacl)
     .def(bp::init<uint32_t, uint32_t, uint32_t>())
     .def(bp::init<cpu_compressed_matrix_wrapper<double> >())
     .def(bp::init<vcl::compressed_matrix<double> >())
-    //.def(bp::init<vcl_coordinate_matrix_t>())
+    //.def(bp::init<vcl::coordinate_matrix<double> >())
+    .def(bp::init<vcl::ell_matrix<double> >())
+    .def(bp::init<vcl::hyb_matrix<double> >())
     .def(bp::init<np::ndarray>())
     .def_readonly("nonzeros", &cpu_compressed_matrix_wrapper<double>::places)
     .add_property("nnz", &cpu_compressed_matrix_wrapper<double>::nnz)
@@ -1524,6 +1542,9 @@ BOOST_PYTHON_MODULE(_viennacl)
     .def("as_ell_matrix",
          &cpu_compressed_matrix_wrapper<double>
          ::as_vcl_sparse_matrix<vcl::ell_matrix<double> >)
+    .def("as_hyb_matrix",
+         &cpu_compressed_matrix_wrapper<double>
+         ::as_vcl_sparse_matrix<vcl::hyb_matrix<double> >)
     ;
 
   // --------------------------------------------------
@@ -1561,50 +1582,50 @@ BOOST_PYTHON_MODULE(_viennacl)
 
   DISAMBIGUATE_FUNCTION_PTR(double, 
                             vcl::linalg::eig,eig_power_iter_double_row,
-                            (vcl::matrix<double, vcl::row_major> const&, 
-                             vcl::linalg::power_iter_tag const&))
+                            (const vcl::matrix<double, vcl::row_major>&, 
+                             const vcl::linalg::power_iter_tag&))
   bp::def("eig", eig_power_iter_double_row);
 
   DISAMBIGUATE_FUNCTION_PTR(std::vector<double>,
                             vcl::linalg::eig, eig_lanczos_vector_double_row,
-                            (vcl::matrix<double, vcl::row_major> const&, 
-                             vcl::linalg::lanczos_tag const&))
+                            (const vcl::matrix<double, vcl::row_major>&, 
+                             const vcl::linalg::lanczos_tag&))
   bp::def("eig", eig_lanczos_vector_double_row);
 
   DISAMBIGUATE_FUNCTION_PTR(float, 
                             vcl::linalg::eig,eig_power_iter_float_row,
-                            (vcl::matrix<float, vcl::row_major> const&, 
-                             vcl::linalg::power_iter_tag const&))
+                            (const vcl::matrix<float, vcl::row_major>&, 
+                             const vcl::linalg::power_iter_tag&))
   bp::def("eig", eig_power_iter_float_row);
 
   DISAMBIGUATE_FUNCTION_PTR(std::vector<float>,
                             vcl::linalg::eig, eig_lanczos_vector_float_row,
-                            (vcl::matrix<float, vcl::row_major> const&, 
-                             vcl::linalg::lanczos_tag const&))
+                            (const vcl::matrix<float, vcl::row_major>&, 
+                             const vcl::linalg::lanczos_tag&))
   bp::def("eig", eig_lanczos_vector_float_row);
 
   DISAMBIGUATE_FUNCTION_PTR(double, 
                             vcl::linalg::eig,eig_power_iter_double_col,
-                            (vcl::matrix<double, vcl::column_major> const&, 
-                             vcl::linalg::power_iter_tag const&))
+                            (const vcl::matrix<double, vcl::column_major>&, 
+                             const vcl::linalg::power_iter_tag&))
   bp::def("eig", eig_power_iter_double_col);
 
   DISAMBIGUATE_FUNCTION_PTR(std::vector<double>,
                             vcl::linalg::eig, eig_lanczos_vector_double_col,
-                            (vcl::matrix<double, vcl::column_major> const&, 
-                             vcl::linalg::lanczos_tag const&))
+                            (const vcl::matrix<double, vcl::column_major>&, 
+                             const vcl::linalg::lanczos_tag&))
   bp::def("eig", eig_lanczos_vector_double_col);
 
   DISAMBIGUATE_FUNCTION_PTR(float, 
                             vcl::linalg::eig,eig_power_iter_float_col,
-                            (vcl::matrix<float, vcl::column_major> const&, 
-                             vcl::linalg::power_iter_tag const&))
+                            (const vcl::matrix<float, vcl::column_major>&, 
+                             const vcl::linalg::power_iter_tag&))
   bp::def("eig", eig_power_iter_float_col);
 
   DISAMBIGUATE_FUNCTION_PTR(std::vector<float>,
                             vcl::linalg::eig, eig_lanczos_vector_float_col,
-                            (vcl::matrix<float, vcl::column_major> const&, 
-                             vcl::linalg::lanczos_tag const&))
+                            (const vcl::matrix<float, vcl::column_major>&, 
+                             const vcl::linalg::lanczos_tag&))
   bp::def("eig", eig_lanczos_vector_float_col);
 
   // --------------------------------------------------
