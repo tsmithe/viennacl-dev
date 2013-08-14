@@ -60,10 +60,29 @@ namespace viennacl{
       INVALID_EXPRESSION_TYPE
     };
 
+    inline const char * expression_type_to_string(expression_type type){
+      switch(type){
+        case SCALAR_SAXPY_TYPE : return "Scalar SAXPY";
+        case VECTOR_SAXPY_TYPE : return "Vector SAXPY";
+        case MATRIX_SAXPY_TYPE : return "Matrix SAXPY";
+        case SCALAR_REDUCE_TYPE : return "Inner Product";
+        case VECTOR_REDUCE_Ax_TYPE : return "Matrix-Vector Product : Ax";
+        case VECTOR_REDUCE_Tx_TYPE : return "Matrix-Vector Product : Tx";
+        case MATRIX_PRODUCT_AA_TYPE : return "Matrix-Matrix Product : AA";
+        case MATRIX_PRODUCT_TA_TYPE : return "Matrix-Matrix Product : TA";
+        case MATRIX_PRODUCT_AT_TYPE : return "Matrix-Matrix Product : AT";
+        case MATRIX_PRODUCT_TT_TYPE : return "Matrix-Matrix Product : TT";
+        default : return "INVALID EXPRESSION";
+      }
+    }
+
+    typedef std::pair<expression_type, std::size_t> expression_key_type;
+
     struct expression_descriptor{
-        bool operator==(expression_descriptor const & o) const{
-          return  type_family==o.type_family
-               && type==o.type;
+        expression_key_type make_key() const { return expression_key_type(type,scalartype_size); }
+        bool operator==(expression_descriptor const & other) const
+        {
+          return type_family == other.type_family && type == other.type && scalartype_size==other.scalartype_size;
         }
         expression_type_family type_family;
         expression_type type;

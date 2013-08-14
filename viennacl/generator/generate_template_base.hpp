@@ -27,7 +27,9 @@
 #include <list>
 #include <set>
 
+#include "viennacl/ocl/kernel.hpp"
 #include "viennacl/ocl/device.hpp"
+#include "viennacl/ocl/device_utils.hpp"
 #include "viennacl/ocl/infos.hpp"
 
 #include "viennacl/scheduler/forwards.h"
@@ -49,6 +51,8 @@ namespace viennacl{
         friend std::ostream & operator<<(std::ostream &, profile_base const &);
 
         virtual bool invalid_impl(viennacl::ocl::device const & /*dev*/, size_t /*scalartype_size*/) const{ return false; }
+
+        virtual bool is_slow_impl(viennacl::ocl::device const &) const { return false; }
 
         virtual std::size_t lmem_used(std::size_t /*scalartype_size*/) const { return 0; }
 
@@ -79,6 +83,22 @@ namespace viennacl{
 
         virtual std::string csv_representation() const = 0;
 
+        /** @brief returns whether or not the profile is likely to be slow on a particular device
+         *  @param dev the given device*/
+        bool is_slow(viennacl::ocl::device const & dev) const{
+          std::size_t size1, size2;
+          set_local_sizes(size1, size2, 0);
+          bool is_slow = false;
+          if(dev.type()==CL_DEVICE_TYPE_GPU){
+            std::size_t warp_size = 32;
+            if(dev.vendor_id()==4098)
+              warp_size = 64;
+            is_slow = static_cast<bool>(((size1*size2)%warp_size)>0);
+          }
+          return is_slow
+              || is_slow_impl(dev);
+        }
+
         /** @brief returns whether or not the profile leads to undefined behavior on particular device
          *  @param dev the given device*/
         bool is_invalid(viennacl::ocl::device const & dev, size_t scalartype_size) const{
@@ -99,23 +119,14 @@ namespace viennacl{
           invalid_work_group_sizes = invalid_work_group_sizes || size1 > max_work_item_sizes[0];
           if(max_work_item_sizes.size()>1) invalid_work_group_sizes = invalid_work_group_sizes || size2 > max_work_item_sizes[1];
 
-          bool is_slow = false;
-          if(dev.type()==CL_DEVICE_TYPE_GPU){
-            std::size_t warp_size = 32;
-            if(dev.vendor_id()==4098)
-              warp_size = 64;
-            is_slow = static_cast<bool>(((size1*size2)%warp_size)>0);
-          }
-
           return  invalid_work_group_sizes
-              || is_slow
               || lmem_used(scalartype_size)>lmem_available
               || invalid_impl(dev, scalartype_size);
         }
 
         std::size_t num_kernels() const{ return num_kernels_; }
 
-        virtual void operator()(utils::kernel_generation_stream & stream, viennacl::ocl::device const & device, statements_type const & statements) const {
+        virtual void operator()(utils::kernel_generation_stream & stream, std::size_t device_offset, statements_type const & statements) const {
           std::vector<detail::mapping_type> mapping(statements.size());
 
           ///Get Prototype, initialize mapping
@@ -145,7 +156,7 @@ namespace viennacl{
             stream << "__kernel ";
 //            stream << "__attribute__((vec_type_hint()))" << std::endl;
             stream << " __attribute__((reqd_work_group_size(" << size1 << "," << size2 << "," << size3 << ")))" << std::endl;
-            stream << "void " << "kernel_" << device.id() << "_" << n << "(" << std::endl;
+            stream << "void " << "kernel_" << device_offset << "_" << n << "(" << std::endl;
             stream << prototype << std::endl;
             stream << ")" << std::endl;
 

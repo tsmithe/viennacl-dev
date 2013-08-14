@@ -47,7 +47,7 @@ namespace viennacl{
           STRIDED
         };
 
-      public:
+      private:
 
         std::size_t lmem_used(std::size_t scalartype_size) const {
           std::size_t lmem_used = 0;
@@ -68,6 +68,15 @@ namespace viennacl{
             << ks_ << ", "
             << ns_ << ", "
             << use_lhs_shared_ << ", " << use_rhs_shared_ << ", " << unroll_ << "}" ;
+        }
+
+        bool is_slow_impl(viennacl::ocl::device const & dev) const {
+          bool is_slow;
+          if(dev.vendor_id()==viennacl::ocl::nvidia_id)
+            is_slow = (unroll_==false);
+          else if(dev.vendor_id()==viennacl::ocl::amd_id)
+            is_slow = (unroll_==true);
+          return is_slow;
         }
 
         bool invalid_impl(viennacl::ocl::device const & /*dev*/, size_t /*scalartype_size*/) const{

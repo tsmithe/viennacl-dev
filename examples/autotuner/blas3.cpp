@@ -3,10 +3,11 @@
 //#define VIENNACL_DEBUG_BUILD
 //#define VIENNACL_DEBUG_ALL
 
-#define NDEBUG
 
 #include <iostream>
-#include "CL/cl.hpp"
+#include "viennacl/ocl/platform.hpp"
+#include "viennacl/ocl/device.hpp"
+
 #include <sys/time.h>
 
 #include "boost/numeric/ublas/matrix.hpp"
@@ -21,11 +22,6 @@
 
 
 using namespace viennacl::generator;
-
-typedef std::vector< viennacl::ocl::platform > platforms_type;
-typedef std::vector<viennacl::ocl::device> devices_type;
-typedef std::vector<cl_device_id> cl_devices_type;
-
 
 template<class ScalarType>
 struct blas3_config{
@@ -90,7 +86,7 @@ void run_autotune(std::string const & dump_name, bool is_lhs_trans, bool is_rhs_
     std::vector<int> vector; for(unsigned int i=1 ; i<=4 ; i*=2) vector.push_back(i);
     std::vector<int> lhs_storage; for(unsigned int i=1 ; i<=1 ; ++i) lhs_storage.push_back(i);
     std::vector<int> rhs_storage; for(unsigned int i=0 ; i<=0 ; ++i) rhs_storage.push_back(i);
-    std::vector<int> unroll; unroll.push_back(1);
+    std::vector<int> unroll; unroll.push_back(0); unroll.push_back(1);
 
     conf.add_tuning_param("local_size1",local_size1);
     conf.add_tuning_param("cache_width",cache_width);
@@ -175,83 +171,76 @@ void run_autotune(std::string const & dump_name, bool is_lhs_trans, bool is_rhs_
 
 
 int main(int argc, char* argv[]){
-    std::vector<std::string> args(argv,argv+argc);
-    if(argc<3){
-        std::cerr << "USAGE : PROGRAM_NAME DEVICE LAYOUT SCALARTYPE" << std::endl;
-        exit(1);
-    }
+    typedef std::vector< viennacl::ocl::platform > platforms_type;
+  std::vector<std::string> args(argv, argv+argc);
+  if(argc<4){
+      std::cerr << "USAGE : PROGRAM_NAME DEVICE LAYOUT SCALARTYPE" << std::endl;
+      exit(1);
+  }
+  unsigned int current_device=0;
+  unsigned int requested_device = atoi(args[1].c_str());
+  unsigned int layout = atoi(args[2].c_str());
+  std::string scalartype = args[3];
 
-
-    unsigned int current_device=0;
-    unsigned int requested_device = atoi(args[1].c_str());
-    unsigned int layout = atoi(args[2].c_str());
-    std::string scalartype = args[3];
-    platforms_type platforms = viennacl::ocl::get_platforms();
-    size_t num_platforms = platforms.size();
-    for(unsigned int k=0 ; k < num_platforms ; ++k)
+  platforms_type platforms = viennacl::ocl::get_platforms();
+  for (platforms_type::iterator platform_iter  = platforms.begin();
+       platform_iter != platforms.end();
+       ++platform_iter)
+  {
+    typedef std::vector<viennacl::ocl::device> devices_type;
+    devices_type devices = platform_iter->devices(CL_DEVICE_TYPE_ALL);
+    for(devices_type::iterator iter = devices.begin(); iter != devices.end(); iter++)
     {
-        viennacl::ocl::platform pf(k);
-        viennacl::ocl::set_context_platform_index(k,k);
-        viennacl::ocl::set_context_device_type(k,CL_DEVICE_TYPE_ALL);
-        viennacl::ocl::switch_context(k);
-        devices_type dev = viennacl::ocl::current_context().devices();
-
-        for(devices_type::iterator it = dev.begin() ; it != dev.end() ; ++it){
-
-            if(current_device++==requested_device){
-                viennacl::ocl::switch_device(*it);
-
-                std::string devname = viennacl::ocl::current_device().name();
-
-                std::cout << "-------------------" << std::endl;
-                std::cout << "Recording timings for : " << devname << std::endl;
-                std::cout << "Vendor ID : " << viennacl::ocl::info<CL_DEVICE_VENDOR_ID>(viennacl::ocl::current_device().id()) << std::endl;
-
-                std::cout << "Matrix - Matrix Multiplication " << std::endl;
-                std::cout << "-------------------" << std::endl;
-                std::cout << " Scalartype : " << scalartype << std::endl;
-                std::cout << "-------------------" << std::endl;
-                switch(layout){
-                case 0:
-                    std::cout << "Layout : AA" << std::endl;
-                    if(scalartype=="float")
-                        run_autotune<float>("BLAS3 AA Float" + it->name(),false,false);
-                    else if(scalartype=="double")
-                        run_autotune<double>("BLAS3 AA Double" + it->name(),false,false);
-                    break;
+      if(current_device++==requested_device){
+        viennacl::ocl::setup_context(current_device,*iter);
+        viennacl::ocl::switch_context(current_device);
+        viennacl::ocl::device const & device = viennacl::ocl::current_device();
+        std::string device_name = device.name();
+        std::replace(device_name.begin(), device_name.end(),' ', '_');
+        std::cout << "-------------------" << std::endl;
+        std::cout << device.info() << std::endl;
+        std::cout << "Matrix-Matrix Product" << std::endl;
+        std::cout << "-------------------" << std::endl;
+        std::cout << " Scalartype : " << scalartype << std::endl;
+        std::cout << "-------------------" << std::endl;
+        switch(layout){
+          case 0:
+            std::cout << "Layout : AA" << std::endl;
+            if(scalartype=="float")
+              run_autotune<float>("blas3_aa_Float" + device_name,false,false);
+            else if(scalartype=="double")
+              run_autotune<double>("blas3_aa_Double" + device_name,false,false);
+            break;
 
 
-                case 1:
-                    std::cout << "Layout : TA" << std::endl;
-                    if(scalartype=="float")
-                        run_autotune<float>("BLAS3 TA Float" + it->name(), true, false);
-                    else if(scalartype=="double")
-                        run_autotune<double>("BLAS3 TA Double" + it->name(), true, false);
-                    break;
+          case 1:
+            std::cout << "Layout : TA" << std::endl;
+            if(scalartype=="float")
+              run_autotune<float>("blas3_ta_float" + device_name + ".dat", true, false);
+            else if(scalartype=="double")
+              run_autotune<double>("blas3_ta_double" + device_name + ".dat", true, false);
+            break;
 
 
-                case 2:
-                    std::cout << "Layout : AT" << std::endl;
-                    if(scalartype=="float")
-                        run_autotune<float>("BLAS3 AT Float" + it->name(), false, true);
-                    else if(scalartype=="double")
-                        run_autotune<double>("BLAS3 AT Double" + it->name(), false, true);
-                    break;
+          case 2:
+            std::cout << "Layout : AT" << std::endl;
+            if(scalartype=="float")
+              run_autotune<float>("blas3_at_float" + device_name + ".dat", false, true);
+            else if(scalartype=="double")
+              run_autotune<double>("blas3_at_double" + device_name + ".dat", false, true);
+            break;
 
-                case 3:
-                    std::cout << "Layout : TT" << std::endl;
-                    if(scalartype=="float")
-                        run_autotune<float>("BLAS3 TT Float" + it->name(),true,true);
-                    else if(scalartype=="double")
-                        run_autotune<double>("BLAS3 TT Double" + it->name(), true, true);
-                    break;
-                }
-
-                exit(0);
-
-            }
+          case 3:
+            std::cout << "Layout : TT" << std::endl;
+            if(scalartype=="float")
+              run_autotune<float>("blas3_tt_float" + device_name + ".dat",true,true);
+            else if(scalartype=="double")
+              run_autotune<double>("blas3_tt_double" + device_name + ".dat", true, true);
+            break;
         }
-
-
+      }
     }
+  }
+  std::cout << std::endl;
+  return EXIT_SUCCESS;
 }
