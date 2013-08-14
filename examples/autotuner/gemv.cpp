@@ -116,10 +116,11 @@ int main(int argc, char* argv[]){
         viennacl::ocl::switch_context(current_device);
         viennacl::ocl::device const & device = viennacl::ocl::current_device();
         std::string device_name = device.name();
+        std::transform(device_name.begin(), device_name.end(), device_name.begin(), ::tolower);
         std::replace(device_name.begin(), device_name.end(),' ', '_');
         std::cout << "-------------------" << std::endl;
         std::cout << device.info()<< std::endl;
-        std::cout << "Matrix-Vector Product" << std::endl;
+        std::cout << "GEMV" << std::endl;
         std::cout << "-------------------" << std::endl;
         std::cout << "scalartype : float" << std::endl;
         std::cout << "-- Av " << std::endl;
