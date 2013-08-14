@@ -699,19 +699,21 @@ public:
   }
 
   template<class SparseT>
-  SparseT as_vcl_sparse_matrix()
+  boost::shared_ptr<SparseT>
+  as_vcl_sparse_matrix()
   {
-    SparseT vcl_sparse_matrix;
-    vcl::copy(cpu_compressed_matrix, vcl_sparse_matrix);
-    return vcl_sparse_matrix;
+    SparseT* vcl_sparse_matrix = new SparseT();
+    vcl::copy(cpu_compressed_matrix, *vcl_sparse_matrix);
+    return boost::shared_ptr<SparseT>(vcl_sparse_matrix);
   }
 
   template<class SparseT>
-  SparseT as_vcl_sparse_matrix_with_size()
+  boost::shared_ptr<SparseT>
+  as_vcl_sparse_matrix_with_size()
   {
-    SparseT vcl_sparse_matrix(size1(), size2(), nnz());
-    vcl::copy(cpu_compressed_matrix, vcl_sparse_matrix);
-    return vcl_sparse_matrix;
+    SparseT* vcl_sparse_matrix = new SparseT(size1(), size2(), nnz());
+    vcl::copy(cpu_compressed_matrix, *vcl_sparse_matrix);
+    return boost::shared_ptr<SparseT>(vcl_sparse_matrix);
   }
 
   void update_places()
@@ -1402,32 +1404,8 @@ BOOST_PYTHON_MODULE(_viennacl)
 
   // *** Sparse matrix types ***
 
-  bp::class_<cpu_compressed_matrix_wrapper<double> >
-    ("cpu_compressed_matrix_double")
-    .def(bp::init<>())
-    .def(bp::init<uint32_t, uint32_t>())
-    .def(bp::init<uint32_t, uint32_t, uint32_t>())
-    .def(bp::init<cpu_compressed_matrix_wrapper<double> >())
-    .def(bp::init<vcl::compressed_matrix<double> >())
-    //.def(bp::init<vcl_coordinate_matrix_t>())
-    .def(bp::init<np::ndarray>())
-    .def_readonly("nonzeros", &cpu_compressed_matrix_wrapper<double>::places)
-    .add_property("nnz", &cpu_compressed_matrix_wrapper<double>::nnz)
-    .add_property("size1", &cpu_compressed_matrix_wrapper<double>::size1)
-    .add_property("size2", &cpu_compressed_matrix_wrapper<double>::size2)
-    .def("resize", &cpu_compressed_matrix_wrapper<double>::resize)
-    .def("set", &cpu_compressed_matrix_wrapper<double>::set)
-    .def("get", &cpu_compressed_matrix_wrapper<double>::get)
-    .def("as_ndarray", &cpu_compressed_matrix_wrapper<double>::as_ndarray)
-    .def("as_compressed_matrix",
-         &cpu_compressed_matrix_wrapper<double>
-         ::as_vcl_sparse_matrix_with_size<vcl::compressed_matrix<double> >)
-    /*.def("as_coordinate_matrix",
-         &cpu_compressed_matrix_wrapper<double>
-         ::as_vcl_sparse_matrix<vcl::coordinate_matrix<double> >)*/
-    ;
-
-  bp::class_<vcl::compressed_matrix<double> >
+    bp::class_<vcl::compressed_matrix<double>,
+               boost::shared_ptr<vcl::compressed_matrix<double> > >
     ("compressed_matrix", bp::no_init)
     .add_property("size1",
 		  make_function(&vcl::compressed_matrix<double>::size1,
@@ -1461,6 +1439,91 @@ BOOST_PYTHON_MODULE(_viennacl)
 	 vcl::compressed_matrix<double>&, vcl::vector<double>&,
 	 vcl::linalg::upper_tag,
 	 op_inplace_solve, 0>)
+    ;
+
+  bp::class_<vcl::coordinate_matrix<double>, 
+             boost::shared_ptr<vcl::coordinate_matrix<double> >,
+             boost::noncopyable >
+    ("coordinate_matrix", bp::no_init)
+    .add_property("size1",
+		  make_function(&vcl::coordinate_matrix<double>::size1,
+			      bp::return_value_policy<bp::return_by_value>()))
+
+    .add_property("size2",
+		  make_function(&vcl::coordinate_matrix<double>::size2,
+			      bp::return_value_policy<bp::return_by_value>()))
+
+    .add_property("nnz",
+		  make_function(&vcl::coordinate_matrix<double>::nnz,
+			      bp::return_value_policy<bp::return_by_value>()))
+
+    /*
+    .def("prod", pyvcl_do_2ary_op<vcl::coordinate_matrix<double>,
+	 vcl::coordinate_matrix<double>&, vcl::coordinate_matrix<double>&,
+	 op_prod, 0>)
+
+    /* 
+    .def("inplace_solve", pyvcl_do_3ary_op<vcl::coordinate_matrix<double>,
+	 vcl::coordinate_matrix<double>&, vcl::vector<double>&,
+	 vcl::linalg::lower_tag,
+	 op_inplace_solve, 0>)
+    .def("inplace_solve", pyvcl_do_3ary_op<vcl::coordinate_matrix<double>,
+	 vcl::coordinate_matrix<double>&, vcl::vector<double>&,
+	 vcl::linalg::unit_lower_tag,
+	 op_inplace_solve, 0>)
+    .def("inplace_solve", pyvcl_do_3ary_op<vcl::coordinate_matrix<double>,
+	 vcl::coordinate_matrix<double>&, vcl::vector<double>&,
+	 vcl::linalg::unit_upper_tag,
+	 op_inplace_solve, 0>)
+    .def("inplace_solve", pyvcl_do_3ary_op<vcl::coordinate_matrix<double>,
+	 vcl::coordinate_matrix<double>&, vcl::vector<double>&,
+	 vcl::linalg::upper_tag,
+	 op_inplace_solve, 0>)*/
+    ;
+
+  bp::class_<vcl::ell_matrix<double>, 
+             boost::shared_ptr<vcl::ell_matrix<double> >,
+             boost::noncopyable >
+    ("ell_matrix", bp::no_init)
+    .add_property("size1",
+		  make_function(&vcl::ell_matrix<double>::size1,
+			      bp::return_value_policy<bp::return_by_value>()))
+
+    .add_property("size2",
+		  make_function(&vcl::ell_matrix<double>::size2,
+			      bp::return_value_policy<bp::return_by_value>()))
+
+    .add_property("nnz",
+		  make_function(&vcl::ell_matrix<double>::nnz,
+			      bp::return_value_policy<bp::return_by_value>()))
+    ;
+
+  bp::class_<cpu_compressed_matrix_wrapper<double> >
+    ("cpu_compressed_matrix_double")
+    .def(bp::init<>())
+    .def(bp::init<uint32_t, uint32_t>())
+    .def(bp::init<uint32_t, uint32_t, uint32_t>())
+    .def(bp::init<cpu_compressed_matrix_wrapper<double> >())
+    .def(bp::init<vcl::compressed_matrix<double> >())
+    //.def(bp::init<vcl_coordinate_matrix_t>())
+    .def(bp::init<np::ndarray>())
+    .def_readonly("nonzeros", &cpu_compressed_matrix_wrapper<double>::places)
+    .add_property("nnz", &cpu_compressed_matrix_wrapper<double>::nnz)
+    .add_property("size1", &cpu_compressed_matrix_wrapper<double>::size1)
+    .add_property("size2", &cpu_compressed_matrix_wrapper<double>::size2)
+    .def("resize", &cpu_compressed_matrix_wrapper<double>::resize)
+    .def("set", &cpu_compressed_matrix_wrapper<double>::set)
+    .def("get", &cpu_compressed_matrix_wrapper<double>::get)
+    .def("as_ndarray", &cpu_compressed_matrix_wrapper<double>::as_ndarray)
+    .def("as_compressed_matrix",
+         &cpu_compressed_matrix_wrapper<double>
+         ::as_vcl_sparse_matrix_with_size<vcl::compressed_matrix<double> >)
+    .def("as_coordinate_matrix",
+         &cpu_compressed_matrix_wrapper<double>
+         ::as_vcl_sparse_matrix_with_size<vcl::coordinate_matrix<double> >)
+    .def("as_ell_matrix",
+         &cpu_compressed_matrix_wrapper<double>
+         ::as_vcl_sparse_matrix<vcl::ell_matrix<double> >)
     ;
 
   // --------------------------------------------------
