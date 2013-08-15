@@ -503,8 +503,8 @@ class Vector(Leaf):
     #@deprecated
     def __mul__(self, rhs):
         if isinstance(rhs, Vector):
-            #return ElementMul(self, rhs) # TODO: ..NOT YET IMPLEMENTED
-            return Vector(self.vcl_leaf * rhs.vcl_leaf, dtype=self.dtype)
+            return ElementMul(self, rhs)
+            #return Vector(self.vcl_leaf * rhs.vcl_leaf, dtype=self.dtype)
         else:
             op = Mul(self, rhs)
             return op
@@ -517,12 +517,16 @@ class SparseMatrixBase(Leaf):
     ndim = 2
     statement_node_type_family = None # Not a ViennaCL type
 
+    @property
+    def vcl_leaf_factory(self):
+        raise NotImplementedError("This is only a base class!")
+
     def _init_leaf(self, args, kwargs):
-        #if 'shape' in kwargs.keys():
-        #    if len(kwargs['shape']) != 2:
-        #        raise TypeError("Matrix can only have a 2-d shape")
-        #    args = list(args)
-        #    args.insert(0, kwargs['shape'])
+        if 'shape' in kwargs.keys():
+            if len(kwargs['shape']) != 2:
+                raise TypeError("Sparse matrix can only have a 2-d shape")
+            args = list(args)
+            args.insert(0, kwargs['shape'])
 
         if 'layout' in kwargs.keys():
             if kwargs['layout'] == COL_MAJOR:
@@ -533,12 +537,62 @@ class SparseMatrixBase(Leaf):
         else:
             self.layout = ROW_MAJOR
 
-        self._init_sparse(args, kwargs)
+        if len(args) == 0:
+            # 0: empty -> empty
+            def get_cpu_leaf(cpu_t):
+                return cpu_t()
+        elif len(args) == 1:
+            if isinstance(args[0], tuple):
+                if len(args[0]) == 2:
+                    # 1: 2-tuple -> shape
+                    def get_cpu_leaf(cpu_t):
+                        return cpu_t(args[0][0], args[0][1])
+                elif len(args[0]) == 3:
+                    # 1: 3-tuple -> shape+nnz
+                    def get_cpu_leaf(cpu_t):
+                        return cpu_t(args[0][0], args[0][1], args[0][2])
+                else:
+                    # error!
+                    raise TypeError("Sparse matrix cannot be constructed thus")
+            elif isinstance(args[0], SparseMatrixBase):
+                # 1: SparseMatrixBase instance -> copy
+                self.dtype = args[0].dtype
+                self.layout = args[0].layout
+                def get_cpu_leaf(cpu_t):
+                    return args[0].cpu_leaf
+            elif isinstance(args[0], Node):
+                # 1: Node instance -> get result and copy
+                result = args[0].result
+                if not isinstance(result, SparseMatrixBase):
+                    raise TypeError("Sparse matrix cannot be constructed thus")
+                self.dtype = result.dtype
+                self.layout = result.layout
+                def get_cpu_leaf(cpu_t):
+                    return result.cpu_leaf
+            elif isinstance(args[0], ndarray):
+                # 1: ndarray -> init and fill
+                def get_cpu_leaf(cpu_t):
+                    return cpu_t(args[0])
+            else:
+                if WITH_SCIPY:
+                    # then test for scipy.sparse matrix
+                    raise NotImplementedError("SciPy support comes later")
+                else:
+                    # error!
+                    raise TypeError("Sparse matrix cannot be constructed thus")
+        elif len(args) == 2:
+            # 2: 2 ints -> shape
+            def get_cpu_leaf(cpu_t):
+                return cpu_t(args[0], args[1])
+        elif len(args) == 3:
+            # 3: 3 ints -> shape+nnz
+            def get_cpu_leaf(cpu_t):
+                return cpu_t(args[0], args[1], args[2])
+        else:
+            raise TypeError("Sparse matrix cannot be constructed thus")
 
-        # TODO: DEAL WITH args HERE IN ORDER CORRECTLY TO CONSTRUCT CPU SPARSE
-        def get_cpu_leaf(cpu_t):
-            return cpu_t()
-
+        if self.dtype is None:
+            self.dtype = dtype(float64)            
         self.statement_node_numeric_type = HostScalarTypes[self.dtype.name]
 
         try:
@@ -620,6 +674,14 @@ class SparseMatrixBase(Leaf):
         out = out[:-1]
         return "".join(out)
 
+    def __mul__(self, rhs):
+        # !!!
+        # TODO: Lazy evaluation, thinking about proper return type
+        # TODO: Currently only supports matrix-vector multiplication
+        # TODO: Unified __mul__ handling -- will come with scheduler support...
+        # !!!
+        return Vector(self.vcl_leaf.prod(rhs.vcl_leaf))
+
 
 class CompressedMatrix(SparseMatrixBase):
     """
@@ -627,22 +689,42 @@ class CompressedMatrix(SparseMatrixBase):
     """
     statement_node_type_family = None # Not supported in scheduler yet
 
-    def _init_sparse(self, args, kwargs):
-        """
-        TODO: DOCSTRING
+    @property
+    def vcl_leaf(self):
+        return self.cpu_leaf.as_compressed_matrix()
 
-        Two initial possibilities:
-        + First, construct host matrix. From that, lazily construct VCL matrix.
-        + Take a HostCompressedMatrix, and construct thus a VCL sparse matrix.
 
-        NB: *Lazily* construct VCL compressed matrix, when needed.
-        """
-        self.dtype = dtype(float64)
+class CoordinateMatrix(SparseMatrixBase):
+    """
+    TODO: VCL coordinate_matrix...
+    """
+    statement_node_type_family = None # Not supported in scheduler yet
 
-        # TODO: THIS ISN'T SEMANTICALLY QUITE RIGHT..
-        def get_vcl_t():
-            return self.cpu_leaf.as_compressed_matrix
-        self.vcl_leaf_type = property(get_vcl_t)
+    @property
+    def vcl_leaf(self):
+        return self.cpu_leaf.as_coordinate_matrix()
+
+
+class ELLMatrix(SparseMatrixBase):
+    """
+    TODO: VCL ell_matrix...
+    """
+    statement_node_type_family = None # Not supported in scheduler yet
+
+    @property
+    def vcl_leaf(self):
+        return self.cpu_leaf.as_ell_matrix()
+
+
+class HybridMatrix(SparseMatrixBase):
+    """
+    TODO: VCL hyb_matrix...
+    """
+    statement_node_type_family = None # Not supported in scheduler yet
+
+    @property
+    def vcl_leaf(self):
+        return self.cpu_leaf.as_hyb_matrix()
 
 
 class Matrix(Leaf):
