@@ -898,8 +898,10 @@ class Matrix(Leaf):
     def clear(self):
         return self.vcl_leaf.clear
 
+    #@property
     @deprecated
     def T(self):
+        #return Trans(self)
         return self.vcl_leaf.trans
     trans = T
 
@@ -1186,6 +1188,202 @@ class Norm_Inf(Node):
     operation_node_type = _v.operation_node_type.OPERATION_UNARY_NORM_INF_TYPE
 
 
+class ElementAbs(Node):
+    """
+    """
+    result_types = {
+        ('Matrix',): Matrix,
+        ('Vector',): Vector,
+        ('Scalar',): Scalar
+    }
+    operation_node_type = _v.operation_node_type.OPERATION_UNARY_ABS_TYPE
+
+
+class ElementAcos(Node):
+    """
+    """
+    result_types = {
+        ('Matrix',): Matrix,
+        ('Vector',): Vector,
+        ('Scalar',): Scalar
+    }
+    operation_node_type = _v.operation_node_type.OPERATION_UNARY_ACOS_TYPE
+
+
+class ElementAsin(Node):
+    """
+    """
+    result_types = {
+        ('Matrix',): Matrix,
+        ('Vector',): Vector,
+        ('Scalar',): Scalar
+    }
+    operation_node_type = _v.operation_node_type.OPERATION_UNARY_ASIN_TYPE
+
+
+class ElementAtan(Node):
+    """
+    """
+    result_types = {
+        ('Matrix',): Matrix,
+        ('Vector',): Vector,
+        ('Scalar',): Scalar
+    }
+    operation_node_type = _v.operation_node_type.OPERATION_UNARY_ATAN_TYPE
+
+
+class ElementCeil(Node):
+    """
+    """
+    result_types = {
+        ('Matrix',): Matrix,
+        ('Vector',): Vector,
+        ('Scalar',): Scalar
+    }
+    operation_node_type = _v.operation_node_type.OPERATION_UNARY_CEIL_TYPE
+
+
+class ElementCos(Node):
+    """
+    """
+    result_types = {
+        ('Matrix',): Matrix,
+        ('Vector',): Vector,
+        ('Scalar',): Scalar
+    }
+    operation_node_type = _v.operation_node_type.OPERATION_UNARY_COS_TYPE
+
+
+class ElementCosh(Node):
+    """
+    """
+    result_types = {
+        ('Matrix',): Matrix,
+        ('Vector',): Vector,
+        ('Scalar',): Scalar
+    }
+    operation_node_type = _v.operation_node_type.OPERATION_UNARY_COSH_TYPE
+
+
+class ElementExp(Node):
+    """
+    """
+    result_types = {
+        ('Matrix',): Matrix,
+        ('Vector',): Vector,
+        ('Scalar',): Scalar
+    }
+    operation_node_type = _v.operation_node_type.OPERATION_UNARY_EXP_TYPE
+
+
+class ElementFabs(Node):
+    """
+    """
+    result_types = {
+        ('Matrix',): Matrix,
+        ('Vector',): Vector,
+        ('Scalar',): Scalar
+    }
+    operation_node_type = _v.operation_node_type.OPERATION_UNARY_FABS_TYPE
+
+
+class ElementFloor(Node):
+    """
+    """
+    result_types = {
+        ('Matrix',): Matrix,
+        ('Vector',): Vector,
+        ('Scalar',): Scalar
+    }
+    operation_node_type = _v.operation_node_type.OPERATION_UNARY_FLOOR_TYPE
+
+
+class ElementLog(Node):
+    """
+    """
+    result_types = {
+        ('Matrix',): Matrix,
+        ('Vector',): Vector,
+        ('Scalar',): Scalar
+    }
+    operation_node_type = _v.operation_node_type.OPERATION_UNARY_LOG_TYPE
+
+
+class ElementLog10(Node):
+    """
+    """
+    result_types = {
+        ('Matrix',): Matrix,
+        ('Vector',): Vector,
+        ('Scalar',): Scalar
+    }
+    operation_node_type = _v.operation_node_type.OPERATION_UNARY_LOG10_TYPE
+
+
+class ElementSin(Node):
+    """
+    """
+    result_types = {
+        ('Matrix',): Matrix,
+        ('Vector',): Vector,
+        ('Scalar',): Scalar
+    }
+    operation_node_type = _v.operation_node_type.OPERATION_UNARY_SIN_TYPE
+
+
+class ElementSinh(Node):
+    """
+    """
+    result_types = {
+        ('Matrix',): Matrix,
+        ('Vector',): Vector,
+        ('Scalar',): Scalar
+    }
+    operation_node_type = _v.operation_node_type.OPERATION_UNARY_SINH_TYPE
+
+
+class ElementSqrt(Node):
+    """
+    """
+    result_types = {
+        ('Matrix',): Matrix,
+        ('Vector',): Vector,
+        ('Scalar',): Scalar
+    }
+    operation_node_type = _v.operation_node_type.OPERATION_UNARY_SQRT_TYPE
+
+
+class ElementTan(Node):
+    """
+    """
+    result_types = {
+        ('Matrix',): Matrix,
+        ('Vector',): Vector,
+        ('Scalar',): Scalar
+    }
+    operation_node_type = _v.operation_node_type.OPERATION_UNARY_TAN_TYPE
+
+
+class ElementTanh(Node):
+    """
+    """
+    result_types = {
+        ('Matrix',): Matrix,
+        ('Vector',): Vector,
+        ('Scalar',): Scalar
+    }
+    operation_node_type = _v.operation_node_type.OPERATION_UNARY_TANH_TYPE
+
+
+class Trans(Node):
+    """
+    """
+    result_types = {
+        ('Matrix',): Matrix,
+    }
+    operation_node_type = _v.operation_node_type.OPERATION_UNARY_TRANS_TYPE
+
+
 class Assign(Node):
     """
     Derived node class for assignment.
@@ -1261,13 +1459,13 @@ class Mul(Node):
     """
     result_types = {
         # OPERATION_BINARY_MAT_MAT_PROD_TYPE
-        #('Matrix', 'Matrix'): Matrix, # NOT IMPLEMENTED IN SCHEDULER
+        ('Matrix', 'Matrix'): Matrix, # NOT IMPLEMENTED IN SCHEDULER
 
         # OPERATION_BINARY_MAT_VEC_PROD_TYPE
-        #('Matrix', 'Vector'): Matrix, # NOT IMPLEMENTED IN SCHEDULER
+        ('Matrix', 'Vector'): Matrix, # NOT IMPLEMENTED IN SCHEDULER
 
         # "OPERATION_BINARY_VEC_VEC_PROD_TYPE" -- VEC as 1-D MAT?
-        #('Vector', 'Vector'): Matrix, # NOT IMPLEMENTED IN SCHEDULER
+        ('Vector', 'Vector'): Matrix, # NOT IMPLEMENTED IN SCHEDULER
 
         # OPERATION_BINARY_MULT_TYPE
         ('Matrix', 'HostScalar'): Matrix,
@@ -1389,7 +1587,6 @@ class Statement:
         if isinstance(node, Assign):
             self.result = node.operands[0]
         else:
-            print("shape:", node.result_shape)
             self.result = node.result_container_type(
                 shape = node.result_shape,
                 dtype = node.dtype )
