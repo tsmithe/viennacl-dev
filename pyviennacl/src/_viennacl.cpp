@@ -903,6 +903,9 @@ public:
   SET_OPERAND(vcl::vector_base<float>*, vector_float)
   SET_OPERAND(vcl::vector_base<double>*, vector_double)
 
+  SET_OPERAND(vcl::implicit_vector_base<float>*, implicit_vector_float)
+  SET_OPERAND(vcl::implicit_vector_base<double>*, implicit_vector_double)
+
   // NB: need to add remaining matrix_row types as they become available
   SET_OPERAND(CONCAT(vcl::matrix_base<float, vcl::row_major>*),
               matrix_row_float)
@@ -914,6 +917,21 @@ public:
               matrix_col_float)
   SET_OPERAND(CONCAT(vcl::matrix_base<double, vcl::column_major>*),
               matrix_col_double)
+
+  SET_OPERAND(vcl::implicit_matrix_base<float>*, implicit_matrix_float)
+  SET_OPERAND(vcl::implicit_matrix_base<double>*, implicit_matrix_double)
+
+  SET_OPERAND(vcl::compressed_matrix<float>*, compressed_matrix_float)
+  SET_OPERAND(vcl::compressed_matrix<double>*, compressed_matrix_double)
+
+  SET_OPERAND(vcl::coordinate_matrix<float>*, coordinate_matrix_float)
+  SET_OPERAND(vcl::coordinate_matrix<double>*, coordinate_matrix_double)
+
+  SET_OPERAND(vcl::ell_matrix<float>*, ell_matrix_float)
+  SET_OPERAND(vcl::ell_matrix<double>*, ell_matrix_double)
+
+  SET_OPERAND(vcl::hyb_matrix<float>*, hyb_matrix_float)
+  SET_OPERAND(vcl::hyb_matrix<double>*, hyb_matrix_double)
 
 };
 #undef SET_OPERAND
@@ -1691,13 +1709,21 @@ BOOST_PYTHON_MODULE(_viennacl)
   bp::enum_<vcl::scheduler::statement_node_subtype>
     ("statement_node_subtype")
     VALUE(vcl::scheduler, INVALID_SUBTYPE)
+
     VALUE(vcl::scheduler, HOST_SCALAR_TYPE)
     VALUE(vcl::scheduler, DEVICE_SCALAR_TYPE)
+
     VALUE(vcl::scheduler, DENSE_VECTOR_TYPE)
     VALUE(vcl::scheduler, IMPLICIT_VECTOR_TYPE)
+
     VALUE(vcl::scheduler, DENSE_ROW_MATRIX_TYPE)
     VALUE(vcl::scheduler, DENSE_COL_MATRIX_TYPE)
     VALUE(vcl::scheduler, IMPLICIT_MATRIX_TYPE)
+
+    VALUE(vcl::scheduler, COMPRESSED_MATRIX_TYPE)
+    VALUE(vcl::scheduler, COORDINATE_MATRIX_TYPE)
+    VALUE(vcl::scheduler, ELL_MATRIX_TYPE)
+    VALUE(vcl::scheduler, HYB_MATRIX_TYPE)
     ;
 
   bp::enum_<vcl::scheduler::statement_node_numeric_type>
@@ -1762,14 +1788,32 @@ DISAMBIGUATE_CLASS_FUNCTION_PTR(statement_node_wrapper,         // class
     SET_OPERAND(host_ulong)
     SET_OPERAND(host_float)
     SET_OPERAND(host_double)
+
+  // TODO: DIFFERENT DTYPES
+
     SET_OPERAND(scalar_float)
     SET_OPERAND(scalar_double)
     SET_OPERAND(vector_float)
     SET_OPERAND(vector_double)
+    SET_OPERAND(implicit_vector_float)
+    SET_OPERAND(implicit_vector_double)
     SET_OPERAND(matrix_row_float)
     SET_OPERAND(matrix_row_double)
     SET_OPERAND(matrix_col_float)
     SET_OPERAND(matrix_col_double)
+    SET_OPERAND(implicit_matrix_float)
+    SET_OPERAND(implicit_matrix_double)
+    SET_OPERAND(implicit_vector_float)
+    SET_OPERAND(implicit_vector_double)
+    SET_OPERAND(compressed_matrix_float)
+    SET_OPERAND(compressed_matrix_double)
+    SET_OPERAND(coordinate_matrix_float)
+    SET_OPERAND(coordinate_matrix_double)
+    SET_OPERAND(ell_matrix_float)
+    SET_OPERAND(ell_matrix_double)
+    SET_OPERAND(hyb_matrix_float)
+    SET_OPERAND(hyb_matrix_double)
+
     .add_property("vcl_statement_node",
 	 bp::make_function(get_vcl_statement_node,
 			   bp::return_value_policy<bp::return_by_value>()))

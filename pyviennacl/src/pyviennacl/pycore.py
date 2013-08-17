@@ -33,7 +33,11 @@ vcl_statement_node_subtype_strings = {
     _v.statement_node_subtype.IMPLICIT_VECTOR_TYPE: 'implicit_vector',
     _v.statement_node_subtype.DENSE_ROW_MATRIX_TYPE: 'matrix_row',
     _v.statement_node_subtype.DENSE_COL_MATRIX_TYPE: 'matrix_col',
-    _v.statement_node_subtype.IMPLICIT_MATRIX_TYPE: 'implicit_matrix'
+    _v.statement_node_subtype.IMPLICIT_MATRIX_TYPE: 'implicit_matrix',
+    _v.statement_node_subtype.COMPRESSED_MATRIX_TYPE: 'compressed_matrix',
+    _v.statement_node_subtype.COORDINATE_MATRIX_TYPE: 'coordinate_matrix',
+    _v.statement_node_subtype.ELL_MATRIX_TYPE: 'ell_matrix',
+    _v.statement_node_subtype.HYB_MATRIX_TYPE: 'hyb_matrix'
 }
 
 # This dict maps ViennaCL numeric types onto the C++ strings used for them
@@ -129,7 +133,7 @@ class MagicMethods:
         return (self * rhs)
 
     def element_prod(self, rhs):
-        return ElementMul(self, rhs)
+        return ElementProd(self, rhs)
     element_mul = element_prod
 
     def element_div(self, rhs):
@@ -196,6 +200,7 @@ class Leaf(MagicMethods):
     such as a scalar, a vector, or a matrix.
     """
     shape = None # No shape yet -- not even 0 dimensions
+    flushed = True # Are host and device data synchronised?
 
     def __init__(self, *args, **kwargs):
         """
@@ -239,6 +244,9 @@ class Leaf(MagicMethods):
         If you're deriving from Leaf, then you probably want to override this.
         """
         raise NotImplementedError("Help")
+
+    def flush(self):
+        raise NotImplementedError("Should you be trying to flush this type?")
 
     @property
     def result_container_type(self):
@@ -503,7 +511,7 @@ class Vector(Leaf):
     #@deprecated
     def __mul__(self, rhs):
         if isinstance(rhs, Vector):
-            return ElementMul(self, rhs)
+            return ElementProd(self, rhs)
             #return Vector(self.vcl_leaf * rhs.vcl_leaf, dtype=self.dtype)
         else:
             op = Mul(self, rhs)
@@ -515,7 +523,8 @@ class SparseMatrixBase(Leaf):
     TODO: docstring
     """
     ndim = 2
-    statement_node_type_family = None # Not a ViennaCL type
+    flushed = False
+    statement_node_type_family = _v.statement_node_type_family.MATRIX_TYPE_FAMILY
 
     @property
     def vcl_leaf_factory(self):
@@ -554,6 +563,12 @@ class SparseMatrixBase(Leaf):
                 else:
                     # error!
                     raise TypeError("Sparse matrix cannot be constructed thus")
+            elif isinstance(args[0], Matrix):
+                # 1: Matrix instance -> copy
+                self.dtype = args[0].dtype
+                self.layout = args[0].layout
+                def get_cpu_leaf(cpu_t):
+                    return cpu_t(args[0].as_ndarray())
             elif isinstance(args[0], SparseMatrixBase):
                 # 1: SparseMatrixBase instance -> copy
                 self.dtype = args[0].dtype
@@ -632,10 +647,20 @@ class SparseMatrixBase(Leaf):
         return (self.size1, self.size2)
 
     def resize(self, size1, size2):
+        self.flushed = False
         return self.cpu_leaf.resize(size1, size2)
 
     def as_ndarray(self):
         return self.cpu_leaf.as_ndarray()
+
+    def as_dense(self):
+        return Matrix(self)
+
+    @property
+    def vcl_leaf(self):
+        if not self.flushed:
+            self.flush()
+        return self._vcl_leaf
 
     def __getitem__(self, key):
         # TODO: extend beyond tuple keys
@@ -655,6 +680,7 @@ class SparseMatrixBase(Leaf):
             raise KeyError("Key must be a 2-tuple")
         if len(key) != 2:
             raise KeyError("Key must be a 2-tuple")
+        self.flushed = False
         self.cpu_leaf.set(key[0], key[1], (self[key] + value))
         self.nnz # Updates nonzero list
 
@@ -663,6 +689,7 @@ class SparseMatrixBase(Leaf):
             raise KeyError("Key must be a 2-tuple")
         if len(key) != 2:
             raise KeyError("Key must be a 2-tuple")
+        self.flushed = False
         self[key] = 0
         self.nnz # Updates nonzero list
 
@@ -674,57 +701,49 @@ class SparseMatrixBase(Leaf):
         out = out[:-1]
         return "".join(out)
 
-    def __mul__(self, rhs):
-        # !!!
-        # TODO: Lazy evaluation, thinking about proper return type
-        # TODO: Currently only supports matrix-vector multiplication
-        # TODO: Unified __mul__ handling -- will come with scheduler support...
-        # !!!
-        return Vector(self.vcl_leaf.prod(rhs.vcl_leaf))
-
 
 class CompressedMatrix(SparseMatrixBase):
     """
     TODO: VCL compressed_matrix...
     """
-    statement_node_type_family = None # Not supported in scheduler yet
+    statement_node_subtype = _v.statement_node_subtype.COMPRESSED_MATRIX_TYPE
 
-    @property
-    def vcl_leaf(self):
-        return self.cpu_leaf.as_compressed_matrix()
+    def flush(self):
+        self._vcl_leaf = self.cpu_leaf.as_compressed_matrix()
+        self.flushed = True
 
 
 class CoordinateMatrix(SparseMatrixBase):
     """
     TODO: VCL coordinate_matrix...
     """
-    statement_node_type_family = None # Not supported in scheduler yet
+    statement_node_subtype = _v.statement_node_subtype.COORDINATE_MATRIX_TYPE
 
-    @property
-    def vcl_leaf(self):
-        return self.cpu_leaf.as_coordinate_matrix()
+    def flush(self):
+        self._vcl_leaf = self.cpu_leaf.as_coordinate_matrix()
+        self.flushed = True
 
 
 class ELLMatrix(SparseMatrixBase):
     """
     TODO: VCL ell_matrix...
     """
-    statement_node_type_family = None # Not supported in scheduler yet
+    statement_node_subtype = _v.statement_node_subtype.ELL_MATRIX_TYPE
 
-    @property
-    def vcl_leaf(self):
-        return self.cpu_leaf.as_ell_matrix()
+    def flush(self):
+        self._vcl_leaf = self.cpu_leaf.as_ell_matrix()
+        self.flushed = True
 
 
 class HybridMatrix(SparseMatrixBase):
     """
     TODO: VCL hyb_matrix...
     """
-    statement_node_type_family = None # Not supported in scheduler yet
+    statement_node_subtype = _v.statement_node_subtype.HYB_MATRIX_TYPE
 
-    @property
-    def vcl_leaf(self):
-        return self.cpu_leaf.as_hyb_matrix()
+    def flush(self):
+        self._vcl_leaf = self.cpu_leaf.as_hyb_matrix()
+        self.flushed = True
 
 
 class Matrix(Leaf):
@@ -770,7 +789,13 @@ class Matrix(Leaf):
             def get_leaf(vcl_t):
                 return vcl_t()
         elif len(args) == 1:
-            if isinstance(args[0], Matrix):
+            if isinstance(args[0], SparseMatrixBase):
+                if self.dtype is None:
+                    self.dtype = args[0].dtype
+                self.layout = args[0].layout
+                def get_leaf(vcl_t):
+                    return vcl_t(args[0].as_ndarray())
+            elif isinstance(args[0], Matrix):
                 if self.dtype is None:
                     self.dtype = args[0].dtype
                 def get_leaf(vcl_t):
@@ -780,7 +805,7 @@ class Matrix(Leaf):
                     return vcl_t(args[0][0], args[0][1])
             elif isinstance(args[0], ndarray):
                 if self.dtype is None:
-                    self.dtype = dtype(args[0])
+                    self.dtype = args[0].dtype
                 def get_leaf(vcl_t):
                     return vcl_t(args[0])
             else:
@@ -1114,13 +1139,24 @@ class Node(MagicMethods):
         result of any operation on the given operands. The len of this tuple
         is the number of dimensions, with each element of the tuple
         determining the upper-bound size of the corresponding dimension.
+
+        TODO: IMPROVE DOCSTRING: MENTION SETTER
         """
+        try:
+            if isinstance(self._result_shape, tuple):
+                return self._result_shape
+        except: pass
+
         ndim = self.result_ndim
         max_size = self.result_max_axis_size
         shape = []
         for n in range(ndim):
             shape.append(max_size)
         return tuple(shape)
+    
+    @result_shape.setter
+    def result_shape(self, value):
+        self._result_shape = value
 
     def express(self, statement=""):
         """
@@ -1459,30 +1495,42 @@ class Mul(Node):
     """
     result_types = {
         # OPERATION_BINARY_MAT_MAT_PROD_TYPE
-        ('Matrix', 'Matrix'): Matrix, # TODO NOT IMPLEMENTED IN SCHEDULER
+        ('Matrix', 'Matrix'): Matrix,
+        # TODO: Sparse matrix support here
 
         # OPERATION_BINARY_MAT_VEC_PROD_TYPE
-        ('Matrix', 'Vector'): Matrix, # TODO NOT IMPLEMENTED IN SCHEDULER
+        ('Matrix', 'Vector'): Vector,
+        ('CompressedMatrix', 'Vector'): Vector,
+        ('CoordinateMatrix', 'Vector'): Vector,
+        ('ELLMatrix', 'Vector'): Vector,
+        ('HybridMatrix', 'Vector'): Vector,
 
         # "OPERATION_BINARY_VEC_VEC_PROD_TYPE" -- VEC as 1-D MAT?
-        ('Vector', 'Vector'): Matrix, # TODO NOT IMPLEMENTED IN SCHEDULER
+        #('Vector', 'Vector'): Matrix, # TODO NOT IMPLEMENTED IN SCHEDULER
 
         # OPERATION_BINARY_MULT_TYPE
         ('Matrix', 'HostScalar'): Matrix,
         ('Matrix', 'Scalar'): Matrix,
         ('Vector', 'HostScalar'): Vector,
         ('Vector', 'Scalar'): Vector,
-        #('Scalar', 'Scalar'): Scalar,
-        #('Scalar', 'HostScalar'): HostScalar,
-        #('HostScalar', 'HostScalar'): HostScalar
+        ('Scalar', 'Scalar'): Scalar,
+        ('Scalar', 'HostScalar'): HostScalar,
+        ('HostScalar', 'HostScalar'): HostScalar
+        # TODO: Sparse matrix support here
     }
 
     def _extra_init(self):
-        if self.operands[0].result_container_type == Matrix: # Matrix * ...
-            if self.operands[1].result_container_type == Matrix:
+        if (self.operands[0].result_container_type == Matrix or
+            issubclass(self.operands[0].result_container_type,
+                       SparseMatrixBase)): # Matrix * ...
+            if (self.operands[1].result_container_type == Matrix or
+                issubclass(self.operands[1].result_container_type,
+                           SparseMatrixBase)):
                 self.operation_node_type = _v.operation_node_type.OPERATION_BINARY_MAT_MAT_PROD_TYPE
             elif self.operands[1].result_container_type == Vector:
                 self.operation_node_type = _v.operation_node_type.OPERATION_BINARY_MAT_VEC_PROD_TYPE
+                # TODO: Make this more shapely..
+                self.result_shape = self.operands[1].shape
             elif self.operands[1].result_container_type == Scalar:
                 self.operation_node_type = _v.operation_node_type.OPERATION_BINARY_MULT_TYPE
             elif self.operands[1].result_container_type == HostScalar:
