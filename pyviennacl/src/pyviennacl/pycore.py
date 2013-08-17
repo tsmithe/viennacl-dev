@@ -1459,13 +1459,13 @@ class Mul(Node):
     """
     result_types = {
         # OPERATION_BINARY_MAT_MAT_PROD_TYPE
-        ('Matrix', 'Matrix'): Matrix, # NOT IMPLEMENTED IN SCHEDULER
+        ('Matrix', 'Matrix'): Matrix, # TODO NOT IMPLEMENTED IN SCHEDULER
 
         # OPERATION_BINARY_MAT_VEC_PROD_TYPE
-        ('Matrix', 'Vector'): Matrix, # NOT IMPLEMENTED IN SCHEDULER
+        ('Matrix', 'Vector'): Matrix, # TODO NOT IMPLEMENTED IN SCHEDULER
 
         # "OPERATION_BINARY_VEC_VEC_PROD_TYPE" -- VEC as 1-D MAT?
-        ('Vector', 'Vector'): Matrix, # NOT IMPLEMENTED IN SCHEDULER
+        ('Vector', 'Vector'): Matrix, # TODO NOT IMPLEMENTED IN SCHEDULER
 
         # OPERATION_BINARY_MULT_TYPE
         ('Matrix', 'HostScalar'): Matrix,
