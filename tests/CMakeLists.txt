@@ -40,16 +40,7 @@ if (ENABLE_OPENCL)
 #                 ${PROJECT_SOURCE_DIR}/external/pugixml/src/pugixml.cpp)
 #  target_link_libraries(external_linkage-opencl ${OPENCL_LIBRARIES})
 #  set_target_properties(external_linkage-opencl PROPERTIES COMPILE_FLAGS "-DVIENNACL_WITH_OPENCL")
-#endif (ENABLE_OPENCL)
-
-#  include_directories(${PROJECT_SOURCE_DIR}/external)
-#  add_executable(external_linkage-opencl
-#                 src/external_1.cpp
-#                 src/external_2.cpp
-#                 ${PROJECT_SOURCE_DIR}/external/pugixml/src/pugixml.cpp)
-#  target_link_libraries(external_linkage-opencl ${OPENCL_LIBRARIES})
-#  set_target_properties(external_linkage-opencl PROPERTIES COMPILE_FLAGS "-DVIENNACL_WITH_OPENCL")
-#endif (ENABLE_OPENCL)
+endif (ENABLE_OPENCL)
 
 # tests with CUDA backend
 if (ENABLE_CUDA)
