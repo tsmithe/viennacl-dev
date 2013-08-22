@@ -929,11 +929,9 @@ class Matrix(Leaf):
     def clear(self):
         return self.vcl_leaf.clear
 
-    #@property
-    @deprecated
+    @property
     def T(self):
-        #return Trans(self)
-        return self.vcl_leaf.trans
+        return Trans(self)
     trans = T
 
 
@@ -986,7 +984,7 @@ class Node(MagicMethods):
                 # No use, so revert
                 self.operands.reverse()
 
-        self._extra_init()
+        self._node_init()
 
         if self.operation_node_type is None:
             raise TypeError("Unsupported expression: %s" % (self.express()))
@@ -1018,7 +1016,7 @@ class Node(MagicMethods):
                 self.operands[0].statement_node_subtype,       # rhs
                 self.operands[0].statement_node_numeric_type)  # rhs
 
-    def _extra_init(self):
+    def _node_init(self):
         pass
 
     def get_vcl_operand_setter(self, operand):
@@ -1473,6 +1471,11 @@ class Add(Node):
     }
     operation_node_type = _v.operation_node_type.OPERATION_BINARY_ADD_TYPE
 
+    def _node_init(self):
+        if self.operands[0].shape != self.operands[1].shape:
+            raise TypeError("Cannot Add two differently shaped objects!")
+        self.result_shape = self.operands[0].shape
+
 
 class Sub(Node):
     """
@@ -1486,6 +1489,11 @@ class Sub(Node):
         ('Matrix', 'Matrix'): Matrix
     }
     operation_node_type = _v.operation_node_type.OPERATION_BINARY_SUB_TYPE
+
+    def _node_init(self):
+        if self.operands[0].shape != self.operands[1].shape:
+            raise TypeError("Cannot Sub two differently shaped objects!")
+        self.result_shape = self.operands[0].shape
 
 
 class Mul(Node):
@@ -1519,7 +1527,7 @@ class Mul(Node):
         # TODO: Sparse matrix support here
     }
 
-    def _extra_init(self):
+    def _node_init(self):
         if (self.operands[0].result_container_type == Matrix or
             issubclass(self.operands[0].result_container_type,
                        SparseMatrixBase)): # Matrix * ...
@@ -1527,8 +1535,8 @@ class Mul(Node):
                 issubclass(self.operands[1].result_container_type,
                            SparseMatrixBase)):
                 self.operation_node_type = _v.operation_node_type.OPERATION_BINARY_MAT_MAT_PROD_TYPE
-                self.result_shape = (self.operands[0].size1,
-                                     self.operands[1].size2)
+                self.result_shape = (self.operands[0].shape[0],
+                                     self.operands[1].shape[1])
             elif self.operands[1].result_container_type == Vector:
                 self.operation_node_type = _v.operation_node_type.OPERATION_BINARY_MAT_VEC_PROD_TYPE
                 self.result_shape = self.operands[1].shape

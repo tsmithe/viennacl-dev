@@ -4,11 +4,11 @@
 #
 # Part 1: Tutorials which work without OpenCL as well:
 #
-foreach(tut bandwidth-reduction blas1 scheduler wrap-host-buffer)
+foreach(tut bandwidth-reduction blas1 scheduler wrap-host-buffer bugfix)
    add_executable(${tut} ${tut}.cpp)
    if (ENABLE_OPENCL)
      target_link_libraries(${tut} ${OPENCL_LIBRARIES})
-     set_target_properties(${tut} PROPERTIES COMPILE_FLAGS "-DVIENNACL_WITH_OPENCL")
+     set_target_properties(${tut} PROPERTIES COMPILE_FLAGS "-DVIENNACL_WITH_OPENCL -ggdb")
    endif (ENABLE_OPENCL)
 endforeach()
 

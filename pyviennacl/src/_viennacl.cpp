@@ -1005,8 +1005,8 @@ public:
 template <class T>
 class vector_wrapper {
   std::vector<T> vector_;
-  typedef std::vector<T>::iterator iter_t;
-  typedef std::vector<T>::const_iterator const_iter_t;
+  typedef typename std::vector<T>::iterator iter_t;
+  typedef typename std::vector<T>::const_iterator const_iter_t;
 
 public:
   vector_wrapper(bp::list list_) {
@@ -1048,7 +1048,7 @@ public:
   void insert_at_index(std::size_t offset, const T& item)
   {
     iter_t it = vector_.begin();
-    _vector.insert(it+offset, item);
+    vector_.insert(it+offset, item);
   }
 
   void insert_at_begin(const T& item)
@@ -1077,7 +1077,7 @@ std::vector<T> vector_from_list(bp::list l) {
 template <class T>
 bp::list list_from_vector(std::vector<T> v) {
   bp::list l;
-  for (std::vector<T>::iterator it = v.begin(); it != v.end(); it++)
+  for (typename std::vector<T>::iterator it = v.begin(); it != v.end(); it++)
     l.append(*it);
   return l;
 }

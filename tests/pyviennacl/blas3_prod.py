@@ -28,15 +28,19 @@ def diff(a, b):
         else:
             raise TypeError("Something went wrong")
 
-    p.log.warning("Converted types")
-
     # The MagicMethods class guarantees that we have some useful facilities
     # (both Node and Leaf are derived from MagicMethods)
     if isinstance(a, p.MagicMethods) and isinstance(b, p.MagicMethods):
-        d = p.ElementFabs(p.Sub(a.result, b.result))
-        p.log.warning("Created fabs expression for shapes: %s and %s"
-                      % (a.shape, b.shape))
+        #print(a.as_ndarray())
+        #print(b.as_ndarray())
+        #print((a - b).as_ndarray())
+        #print(a.as_ndarray() - b.as_ndarray())
+        #d = p.ElementFabs(a - b)
+        # TODO: Construct Node from ndarray
+        d = p.ElementFabs(p.Matrix(a.as_ndarray() - b.as_ndarray()))
+        #print(d.express())
         cpu_d = d.as_ndarray()
+        #print(cpu_d)
         if len(d.shape) == 1:
             # vector
             for i in range(d.shape[0]):
@@ -67,7 +71,6 @@ def test_prod(epsilon,
     # C +-= A * B
     C = A.dot(B)
     vcl_C = vcl_A * vcl_B
-    p.log.warning("Created expression 1")
     act_diff = math.fabs(diff(C, vcl_C))
     if (act_diff > epsilon):
         raise Exception("Error at operation: matrix-matrix product; diff = %s"
@@ -91,24 +94,24 @@ def test_prod(epsilon,
     print("Test C -= A * B passed!")
 
     # C +-= A * trans(B)
-    C = A.dot(B_trans)
-    vcl_C = vcl_A * vcl_B_trans
+    C = A.dot(B_trans.T)
+    vcl_C = vcl_A * vcl_B_trans.T
     act_diff = math.fabs(diff(C, vcl_C))
     if (act_diff > epsilon):
         raise Exception("Error at operation: matrix-matrix product; diff = %s"
                         % act_diff)
     print("Test C = A * trans(B) passed!")
 
-    C += A.dot(B_trans)
-    vcl_C += vcl_A * vcl_B_trans
+    C += A.dot(B_trans.T)
+    vcl_C += vcl_A * vcl_B_trans.T
     act_diff = math.fabs(diff(C, vcl_C))
     if (act_diff > epsilon):
         raise Exception("Error at operation: matrix-matrix product; diff = %s"
                         % act_diff)
     print("Test C += A * trans(B) passed!")
 
-    C -= A.dot(B_trans)
-    vcl_C -= vcl_A * vcl_B_trans
+    C -= A.dot(B_trans.T)
+    vcl_C -= vcl_A * vcl_B_trans.T
     act_diff = math.fabs(diff(C, vcl_C))
     if (act_diff > epsilon):
         raise Exception("Error at operation: matrix-matrix product; diff = %s"
@@ -116,24 +119,24 @@ def test_prod(epsilon,
     print("Test C -= A * trans(B) passed!")
 
     # C +-= trans(A) * B
-    C = A_trans.dot(B)
-    vcl_C = vcl_A_trans * vcl_B
+    C = A_trans.T.dot(B)
+    vcl_C = vcl_A_trans.T * vcl_B
     act_diff = math.fabs(diff(C, vcl_C))
     if (act_diff > epsilon):
         raise Exception("Error at operation: matrix-matrix product; diff = %s"
                         % act_diff)
     print("Test C = trans(A) * B passed!")
 
-    C += A_trans.dot(B)
-    vcl_C += vcl_A_trans * vcl_B
+    C += A_trans.T.dot(B)
+    vcl_C += vcl_A_trans.T * vcl_B
     act_diff = math.fabs(diff(C, vcl_C))
     if (act_diff > epsilon):
         raise Exception("Error at operation: matrix-matrix product; diff = %s"
                         % act_diff)
     print("Test C += trans(A) * B passed!")
 
-    C -= A_trans.dot(B)
-    vcl_C -= vcl_A_trans * vcl_B
+    C -= A_trans.T.dot(B)
+    vcl_C -= vcl_A_trans.T * vcl_B
     act_diff = math.fabs(diff(C, vcl_C))
     if (act_diff > epsilon):
         raise Exception("Error at operation: matrix-matrix product; diff = %s"
@@ -141,24 +144,24 @@ def test_prod(epsilon,
     print("Test C -= trans(A) * B passed!")
 
     # C +-= trans(A) * trans(B)
-    C = A_trans.dot(B_trans)
-    vcl_C = vcl_A_trans * vcl_B_trans
+    C = A_trans.T.dot(B_trans.T)
+    vcl_C = vcl_A_trans.T * vcl_B_trans.T
     act_diff = math.fabs(diff(C, vcl_C))
     if (act_diff > epsilon):
         raise Exception("Error at operation: matrix-matrix product; diff = %s"
                         % act_diff)
     print("Test C = trans(A) * trans(B) passed!")
 
-    C += A_trans.dot(B_trans)
-    vcl_C += vcl_A_trans * vcl_B_trans
+    C += A_trans.T.dot(B_trans.T)
+    vcl_C += vcl_A_trans.T * vcl_B_trans.T
     act_diff = math.fabs(diff(C, vcl_C))
     if (act_diff > epsilon):
         raise Exception("Error at operation: matrix-matrix product; diff = %s"
                         % act_diff)
     print("Test C += trans(A) * trans(B) passed!")
 
-    C -= A_trans.dot(B_trans)
-    vcl_C -= vcl_A_trans * vcl_B_trans
+    C -= A_trans.T.dot(B_trans.T)
+    vcl_C -= vcl_A_trans.T * vcl_B_trans.T
     act_diff = math.fabs(diff(C, vcl_C))
     if (act_diff > epsilon):
         raise Exception("Error at operation: matrix-matrix product; diff = %s"
@@ -210,8 +213,6 @@ def test_slice(epsilon, dtype,
     C_trans = C.T
     big_C_trans = big_C.T
 
-    p.log.warning("PRE")
-
     # Construct appropriate ViennaCL objects
     vcl_A = p.Matrix(A, layout = A_layout)
 
@@ -223,8 +224,6 @@ def test_slice(epsilon, dtype,
     vcl_big_slice_A[size1:-size1:2, size2::3] = vcl_A
     vcl_slice_A = vcl_big_slice_A[size1:-size1:2, size2::3]
 
-    p.log.warning("A")
-
     vcl_A_trans = p.Matrix(A_trans, layout = A_layout)
 
     vcl_big_range_A_trans = p.Matrix(big_A_trans, layout = A_layout)
@@ -234,8 +233,6 @@ def test_slice(epsilon, dtype,
     vcl_big_slice_A_trans = p.Matrix(big_A_trans, layout = A_layout)
     vcl_big_slice_A_trans[size2:-size2:2, size1::3] = vcl_A_trans
     vcl_slice_A_trans = vcl_big_slice_A_trans[size2:-size2:2, size1::3]
-
-    p.log.warning("A_trans")
 
     vcl_B = p.Matrix(B, layout = B_layout)
 
@@ -247,8 +244,6 @@ def test_slice(epsilon, dtype,
     vcl_big_slice_B[size2:-size2:2, size3::3] = vcl_B
     vcl_slice_B = vcl_big_slice_B[size2:-size2:2, size3::3]
 
-    p.log.warning("B")
-
     vcl_B_trans = p.Matrix(B_trans, layout = B_layout)
 
     vcl_big_range_B_trans = p.Matrix(big_B_trans, layout = B_layout)
@@ -259,8 +254,6 @@ def test_slice(epsilon, dtype,
     vcl_big_slice_B_trans[size3:-size3:2, size2::3] = vcl_B_trans
     vcl_slice_B_trans = vcl_big_slice_B_trans[size3:-size3:2, size2::3]
 
-    p.log.warning("B_trans")
-
     vcl_C = p.Matrix(C, layout = C_layout)
 
     vcl_big_range_C = p.Matrix(big_C, layout = C_layout)
@@ -268,8 +261,6 @@ def test_slice(epsilon, dtype,
 
     vcl_big_slice_C = p.Matrix(big_C, layout = C_layout)
     vcl_slice_C = vcl_big_slice_C[(size1 - 1):(4*size1 - 1):3, (size3 - 1):(4*size3 - 1):3]
-
-    p.log.warning("C")
 
     # A=matrix, B=matrix, C=matrix
     print("Now using A=matrix, B=matrix, C=matrix")
@@ -283,14 +274,14 @@ def test_slice(epsilon, dtype,
     ret = test_prod(epsilon,
                     A, A_trans, B, B_trans, C,
                     vcl_A, vcl_A_trans,
-                    vcl_B, vcl_B_trans, vcl_C_range)
+                    vcl_B, vcl_B_trans, vcl_range_C)
 
     # A=matrix, B=matrix, C=slice
     print("Now using A=matrix, B=matrix, C=slice")
     ret = test_prod(epsilon,
                     A, A_trans, B, B_trans, C,
                     vcl_A, vcl_A_trans,
-                    vcl_B, vcl_B_trans, vcl_C_slice)
+                    vcl_B, vcl_B_trans, vcl_slice_C)
 
     # A=matrix, B=range, C=matrix
     print("Now using A=matrix, B=range, C=matrix")
@@ -304,14 +295,14 @@ def test_slice(epsilon, dtype,
     ret = test_prod(epsilon,
                     A, A_trans, B, B_trans, C,
                     vcl_A, vcl_A_trans,
-                    vcl_range_B, vcl_range_B_trans, vcl_C_range)
+                    vcl_range_B, vcl_range_B_trans, vcl_range_C)
 
     # A=matrix, B=range, C=slice
     print("Now using A=matrix, B=range, C=slice")
     ret = test_prod(epsilon,
                     A, A_trans, B, B_trans, C,
                     vcl_A, vcl_A_trans,
-                    vcl_range_B, vcl_range_B_trans, vcl_C_slice)
+                    vcl_range_B, vcl_range_B_trans, vcl_slice_C)
 
     # A=matrix, B=slice, C=matrix
     print("Now using A=matrix, B=slice, C=matrix")
@@ -325,14 +316,14 @@ def test_slice(epsilon, dtype,
     ret = test_prod(epsilon,
                     A, A_trans, B, B_trans, C,
                     vcl_A, vcl_A_trans,
-                    vcl_slice_B, vcl_slice_B_trans, vcl_C_range)
+                    vcl_slice_B, vcl_slice_B_trans, vcl_range_C)
 
     # A=matrix, B=slice, C=slice
     print("Now using A=matrix, B=slice, C=slice")
     ret = test_prod(epsilon,
                     A, A_trans, B, B_trans, C,
                     vcl_A, vcl_A_trans,
-                    vcl_slice_B, vcl_slice_B_trans, vcl_C_slice)
+                    vcl_slice_B, vcl_slice_B_trans, vcl_slice_C)
 
     # A=range, B=matrix, C=matrix
     print("Now using A=range, B=matrix, C=matrix")
@@ -346,14 +337,14 @@ def test_slice(epsilon, dtype,
     ret = test_prod(epsilon,
                     A, A_trans, B, B_trans, C,
                     vcl_range_A, vcl_range_A_trans,
-                    vcl_B, vcl_B_trans, vcl_C_range)
+                    vcl_B, vcl_B_trans, vcl_range_C)
 
     # A=range, B=matrix, C=slice
     print("Now using A=range, B=matrix, C=slice")
     ret = test_prod(epsilon,
                     A, A_trans, B, B_trans, C,
                     vcl_range_A, vcl_range_A_trans,
-                    vcl_B, vcl_B_trans, vcl_C_slice)
+                    vcl_B, vcl_B_trans, vcl_slice_C)
 
     # A=range, B=range, C=matrix
     print("Now using A=range, B=range, C=matrix")
@@ -367,14 +358,14 @@ def test_slice(epsilon, dtype,
     ret = test_prod(epsilon,
                     A, A_trans, B, B_trans, C,
                     vcl_range_A, vcl_range_A_trans,
-                    vcl_range_B, vcl_range_B_trans, vcl_C_range)
+                    vcl_range_B, vcl_range_B_trans, vcl_range_C)
 
     # A=range, B=range, C=slice
     print("Now using A=range, B=range, C=slice")
     ret = test_prod(epsilon,
                     A, A_trans, B, B_trans, C,
                     vcl_range_A, vcl_range_A_trans,
-                    vcl_range_B, vcl_range_B_trans, vcl_C_slice)
+                    vcl_range_B, vcl_range_B_trans, vcl_slice_C)
 
     # A=range, B=slice, C=matrix
     print("Now using A=range, B=slice, C=matrix")
@@ -388,14 +379,14 @@ def test_slice(epsilon, dtype,
     ret = test_prod(epsilon,
                     A, A_trans, B, B_trans, C,
                     vcl_range_A, vcl_range_A_trans,
-                    vcl_slice_B, vcl_slice_B_trans, vcl_C_range)
+                    vcl_slice_B, vcl_slice_B_trans, vcl_range_C)
 
     # A=range, B=slice, C=slice
     print("Now using A=range, B=slice, C=slice")
     ret = test_prod(epsilon,
                     A, A_trans, B, B_trans, C,
                     vcl_range_A, vcl_range_A_trans,
-                    vcl_slice_B, vcl_slice_B_trans, vcl_C_slice)
+                    vcl_slice_B, vcl_slice_B_trans, vcl_slice_C)
 
     # A=slice, B=matrix, C=matrix
     print("Now using A=slice, B=matrix, C=matrix")
@@ -409,14 +400,14 @@ def test_slice(epsilon, dtype,
     ret = test_prod(epsilon,
                     A, A_trans, B, B_trans, C,
                     vcl_slice_A, vcl_slice_A_trans,
-                    vcl_B, vcl_B_trans, vcl_C_range)
+                    vcl_B, vcl_B_trans, vcl_range_C)
 
     # A=slice, B=matrix, C=slice
     print("Now using A=slice, B=matrix, C=slice")
     ret = test_prod(epsilon,
                     A, A_trans, B, B_trans, C,
                     vcl_slice_A, vcl_slice_A_trans,
-                    vcl_B, vcl_B_trans, vcl_C_slice)
+                    vcl_B, vcl_B_trans, vcl_slice_C)
 
     # A=slice, B=range, C=matrix
     print("Now using A=slice, B=range, C=matrix")
@@ -430,14 +421,14 @@ def test_slice(epsilon, dtype,
     ret = test_prod(epsilon,
                     A, A_trans, B, B_trans, C,
                     vcl_slice_A, vcl_slice_A_trans,
-                    vcl_range_B, vcl_range_B_trans, vcl_C_range)
+                    vcl_range_B, vcl_range_B_trans, vcl_range_C)
 
     # A=slice, B=range, C=slice
     print("Now using A=slice, B=range, C=slice")
     ret = test_prod(epsilon,
                     A, A_trans, B, B_trans, C,
                     vcl_slice_A, vcl_slice_A_trans,
-                    vcl_range_B, vcl_range_B_trans, vcl_C_slice)
+                    vcl_range_B, vcl_range_B_trans, vcl_slice_C)
 
     # A=slice, B=slice, C=matrix
     print("Now using A=slice, B=slice, C=matrix")
@@ -451,14 +442,14 @@ def test_slice(epsilon, dtype,
     ret = test_prod(epsilon,
                     A, A_trans, B, B_trans, C,
                     vcl_slice_A, vcl_slice_A_trans,
-                    vcl_slice_B, vcl_slice_B_trans, vcl_C_range)
+                    vcl_slice_B, vcl_slice_B_trans, vcl_range_C)
 
     # A=slice, B=slice, C=slice
     print("Now using A=slice, B=slice, C=slice")
     ret = test_prod(epsilon,
                     A, A_trans, B, B_trans, C,
                     vcl_slice_A, vcl_slice_A_trans,
-                    vcl_slice_B, vcl_slice_B_trans, vcl_C_slice)
+                    vcl_slice_B, vcl_slice_B_trans, vcl_slice_C)
 
     return os.EX_OK
 
@@ -516,9 +507,9 @@ def test_layout(epsilon, dtype):
 
 
 def test_dtype(epsilon):
-    #print(" *** Using float numeric type ***")
+    #print("*** Using float numeric type ***")
     #test_layout(epsilon, p.float32)
-    print(" *** Using double numeric type ***")
+    print("*** Using double numeric type ***")
     test_layout(epsilon, p.float64)
 
     return os.EX_OK
