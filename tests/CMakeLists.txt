@@ -4,8 +4,9 @@ include_directories(${Boost_INCLUDE_DIRS})
 # tests with CPU backend
 #foreach(PROG blas3_prod_float blas3_prod_double blas3_solve_float blas3_solve_double iterators
 #             global_variables
-#             matrix_vector
-#             matrix_row_float matrix_row_double matrix_col_float matrix_col_double
+#             matrix_vector matrix_vector_int
+#             matrix_row_float matrix_row_double matrix_row_int
+#             matrix_col_float matrix_col_double matrix_col_int
 #             scalar scheduler_matrix scheduler_matrix_matrix scheduler_matrix_vector scheduler_sparse scheduler_vector sparse
 #             vector_float vector_double vector_int vector_multi_inner_prod
 #             spmdm)
@@ -15,12 +16,13 @@ include_directories(${Boost_INCLUDE_DIRS})
 
 
 # tests with OpenCL backend
-#if (ENABLE_OPENCL)
+if (ENABLE_OPENCL)
 #  foreach(PROG blas3_prod_float blas3_prod_double blas3_solve_float blas3_solve_double fft iterators
 #               generator_blas1 generator_blas2 generator_blas3 #generator_segmentation
 #               global_variables
-#               matrix_vector
-#               matrix_row_float matrix_row_double matrix_col_float matrix_col_double
+#               matrix_vector matrix_vector_int
+#               matrix_row_float matrix_row_double matrix_row_int
+#               matrix_col_float matrix_col_double matrix_col_int
 #               nmf qr_method
 #               scalar sparse structured-matrices svd
 #               vector_float vector_double vector_int vector_multi_inner_prod
@@ -53,8 +55,9 @@ include_directories(${Boost_INCLUDE_DIRS})
 if (ENABLE_CUDA)
   foreach(PROG blas3_prod_float blas3_prod_double blas3_solve_float blas3_solve_double iterators
                global_variables
-               matrix_vector
-               matrix_row_float matrix_row_double matrix_col_float matrix_col_double
+               matrix_vector matrix_vector_int
+               matrix_row_float matrix_row_double matrix_row_int
+               matrix_col_float matrix_col_double matrix_col_int
                scalar sparse
                vector_float vector_double vector_int vector_multi_inner_prod
                spmdm)

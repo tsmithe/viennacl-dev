@@ -32,6 +32,8 @@
 #include "viennacl/scheduler/forwards.h"
 #include "viennacl/generator/forwards.h"
 
+#include "viennacl/meta/result_of.hpp"
+
 #include "viennacl/tools/shared_ptr.hpp"
 
 #include "viennacl/ocl/kernel.hpp"
@@ -55,7 +57,8 @@ namespace viennacl{
 
           template<class ScalarType>
           result_type operator()(ScalarType const & scal) const {
-            kernel_.arg(current_arg_++, scal);
+            typedef typename viennacl::result_of::cl_type<ScalarType>::type cl_scalartype;
+            kernel_.arg(current_arg_++, cl_scalartype(scal));
           }
 
           //Scalar mapping
@@ -71,36 +74,38 @@ namespace viennacl{
             if(memory_.insert((void*)&vec).second){
               kernel_.arg(current_arg_++, vec.handle().opencl_handle());
               if(viennacl::traits::start(vec)>0)
-                kernel_.arg(current_arg_++, viennacl::traits::start(vec));
+                kernel_.arg(current_arg_++, cl_uint(viennacl::traits::start(vec)));
               if(vec.stride()>1)
-                kernel_.arg(current_arg_++, vec.stride());
+                kernel_.arg(current_arg_++, cl_uint(viennacl::traits::stride(vec)));
             }
           }
 
           //Implicit vector mapping
           template<class ScalarType>
           result_type operator()(implicit_vector_base<ScalarType> const & vec) const {
+            typedef typename viennacl::result_of::cl_type<ScalarType>::type cl_scalartype;
             if(memory_.insert((void*)&vec).second){
               if(vec.is_value_static()==false)
-                kernel_.arg(current_arg_++, vec.value());
+                kernel_.arg(current_arg_++, cl_scalartype(vec.value()));
               if(vec.has_index())
-                kernel_.arg(current_arg_++, vec.index());
+                kernel_.arg(current_arg_++, cl_uint(vec.index()));
             }
           }
 
           //Matrix mapping
           template<class ScalarType, class Layout>
           result_type operator()(matrix_base<ScalarType, Layout> const & mat) const {
+            typedef typename matrix_base<ScalarType, Layout>::size_type size_type;
             if(memory_.insert((void*)&mat).second){
               kernel_.arg(current_arg_++, mat.handle().opencl_handle());
               if(viennacl::traits::start1(mat)>0)
-                kernel_.arg(current_arg_++, viennacl::traits::start1(mat));
+                kernel_.arg(current_arg_++, cl_uint(viennacl::traits::start1(mat)));
               if(viennacl::traits::stride1(mat)>1)
-                kernel_.arg(current_arg_++, viennacl::traits::stride1(mat));
+                kernel_.arg(current_arg_++, cl_uint(viennacl::traits::stride1(mat)));
               if(viennacl::traits::start2(mat)>0)
-                kernel_.arg(current_arg_++, viennacl::traits::start2(mat));
+                kernel_.arg(current_arg_++, cl_uint(viennacl::traits::start2(mat)));
               if(viennacl::traits::stride2(mat)>1)
-                kernel_.arg(current_arg_++, viennacl::traits::stride2(mat));
+                kernel_.arg(current_arg_++, cl_uint(viennacl::traits::stride2(mat)));
             }
           }
 

@@ -47,8 +47,7 @@
 #include "viennacl/linalg/opencl/common.hpp"
 
 #include "viennacl/linalg/opencl/kernels/matrix.hpp"
-#include "viennacl/linalg/kernels/matrix_row_element_kernels.h"
-#include "viennacl/linalg/kernels/matrix_col_element_kernels.h"
+#include "viennacl/linalg/opencl/kernels/matrix_element.hpp"
 
 #include "viennacl/linalg/kernels/matrix_prod_col_col_col_kernels.h"
 #include "viennacl/linalg/kernels/matrix_prod_col_col_row_kernels.h"
@@ -261,6 +260,218 @@ namespace viennacl
                               );
       }
 
+      template <typename NumericT, typename F>
+      void matrix_diag_from_vector(const vector_base<NumericT> & vec, int k, matrix_base<NumericT, F> & mat)
+      {
+        typedef NumericT        value_type;
+
+        // Step 1: set everything to zero
+        matrix_assign(mat, NumericT(0));
+
+        // Step 2: set the diagonal:
+
+        // reuse vector ambm kernel for assigning the elements:
+        viennacl::ocl::context & ctx = const_cast<viennacl::ocl::context &>(viennacl::traits::opencl_handle(mat).context());
+        typedef viennacl::linalg::opencl::kernels::vector<NumericT>  KernelClass;
+        KernelClass::init(ctx);
+
+        cl_uint options_alpha = 0;
+        viennacl::ocl::packed_cl_uint size_mat;
+        if (viennacl::is_row_major<F>::value)
+        {
+          std::size_t first_row_index = 0;
+          std::size_t first_col_index = 0;
+          if (k < 0)
+            first_row_index = std::size_t(-k);
+          else
+            first_col_index = std::size_t(k);
+          size_mat.start  = cl_uint( (viennacl::traits::start1(mat) + first_row_index * viennacl::traits::stride1(mat)) * viennacl::traits::internal_size2(mat)
+                                    + viennacl::traits::start2(mat) + first_col_index * viennacl::traits::stride2(mat));
+          size_mat.stride = cl_uint(viennacl::traits::stride1(mat) * viennacl::traits::internal_size2(mat) + viennacl::traits::stride2(mat));
+          size_mat.size   = cl_uint(viennacl::traits::size(vec));
+          size_mat.internal_size   = cl_uint(viennacl::traits::internal_size(vec));
+        }
+        else
+        {
+          std::size_t first_row_index = 0;
+          std::size_t first_col_index = 0;
+          if (k < 0)
+            first_row_index = std::size_t(-k);
+          else
+            first_col_index = std::size_t(k);
+          size_mat.start  = cl_uint(   viennacl::traits::start1(mat) + first_row_index * viennacl::traits::stride1(mat)
+                                    + (viennacl::traits::start2(mat) + first_col_index * viennacl::traits::stride2(mat)) * viennacl::traits::internal_size1(mat));
+          size_mat.stride = cl_uint(viennacl::traits::stride2(mat) * viennacl::traits::internal_size1(mat) + viennacl::traits::stride1(mat));
+          size_mat.size   = cl_uint(viennacl::traits::size(vec));
+          size_mat.internal_size   = cl_uint(viennacl::traits::internal_size(vec));
+        }
+
+        viennacl::ocl::packed_cl_uint size_vec;
+        size_vec.start  = cl_uint(viennacl::traits::start(vec));
+        size_vec.stride = cl_uint(viennacl::traits::stride(vec));
+        size_vec.size   = cl_uint(viennacl::traits::size(vec));
+        size_vec.internal_size   = cl_uint(viennacl::traits::internal_size(vec));
+
+        viennacl::ocl::kernel & kern = ctx.get_kernel(KernelClass::program_name(), "av_cpu");
+        viennacl::ocl::enqueue(kern(viennacl::traits::opencl_handle(mat),
+                                    size_mat,
+
+                                    viennacl::traits::opencl_handle(NumericT(1)),
+                                    options_alpha,
+                                    viennacl::traits::opencl_handle(vec),
+                                    size_vec)
+                              );
+      }
+
+      template <typename NumericT, typename F>
+      void matrix_diag_to_vector(const matrix_base<NumericT, F> & mat, int k, vector_base<NumericT> & vec)
+      {
+        typedef NumericT        value_type;
+
+        // reuse vector ambm kernel for assigning the elements:
+        viennacl::ocl::context & ctx = const_cast<viennacl::ocl::context &>(viennacl::traits::opencl_handle(mat).context());
+        typedef viennacl::linalg::opencl::kernels::vector<NumericT>  KernelClass;
+        KernelClass::init(ctx);
+
+        cl_uint options_alpha = 0;
+        viennacl::ocl::packed_cl_uint size_mat;
+        if (viennacl::is_row_major<F>::value)
+        {
+          std::size_t first_row_index = 0;
+          std::size_t first_col_index = 0;
+          if (k < 0)
+            first_row_index = std::size_t(-k);
+          else
+            first_col_index = std::size_t(k);
+          size_mat.start  = cl_uint( (viennacl::traits::start1(mat) + first_row_index * viennacl::traits::stride1(mat)) * viennacl::traits::internal_size2(mat)
+                                    + viennacl::traits::start2(mat) + first_col_index * viennacl::traits::stride2(mat));
+          size_mat.stride = cl_uint(viennacl::traits::stride1(mat) * viennacl::traits::internal_size2(mat) + viennacl::traits::stride2(mat));
+          size_mat.size   = cl_uint(viennacl::traits::size(vec));
+          size_mat.internal_size   = cl_uint(viennacl::traits::internal_size(vec));
+        }
+        else
+        {
+          std::size_t first_row_index = 0;
+          std::size_t first_col_index = 0;
+          if (k < 0)
+            first_row_index = std::size_t(-k);
+          else
+            first_col_index = std::size_t(k);
+          size_mat.start  = cl_uint(   viennacl::traits::start1(mat) + first_row_index * viennacl::traits::stride1(mat)
+                                    + (viennacl::traits::start2(mat) + first_col_index * viennacl::traits::stride2(mat)) * viennacl::traits::internal_size1(mat));
+          size_mat.stride = cl_uint(viennacl::traits::stride2(mat) * viennacl::traits::internal_size1(mat) + viennacl::traits::stride1(mat));
+          size_mat.size   = cl_uint(viennacl::traits::size(vec));
+          size_mat.internal_size   = cl_uint(viennacl::traits::internal_size(vec));
+        }
+
+        viennacl::ocl::packed_cl_uint size_vec;
+        size_vec.start  = cl_uint(viennacl::traits::start(vec));
+        size_vec.stride = cl_uint(viennacl::traits::stride(vec));
+        size_vec.size   = cl_uint(viennacl::traits::size(vec));
+        size_vec.internal_size   = cl_uint(viennacl::traits::internal_size(vec));
+
+
+        viennacl::ocl::kernel & kern = ctx.get_kernel(KernelClass::program_name(), "av_cpu");
+        viennacl::ocl::enqueue(kern(viennacl::traits::opencl_handle(vec),
+                                    size_vec,
+
+                                    viennacl::traits::opencl_handle(NumericT(1)),
+                                    options_alpha,
+                                    viennacl::traits::opencl_handle(mat),
+                                    size_mat)
+                              );
+      }
+
+      template <typename NumericT, typename F>
+      void matrix_row(const matrix_base<NumericT, F> & mat, unsigned int i, vector_base<NumericT> & vec)
+      {
+        typedef NumericT        value_type;
+
+        // reuse vector ambm kernel for assigning the elements:
+        viennacl::ocl::context & ctx = const_cast<viennacl::ocl::context &>(viennacl::traits::opencl_handle(mat).context());
+        typedef viennacl::linalg::opencl::kernels::vector<NumericT>  KernelClass;
+        KernelClass::init(ctx);
+
+        cl_uint options_alpha = 0;
+        viennacl::ocl::packed_cl_uint size_mat;
+        if (viennacl::is_row_major<F>::value)
+        {
+          size_mat.start  = cl_uint((viennacl::traits::start1(mat) + i * viennacl::traits::stride1(mat)) * viennacl::traits::internal_size2(mat) + viennacl::traits::start2(mat));
+          size_mat.stride = cl_uint(viennacl::traits::stride2(mat));
+          size_mat.size   = cl_uint(viennacl::traits::size(vec));
+          size_mat.internal_size   = cl_uint(viennacl::traits::internal_size(vec));
+        }
+        else
+        {
+          size_mat.start  = cl_uint((viennacl::traits::start1(mat) + i * viennacl::traits::stride1(mat)) + viennacl::traits::start2(mat) * viennacl::traits::internal_size1(mat));
+          size_mat.stride = cl_uint(viennacl::traits::stride2(mat) * viennacl::traits::internal_size1(mat));
+          size_mat.size   = cl_uint(viennacl::traits::size(vec));
+          size_mat.internal_size   = cl_uint(viennacl::traits::internal_size(vec));
+        }
+
+        viennacl::ocl::packed_cl_uint size_vec;
+        size_vec.start  = cl_uint(viennacl::traits::start(vec));
+        size_vec.stride = cl_uint(viennacl::traits::stride(vec));
+        size_vec.size   = cl_uint(viennacl::traits::size(vec));
+        size_vec.internal_size   = cl_uint(viennacl::traits::internal_size(vec));
+
+
+        viennacl::ocl::kernel & kern = ctx.get_kernel(KernelClass::program_name(), "av_cpu");
+        viennacl::ocl::enqueue(kern(viennacl::traits::opencl_handle(vec),
+                                    size_vec,
+
+                                    viennacl::traits::opencl_handle(NumericT(1)),
+                                    options_alpha,
+                                    viennacl::traits::opencl_handle(mat),
+                                    size_mat)
+                              );
+      }
+
+      template <typename NumericT, typename F>
+      void matrix_column(const matrix_base<NumericT, F> & mat, unsigned int j, vector_base<NumericT> & vec)
+      {
+        typedef NumericT        value_type;
+
+        // reuse vector ambm kernel for assigning the elements:
+        viennacl::ocl::context & ctx = const_cast<viennacl::ocl::context &>(viennacl::traits::opencl_handle(mat).context());
+        typedef viennacl::linalg::opencl::kernels::vector<NumericT>  KernelClass;
+        KernelClass::init(ctx);
+
+        cl_uint options_alpha = 0;
+        viennacl::ocl::packed_cl_uint size_mat;
+        if (viennacl::is_row_major<F>::value)
+        {
+          size_mat.start  = cl_uint(viennacl::traits::start1(mat) * viennacl::traits::internal_size2(mat) + viennacl::traits::start2(mat) + j * viennacl::traits::stride2(mat));
+          size_mat.stride = cl_uint(viennacl::traits::stride2(mat) * viennacl::traits::internal_size2(mat));
+          size_mat.size   = cl_uint(viennacl::traits::size(vec));
+          size_mat.internal_size   = cl_uint(viennacl::traits::internal_size(vec));
+        }
+        else
+        {
+          size_mat.start  = cl_uint(viennacl::traits::start1(mat) + (viennacl::traits::start2(mat) + j * viennacl::traits::stride2(mat)) * viennacl::traits::internal_size1(mat));
+          size_mat.stride = cl_uint(viennacl::traits::stride2(mat));
+          size_mat.size   = cl_uint(viennacl::traits::size(vec));
+          size_mat.internal_size   = cl_uint(viennacl::traits::internal_size(vec));
+        }
+
+        viennacl::ocl::packed_cl_uint size_vec;
+        size_vec.start  = cl_uint(viennacl::traits::start(vec));
+        size_vec.stride = cl_uint(viennacl::traits::stride(vec));
+        size_vec.size   = cl_uint(viennacl::traits::size(vec));
+        size_vec.internal_size   = cl_uint(viennacl::traits::internal_size(vec));
+
+
+        viennacl::ocl::kernel & kern = ctx.get_kernel(KernelClass::program_name(), "av_cpu");
+        viennacl::ocl::enqueue(kern(viennacl::traits::opencl_handle(vec),
+                                    size_vec,
+
+                                    viennacl::traits::opencl_handle(NumericT(1)),
+                                    options_alpha,
+                                    viennacl::traits::opencl_handle(mat),
+                                    size_mat)
+                              );
+      }
+
 
       //
       ///////////////////////// Element-wise operation //////////////////////////////////
@@ -285,6 +496,12 @@ namespace viennacl
 
         viennacl::ocl::kernel & k = ctx.get_kernel(KernelClass::program_name(), "element_op");
 
+        cl_uint op_type = 2; //0: product, 1: division, 2: power
+        if (viennacl::is_division<OP>::value)
+          op_type = 1;
+        else if (viennacl::is_product<OP>::value)
+          op_type = 0;
+
         viennacl::ocl::enqueue(k(viennacl::traits::opencl_handle(A),
                                 cl_uint(viennacl::traits::start1(A)),           cl_uint(viennacl::traits::start2(A)),
                                 cl_uint(viennacl::traits::stride1(A)),          cl_uint(viennacl::traits::stride2(A)),
@@ -301,7 +518,7 @@ namespace viennacl
                                 cl_uint(viennacl::traits::stride1(proxy.rhs())),          cl_uint(viennacl::traits::stride2(proxy.rhs())),
                                 cl_uint(viennacl::traits::internal_size1(proxy.rhs())),   cl_uint(viennacl::traits::internal_size2(proxy.rhs())),
 
-                                cl_uint(viennacl::is_division<OP>::value))
+                                op_type)
                               );
       }
 
@@ -322,14 +539,8 @@ namespace viennacl
 
         viennacl::ocl::context & ctx = const_cast<viennacl::ocl::context &>(viennacl::traits::opencl_handle(A).context());
 
-        if (viennacl::is_row_major<F>::value == true)
-          viennacl::linalg::kernels::matrix_row_element<T, 1>::init(ctx);
-        else
-          viennacl::linalg::kernels::matrix_col_element<T, 1>::init(ctx);
-
-        viennacl::ocl::kernel & k = (viennacl::is_row_major<F>::value == true) ?
-                                      ctx.get_kernel(viennacl::linalg::kernels::matrix_row_element<T, 1>::program_name(), detail::op_to_string(OP()) + "_assign")
-                                    : ctx.get_kernel(viennacl::linalg::kernels::matrix_col_element<T, 1>::program_name(), detail::op_to_string(OP()) + "_assign");
+        viennacl::linalg::opencl::kernels::matrix_element<T, F>::init(ctx);
+        viennacl::ocl::kernel & k = ctx.get_kernel(viennacl::linalg::opencl::kernels::matrix_element<T, F>::program_name(), detail::op_to_string(OP()) + "_assign");
 
         viennacl::ocl::enqueue(k(viennacl::traits::opencl_handle(A),
                                  cl_uint(viennacl::traits::start1(A)),           cl_uint(viennacl::traits::start2(A)),

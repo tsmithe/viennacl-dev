@@ -31,16 +31,14 @@
 #include "viennacl/scalar.hpp"
 #include "viennacl/matrix.hpp"
 #include "viennacl/linalg/prod.hpp"
-#include "viennacl/linalg/norm_1.hpp"
-#include "viennacl/linalg/norm_inf.hpp"
-#include "viennacl/linalg/norm_frobenius.hpp"
+/*#include "viennacl/compressed_matrix.hpp"
+#include "viennacl/linalg/cg.hpp"
+#include "viennacl/linalg/inner_prod.hpp"
+#include "viennacl/linalg/ilu.hpp"
+#include "viennacl/linalg/norm_2.hpp"
+#include "viennacl/io/matrix_market.hpp"*/
 #include "viennacl/matrix_proxy.hpp"
 #include "viennacl/vector_proxy.hpp"
-#include "viennacl/linalg/norm_1.hpp"
-#include "viennacl/linalg/norm_2.hpp"
-#include "viennacl/linalg/norm_inf.hpp"
-#include "viennacl/linalg/norm_frobenius.hpp"
-
 #include "boost/numeric/ublas/vector.hpp"
 #include "boost/numeric/ublas/matrix.hpp"
 #include "boost/numeric/ublas/matrix_proxy.hpp"
@@ -50,7 +48,7 @@
 using namespace boost::numeric;
 
 template <typename MatrixType, typename VCLMatrixType>
-bool check_for_equality(MatrixType const & ublas_A, VCLMatrixType const & vcl_A, double epsilon)
+bool check_for_equality(MatrixType const & ublas_A, VCLMatrixType const & vcl_A, double /*epsilon*/)
 {
   typedef typename MatrixType::value_type   value_type;
 
@@ -64,12 +62,9 @@ bool check_for_equality(MatrixType const & ublas_A, VCLMatrixType const & vcl_A,
     {
       if (ublas_A(i,j) != vcl_A_cpu(i,j))
       {
-        if ( (std::abs(ublas_A(i,j) - vcl_A_cpu(i,j)) / std::max(ublas_A(i,j), vcl_A_cpu(i,j)) > epsilon) || (vcl_A_cpu(i,j) != vcl_A_cpu(i,j)) )
-        {
-          std::cout << "Error at index (" << i << ", " << j << "): " << ublas_A(i,j) << " vs " << vcl_A_cpu(i,j) << std::endl;
-          std::cout << std::endl << "TEST failed!" << std::endl;
-          return false;
-        }
+        std::cout << "Error at index (" << i << ", " << j << "): " << ublas_A(i,j) << " vs " << vcl_A_cpu(i,j) << std::endl;
+        std::cout << std::endl << "TEST failed!" << std::endl;
+        return false;
       }
     }
   }
@@ -90,10 +85,10 @@ int run_test(double epsilon,
 
   typedef typename viennacl::result_of::cpu_value_type<typename ViennaCLMatrixType1::value_type>::type  cpu_value_type;
 
-  cpu_value_type alpha = 3.1415;
+  cpu_value_type alpha = 3;
   viennacl::scalar<cpu_value_type>   gpu_alpha = alpha;
 
-  cpu_value_type beta = 2.7182;
+  cpu_value_type beta = 2;
   viennacl::scalar<cpu_value_type>   gpu_beta = beta;
 
 
@@ -117,11 +112,12 @@ int run_test(double epsilon,
   if (!check_for_equality(ublas_A, vcl_A, epsilon))
     return EXIT_FAILURE;
 
-  /*std::cout << "Checking for identity initializer..." << std::endl;
+  /*
+  std::cout << "Checking for identity initializer..." << std::endl;
   ublas_A = ublas::identity_matrix<cpu_value_type>(ublas_A.size1());
   vcl_A = viennacl::identity_matrix<cpu_value_type>(vcl_A.size1());
   if (!check_for_equality(ublas_A, vcl_A, epsilon))
-    return EXIT_FAILURE;*/
+    return EXIT_FAILURE; */
 
 
   std::cout << std::endl;
@@ -362,8 +358,8 @@ int run_test(double epsilon,
 
 
   std::cout << "Testing elementwise multiplication..." << std::endl;
-  ublas_B = ublas::scalar_matrix<cpu_value_type>(ublas_B.size1(), ublas_B.size2(), 1.4142);
-  ublas_A = 3.1415 * ublas_B;
+  ublas_B = ublas::scalar_matrix<cpu_value_type>(ublas_B.size1(), ublas_B.size2(), 2);
+  ublas_A = 3 * ublas_B;
   viennacl::copy(ublas_A, vcl_A);
   viennacl::copy(ublas_B, vcl_B);
   viennacl::copy(ublas_B, vcl_B);
@@ -443,9 +439,10 @@ int run_test(double epsilon,
     return EXIT_FAILURE;
 
 
-  ublas_B = ublas::scalar_matrix<cpu_value_type>(ublas_B.size1(), ublas_B.size2(), 1.4142);
-  ublas_A = 3.1415 * ublas_B;
+  ublas_B = ublas::scalar_matrix<cpu_value_type>(ublas_B.size1(), ublas_B.size2(), 2);
+  ublas_A = 3 * ublas_B;
   viennacl::copy(ublas_A, vcl_A);
+  viennacl::copy(ublas_B, vcl_B);
   viennacl::copy(ublas_B, vcl_B);
 
   ublas_A = ublas::element_div(ublas_A, ublas_B);
@@ -523,120 +520,12 @@ int run_test(double epsilon,
   if (!check_for_equality(ublas_A, vcl_A, epsilon))
     return EXIT_FAILURE;
 
-  // element_pow
-  std::cout << "Testing unary element_pow()..." << std::endl;
-
-  ublas_B = ublas::scalar_matrix<cpu_value_type>(ublas_B.size1(), ublas_B.size2(), 1.4142);
-  ublas_A = 3.1415 * ublas_B;
-  viennacl::copy(ublas_A, vcl_A);
-  viennacl::copy(ublas_B, vcl_B);
-
-  for (std::size_t i=0; i<ublas_C.size1(); i++)
-    for (std::size_t j=0; j<ublas_C.size2(); ++j)
-      ublas_C(i,j) = std::pow(ublas_A(i,j), ublas_B(i,j));
-  vcl_C = viennacl::linalg::element_pow(vcl_A, vcl_B);
-
-  if (!check_for_equality(ublas_C, vcl_C, epsilon))
-    return EXIT_FAILURE;
-
-  for (std::size_t i=0; i<ublas_C.size1(); i++)
-    for (std::size_t j=0; j<ublas_C.size2(); ++j)
-      ublas_C(i,j) += std::pow(ublas_A(i,j), ublas_B(i,j));
-  vcl_C += viennacl::linalg::element_pow(vcl_A, vcl_B);
-
-  if (!check_for_equality(ublas_C, vcl_C, epsilon))
-    return EXIT_FAILURE;
-
-  for (std::size_t i=0; i<ublas_C.size1(); i++)
-    for (std::size_t j=0; j<ublas_C.size2(); ++j)
-      ublas_C(i,j) -= std::pow(ublas_A(i,j), ublas_B(i,j));
-  vcl_C -= viennacl::linalg::element_pow(vcl_A, vcl_B);
-
-  if (!check_for_equality(ublas_C, vcl_C, epsilon))
-    return EXIT_FAILURE;
-
-  ///////
-  for (std::size_t i=0; i<ublas_C.size1(); i++)
-    for (std::size_t j=0; j<ublas_C.size2(); ++j)
-      ublas_C(i,j) = std::pow(ublas_A(i,j) + ublas_B(i,j), ublas_B(i,j));
-  vcl_C = viennacl::linalg::element_pow(vcl_A + vcl_B, vcl_B);
-
-  if (!check_for_equality(ublas_C, vcl_C, epsilon))
-    return EXIT_FAILURE;
-
-  for (std::size_t i=0; i<ublas_C.size1(); i++)
-    for (std::size_t j=0; j<ublas_C.size2(); ++j)
-      ublas_C(i,j) += std::pow(ublas_A(i,j) + ublas_B(i,j), ublas_B(i,j));
-  vcl_C += viennacl::linalg::element_pow(vcl_A + vcl_B, vcl_B);
-
-  if (!check_for_equality(ublas_C, vcl_C, epsilon))
-    return EXIT_FAILURE;
-
-  for (std::size_t i=0; i<ublas_C.size1(); i++)
-    for (std::size_t j=0; j<ublas_C.size2(); ++j)
-      ublas_C(i,j) -= std::pow(ublas_A(i,j) + ublas_B(i,j), ublas_B(i,j));
-  vcl_C -= viennacl::linalg::element_pow(vcl_A + vcl_B, vcl_B);
-
-  if (!check_for_equality(ublas_C, vcl_C, epsilon))
-    return EXIT_FAILURE;
-
-  ///////
-  for (std::size_t i=0; i<ublas_C.size1(); i++)
-    for (std::size_t j=0; j<ublas_C.size2(); ++j)
-      ublas_C(i,j) = std::pow(ublas_A(i,j), ublas_B(i,j) + ublas_A(i,j));
-  vcl_C = viennacl::linalg::element_pow(vcl_A, vcl_B + vcl_A);
-
-  if (!check_for_equality(ublas_C, vcl_C, epsilon))
-    return EXIT_FAILURE;
-
-  for (std::size_t i=0; i<ublas_C.size1(); i++)
-    for (std::size_t j=0; j<ublas_C.size2(); ++j)
-      ublas_C(i,j) += std::pow(ublas_A(i,j), ublas_B(i,j) + ublas_A(i,j));
-  vcl_C += viennacl::linalg::element_pow(vcl_A, vcl_B + vcl_A);
-
-  if (!check_for_equality(ublas_C, vcl_C, epsilon))
-    return EXIT_FAILURE;
-
-  for (std::size_t i=0; i<ublas_C.size1(); i++)
-    for (std::size_t j=0; j<ublas_C.size2(); ++j)
-      ublas_C(i,j) -= std::pow(ublas_A(i,j), ublas_B(i,j) + ublas_A(i,j));
-  vcl_C -= viennacl::linalg::element_pow(vcl_A, vcl_B + vcl_A);
-
-  if (!check_for_equality(ublas_C, vcl_C, epsilon))
-    return EXIT_FAILURE;
-
-  ///////
-  for (std::size_t i=0; i<ublas_C.size1(); i++)
-    for (std::size_t j=0; j<ublas_C.size2(); ++j)
-      ublas_C(i,j) = std::pow(ublas_A(i,j) + ublas_B(i,j), ublas_B(i,j) + ublas_A(i,j));
-  vcl_C = viennacl::linalg::element_pow(vcl_A + vcl_B, vcl_B + vcl_A);
-
-  if (!check_for_equality(ublas_C, vcl_C, epsilon))
-    return EXIT_FAILURE;
-
-  for (std::size_t i=0; i<ublas_C.size1(); i++)
-    for (std::size_t j=0; j<ublas_C.size2(); ++j)
-      ublas_C(i,j) += std::pow(ublas_A(i,j) + ublas_B(i,j), ublas_B(i,j) + ublas_A(i,j));
-  vcl_C += viennacl::linalg::element_pow(vcl_A + vcl_B, vcl_B + vcl_A);
-
-  if (!check_for_equality(ublas_C, vcl_C, epsilon))
-    return EXIT_FAILURE;
-
-  for (std::size_t i=0; i<ublas_C.size1(); i++)
-    for (std::size_t j=0; j<ublas_C.size2(); ++j)
-      ublas_C(i,j) -= std::pow(ublas_A(i,j) + ublas_B(i,j), ublas_B(i,j) + ublas_A(i,j));
-  vcl_C -= viennacl::linalg::element_pow(vcl_A + vcl_B, vcl_B + vcl_A);
-
-  if (!check_for_equality(ublas_C, vcl_C, epsilon))
-    return EXIT_FAILURE;
-
-
   std::cout << "Testing unary elementwise operations..." << std::endl;
 
 #define GENERATE_UNARY_OP_TEST(FUNCNAME) \
-  ublas_B = ublas::scalar_matrix<cpu_value_type>(ublas_B.size1(), ublas_B.size2(), 1.4142); \
-  ublas_A = 3.1415 * ublas_B; \
-  ublas_C = 2.7172 * ublas_A; \
+  ublas_B = ublas::scalar_matrix<cpu_value_type>(ublas_B.size1(), ublas_B.size2(), 1); \
+  ublas_A = 3 * ublas_B; \
+  ublas_C = 2 * ublas_A; \
   viennacl::copy(ublas_A, vcl_A); \
   viennacl::copy(ublas_B, vcl_B); \
   viennacl::copy(ublas_C, vcl_C); \
@@ -709,19 +598,7 @@ int run_test(double epsilon,
   } \
  \
 
-  GENERATE_UNARY_OP_TEST(cos);
-  GENERATE_UNARY_OP_TEST(cosh);
-  GENERATE_UNARY_OP_TEST(exp);
-  GENERATE_UNARY_OP_TEST(floor);
-  GENERATE_UNARY_OP_TEST(fabs);
-  GENERATE_UNARY_OP_TEST(log);
-  GENERATE_UNARY_OP_TEST(log10);
-  GENERATE_UNARY_OP_TEST(sin);
-  GENERATE_UNARY_OP_TEST(sinh);
-  GENERATE_UNARY_OP_TEST(fabs);
-  GENERATE_UNARY_OP_TEST(sqrt);
-  GENERATE_UNARY_OP_TEST(tan);
-  GENERATE_UNARY_OP_TEST(tanh);
+  GENERATE_UNARY_OP_TEST(abs);
 
   std::cout << "Complicated expressions: ";
   //std::cout << "ublas_A: " << ublas_A << std::endl;
@@ -935,53 +812,10 @@ int run_test(double epsilon)
       }
     }
 
-    std::cout << "//" << std::endl;
-    std::cout << "////////// Test: Norms //////////" << std::endl;
-    std::cout << "//" << std::endl;
-
-    /*ScalarType ublas_norm_1 = viennacl::linalg::norm_1(ublas_C);
-    ScalarType   vcl_norm_1 = viennacl::linalg::norm_1(vcl_C);
-    if ( std::fabs(ublas_norm_1 - vcl_norm_1) / ublas_norm_1 > epsilon)
-    {
-      std::cerr << "Failure at norm_1(): " << std::fabs(ublas_norm_1 - vcl_norm_1) / ublas_norm_1  << std::endl;
-      return EXIT_FAILURE;
-    }
-
-    ScalarType ublas_norm_inf = ublas::norm_inf(ublas_C);
-    ScalarType   vcl_norm_inf = viennacl::linalg::norm_inf(vcl_C);
-    if ( std::fabs(ublas_norm_inf - vcl_norm_inf) / ublas_norm_inf > epsilon)
-    {
-      std::cerr << "Failure at norm_inf(): " << std::fabs(ublas_norm_inf - vcl_norm_inf) / ublas_norm_inf << std::endl;
-      return EXIT_FAILURE;
-    }*/
-
-    ScalarType ublas_norm_frobenius = viennacl::linalg::norm_frobenius(ublas_C);
-    ScalarType   vcl_norm_frobenius = viennacl::linalg::norm_frobenius(vcl_C);
-    if ( std::fabs(ublas_norm_frobenius - vcl_norm_frobenius) / ublas_norm_frobenius > epsilon)
-    {
-      std::cerr << "Failure at norm_frobenius()" << std::endl;
-      return EXIT_FAILURE;
-    }
-
-    viennacl::scalar<ScalarType> device_ublas_norm_frobenius = viennacl::linalg::norm_frobenius(ublas_C);
-    viennacl::scalar<ScalarType>   device_vcl_norm_frobenius = viennacl::linalg::norm_frobenius(vcl_C);
-    if ( std::fabs(device_ublas_norm_frobenius - device_vcl_norm_frobenius) / device_ublas_norm_frobenius > epsilon)
-    {
-      std::cerr << "Failure at norm_frobenius()" << std::endl;
-      return EXIT_FAILURE;
-    }
-
-    std::cout << "PASSED!" << std::endl;
-
 
     //
     // run operation tests:
     //
-
-    std::cout << "//" << std::endl;
-    std::cout << "////////// Test: Operations //////////" << std::endl;
-    std::cout << "//" << std::endl;
-
 
     /////// A=matrix:
     std::cout << "Testing A=matrix, B=matrix, C=matrix ..." << std::endl;

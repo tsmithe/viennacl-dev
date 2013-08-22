@@ -73,9 +73,9 @@ namespace viennacl{
         bool is_slow_impl(viennacl::ocl::device const & dev) const {
           bool is_slow;
           if(dev.vendor_id()==viennacl::ocl::nvidia_id)
-            is_slow = (unroll_==false);
+            is_slow = (unroll_==0);
           else if(dev.vendor_id()==viennacl::ocl::amd_id)
-            is_slow = (unroll_==true);
+            is_slow = (unroll_ > 0);
           return is_slow;
         }
 
@@ -109,7 +109,7 @@ namespace viennacl{
           ns_=ns;
           use_lhs_shared_ = use_lhs_shared;
           use_rhs_shared_ = use_rhs_shared;
-          unroll_ = unroll;
+          unroll_ = unroll ? 1 : 0;
         }
 
         static std::string csv_format() {
@@ -225,6 +225,30 @@ namespace viennacl{
           return name;
         }
 
+        void fetch_element_to_local_mem(utils::kernel_generation_stream & stream,
+                                std::string const & lmem_name,
+                                std::size_t lmem_size2,
+                                std::string const & global_ptr,
+                                detail::mapped_matrix const & mat,
+                                access_flow flow) const {
+
+            if(flow==REGULAR){
+              stream << "val = *(" << global_ptr + " + j  + " + mat.size2()  + "*i" << ");" << std::endl;
+              for(unsigned int a = 0 ; a < vectorization_ ; ++a)
+                  if(vectorization_>1)
+                      stream << lmem_name << "[i*" << lmem_size2 << " + j*" << vectorization_<<" + " << a << "] = val.s" << a << ";" <<std::endl;
+                  else
+                      stream << lmem_name << "[i*" << lmem_size2 << " + j*" << vectorization_ << "] = val" << ";" <<std::endl;
+            }
+            else{
+              stream << "val = *(" << global_ptr + "+ j*" + mat.size1() + " + i" << ");" << std::endl;
+              for(unsigned int a = 0 ; a < vectorization_ ; ++a)
+                  if(vectorization_>1)
+                      stream << lmem_name << "[i*" << vectorization_*lmem_size2 << " + j + " << a*lmem_size2 << "] = val.s" << a << ";" <<std::endl;
+                  else
+                      stream << lmem_name << "[i*" << vectorization_*lmem_size2 << " + j] = val" << ";" <<std::endl;
+            }
+        }
         void fetch_to_local_mem(utils::kernel_generation_stream & stream,
                                 std::string const & lmem_name,
                                 std::size_t lmem_size2,
@@ -237,36 +261,33 @@ namespace viennacl{
           if(vectorization_ > 1)
             aligned_scalartype+=utils::to_string(vectorization_);
           stream << "barrier(CLK_LOCAL_MEM_FENCE);" << std::endl;
-          stream << "#pragma unroll " << bound2/local_size2_ << std::endl;
-          stream << "for(unsigned int j = get_local_id(1)" << " ; j < " << bound2 << "; j+= " << local_size2_ << "){" << std::endl;
-          stream.inc_tab();
-          stream << "#pragma unroll " << bound1/local_size1_ << std::endl;
-          stream << "for(unsigned int i = get_local_id(0)" << " ; i < " << bound1 << "; i+= " << local_size1_ << "){" << std::endl;
-          stream.inc_tab();
-          if(flow==REGULAR){
-            stream << aligned_scalartype << " val = *(" << global_ptr + " + j  + " + mat.size2()  + "*i" << ");" << std::endl;
-            stream << "__local " << mat.scalartype() << "* ptr = " << lmem_name << " + i*" << lmem_size2 << "+j*" << vectorization_<<";" <<std::endl;
-            for(unsigned int a = 0 ; a < vectorization_ ; ++a){
-              if(vectorization_>1)
-                stream << "*ptr++ =  val.s" << a << ";" << std::endl;
-              else
-                stream << "*ptr++ =  val;" << std::endl;
-            }
+          stream << "{" << std::endl;
+          stream << "unsigned int j = get_local_id(1);" << std::endl;
+          stream << "unsigned int i;" << std::endl;
+          stream << aligned_scalartype << " val;" << std::endl;
+          //Can unroll
+          if(bound2%local_size2_==0 && bound1%local_size1_==0){
+              for(unsigned int j = 0 ; j < bound2 ; j+=local_size2_){
+                  stream << "i = get_local_id(0);" << std::endl;
+                  for(unsigned int i = 0 ; i < bound1 ; i+=local_size1_){
+                      fetch_element_to_local_mem(stream,lmem_name,lmem_size2,global_ptr,mat,flow);
+                      stream << "i+=" << local_size1_ << ";" << std::endl;
+                  }
+                  stream << "j+=" << local_size2_ << ";" << std::endl;
+              }
           }
           else{
-            stream << aligned_scalartype << " val = *(" << global_ptr + "+ j*" + mat.size1() + " + i" << ");" << std::endl;
-            stream << "__local " << mat.scalartype() << "* ptr = " << lmem_name << " + i*" << vectorization_ * lmem_size2 << "+ j;" <<std::endl;
-            for(unsigned int a = 0 ; a < vectorization_ ; ++a){
-              if(vectorization_>1)
-                stream << "*ptr =  val.s" << a << ";" << std::endl;
-              else
-                stream << "*ptr =  val;" << std::endl;
-              stream << "ptr += " << lmem_size2 << ";" << std::endl;
-            }
+              stream << "for(unsigned int j = get_local_id(1)" << " ; j < " << bound2 << "; j+= " << local_size2_ << "){" << std::endl;
+              stream.inc_tab();
+              stream << "for(unsigned int i = get_local_id(0)" << " ; i < " << bound1 << "; i+= " << local_size1_ << "){" << std::endl;
+              stream.inc_tab();
+              fetch_element_to_local_mem(stream,lmem_name,lmem_size2,global_ptr,mat,flow);
+              stream.dec_tab();
+              stream << "}" << std::endl;
+              stream.dec_tab();
+              stream << "}" << std::endl;
+
           }
-          stream.dec_tab();
-          stream << "}" << std::endl;
-          stream.dec_tab();
           stream << "}" << std::endl;
           stream << "barrier(CLK_LOCAL_MEM_FENCE);" << std::endl;
 
@@ -452,13 +473,13 @@ namespace viennacl{
           else{
             if(lhs_access_flow==REGULAR)
               for(unsigned int m=0; m<ms_lhs; ++m)
-                stream << "__global " << aligned_scalartype << " * " << "lhs_ptr_" << m << " = " << lhs->name() << " + "
+                stream << "__global " << aligned_scalartype << "* " << "lhs_ptr_" << m << " = " << lhs->name() << " + "
                        << lhs->size2() << "* ("
                        << "get_group_id(0)*" << ml_lhs << "+" << "get_local_id(0)*" << ms_lhs << "+" << m
                        << " );" << std::endl;
             else
               for(unsigned int k=0; k<ks_lhs; ++k)
-                stream << "__global " << aligned_scalartype<< " * " << "lhs_ptr_" << k << " = " << lhs->name() << " + "
+                stream << "__global " << aligned_scalartype<< "* " << "lhs_ptr_" << k << " = " << lhs->name() << " + "
                        << "(" << lhs->size1() << ")*" << k
                        << "+ " << "get_group_id(0)*" << ml_lhs << "+" << "get_local_id(0)*" << ms_lhs << ";" << std::endl;
           }
@@ -478,13 +499,13 @@ namespace viennacl{
           else{
             if(rhs_access_flow==REGULAR)
               for(unsigned int k = 0 ; k < ks_rhs ; ++k)
-                stream << "__global " << aligned_scalartype << " * " << "rhs_ptr_" << k << " = " << rhs->name() << " + "
+                stream << "__global " << aligned_scalartype << "* " << "rhs_ptr_" << k << " = " << rhs->name() << " + "
                        << "(" << k << ")" << "*" << rhs->size2()
                        << " + " << "get_local_id(1)*" << ns_rhs << " + get_group_id(1)*" << nl_rhs
                        << ";" << std::endl;
             else
               for(unsigned int n = 0 ; n < ns_rhs ; ++n)
-                stream << "__global " << aligned_scalartype << " * " << "rhs_ptr_" << n << " = " << rhs->name() << " +  "
+                stream << "__global " << aligned_scalartype << "* " << "rhs_ptr_" << n << " = " << rhs->name() << " +  "
                        << "(" << "get_local_id(1)*" << ns_rhs << " + get_group_id(1)*" << nl_rhs << " + " << n << ")" << "*" << rhs->size1()
                        << ";" << std::endl;
           }

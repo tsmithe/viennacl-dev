@@ -15,48 +15,37 @@
    License:         MIT (X11), see file LICENSE in the base directory
 ============================================================================= */
 
+#include "matrix_int.hpp"
 
-#include "vector_float_double.hpp"
-
-
-
-//
-// -------------------------------------------------------------
-//
-int main()
+int main (int, const char **)
 {
   std::cout << std::endl;
   std::cout << "----------------------------------------------" << std::endl;
   std::cout << "----------------------------------------------" << std::endl;
-  std::cout << "## Test :: Vector" << std::endl;
+  std::cout << "## Test :: Matrix operations, row-major, integers " << std::endl;
   std::cout << "----------------------------------------------" << std::endl;
   std::cout << "----------------------------------------------" << std::endl;
   std::cout << std::endl;
 
-  int retval = EXIT_SUCCESS;
+  double epsilon = 1e-4;
+  std::cout << "# Testing setup:" << std::endl;
+  std::cout << "  eps:     " << epsilon << std::endl;
+  std::cout << "  numeric: int" << std::endl;
+  std::cout << " --- row-major ---" << std::endl;
+  if (run_test<viennacl::row_major, int>(epsilon) != EXIT_SUCCESS)
+    return EXIT_FAILURE;
 
-  std::cout << std::endl;
-  std::cout << "----------------------------------------------" << std::endl;
-  std::cout << std::endl;
-  {
-    typedef float NumericT;
-    NumericT epsilon = static_cast<NumericT>(1.0E-2);
-    std::cout << "# Testing setup:" << std::endl;
-    std::cout << "  eps:     " << epsilon << std::endl;
-    std::cout << "  numeric: float" << std::endl;
-    retval = test<NumericT>(epsilon);
-    if( retval == EXIT_SUCCESS )
-      std::cout << "# Test passed" << std::endl;
-    else
-      return retval;
-  }
-  std::cout << std::endl;
-  std::cout << "----------------------------------------------" << std::endl;
-  std::cout << std::endl;
+  std::cout << "# Testing setup:" << std::endl;
+  std::cout << "  eps:     " << epsilon << std::endl;
+  std::cout << "  numeric: long" << std::endl;
+  std::cout << " --- row-major ---" << std::endl;
+  if (run_test<viennacl::row_major, long>(epsilon) != EXIT_SUCCESS)
+    return EXIT_FAILURE;
 
   std::cout << std::endl;
   std::cout << "------- Test completed --------" << std::endl;
   std::cout << std::endl;
 
-  return retval;
+  return EXIT_SUCCESS;
 }
+

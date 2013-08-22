@@ -152,8 +152,11 @@ namespace viennacl
   template <typename LHS, typename RHS, typename OP>
   class matrix_expression
   {
+      typedef typename result_of::reference_if_nonscalar<LHS>::type     lhs_reference_type;
+      typedef typename result_of::reference_if_nonscalar<RHS>::type     rhs_reference_type;
+
     public:
-      typedef typename LHS::size_type       size_type;
+      typedef vcl_size_t       size_type;
 
       matrix_expression(LHS & lhs, RHS & rhs) : lhs_(lhs), rhs_(rhs) {}
 
@@ -170,9 +173,9 @@ namespace viennacl
 
     private:
       /** @brief The left hand side operand */
-      typename result_of::matrix_expression_internal_storage<LHS>::type lhs_;
+      lhs_reference_type lhs_;
       /** @brief The right hand side operand */
-      typename result_of::matrix_expression_internal_storage<RHS>::type rhs_;
+      rhs_reference_type rhs_;
   };
 
 
@@ -227,7 +230,7 @@ namespace viennacl
 
       typedef matrix_iterator<row_iteration, self_type >   iterator1;
       typedef matrix_iterator<col_iteration, self_type >   iterator2;
-      typedef scalar<typename viennacl::tools::CHECK_SCALAR_TEMPLATE_ARGUMENT<SCALARTYPE>::ResultType>   value_type;
+      typedef scalar<SCALARTYPE>                                                  value_type;
       typedef SCALARTYPE                                                          cpu_value_type;
       typedef SizeType                                                            size_type;
       typedef DistanceType                                                        difference_type;
@@ -560,7 +563,7 @@ namespace viennacl
       /** @brief Sign flip for the matrix. Emulated to be equivalent to -1.0 * matrix */
       matrix_expression<const self_type, const SCALARTYPE, op_mult> operator-() const
       {
-        return matrix_expression<const self_type, const SCALARTYPE, op_mult>(*this, SCALARTYPE(-1.0));
+        return matrix_expression<const self_type, const SCALARTYPE, op_mult>(*this, SCALARTYPE(-1));
       }
 
       /** @brief Returns the number of rows */
@@ -830,6 +833,36 @@ namespace viennacl
     return matrix_expression< const matrix_base<NumericT, F>, const matrix_base<NumericT, F>, op_trans>(mat, mat);
   }
 
+  //diag():
+  template<typename NumericT, typename F>
+  vector_expression< const matrix_base<NumericT, F>, const int, op_matrix_diag>
+  diag(const matrix_base<NumericT, F> & A, int k = 0)
+  {
+    return vector_expression< const matrix_base<NumericT, F>, const int, op_matrix_diag>(A, k);
+  }
+
+  template<typename NumericT>
+  matrix_expression< const vector_base<NumericT>, const int, op_vector_diag>
+  diag(const vector_base<NumericT> & v, int k = 0)
+  {
+    return matrix_expression< const vector_base<NumericT>, const int, op_vector_diag>(v, k);
+  }
+
+  // row():
+  template<typename NumericT, typename F>
+  vector_expression< const matrix_base<NumericT, F>, const unsigned int, op_row>
+  row(const matrix_base<NumericT, F> & A, unsigned int i)
+  {
+    return vector_expression< const matrix_base<NumericT, F>, const unsigned int, op_row>(A, i);
+  }
+
+  // column():
+  template<typename NumericT, typename F>
+  vector_expression< const matrix_base<NumericT, F>, const unsigned int, op_column>
+  column(const matrix_base<NumericT, F> & A, unsigned int j)
+  {
+    return vector_expression< const matrix_base<NumericT, F>, const unsigned int, op_column>(A, j);
+  }
 
   /////////////////////// transfer operations: //////////////////////////////////////
 
@@ -1596,8 +1629,6 @@ namespace viennacl
           static void apply(matrix_base<T, F> & lhs, matrix_expression<const matrix_expression<const LHS, const RHS, OP>, const ScalarType, op_div> const & proxy)
           {
             matrix<T, F> temp(proxy.lhs());
-            std::cout << "lhs -= temp / proxy.rhs()" << std::endl;
-            std::cout << temp(0,0) << " / " << proxy.rhs() << std::endl;
             lhs -= temp / proxy.rhs();
           }
       };
@@ -2365,10 +2396,48 @@ namespace viennacl
       };
 
 
+      //////////////////// diag(), row(), column() operations ////////////////////////////////////////
+
+      template <typename T, typename F, typename LHS>
+      struct op_executor<matrix_base<T, F>, op_assign, matrix_expression<const LHS, const int, op_vector_diag> >
+      {
+        static void apply(matrix_base<T, F> & lhs, matrix_expression<const vector_base<T>, const int, op_vector_diag> const & proxy)
+        {
+          viennacl::linalg::matrix_diag_from_vector(proxy.lhs(), proxy.rhs(), lhs);
+        }
+      };
 
 
+      template <typename T, typename LHS>
+      struct op_executor<vector_base<T>, op_assign, vector_expression<const LHS, const int, op_matrix_diag> >
+      {
+        template <typename F>
+        static void apply(vector_base<T> & lhs, vector_expression<const matrix_base<T, F>, const int, op_matrix_diag> const & proxy)
+        {
+          viennacl::linalg::matrix_diag_to_vector(proxy.lhs(), proxy.rhs(), lhs);
+        }
+      };
+
+      template <typename T, typename LHS>
+      struct op_executor<vector_base<T>, op_assign, vector_expression<const LHS, const unsigned int, op_row> >
+      {
+        template <typename F>
+        static void apply(vector_base<T> & lhs, vector_expression<const matrix_base<T, F>, const unsigned int, op_row> const & proxy)
+        {
+          viennacl::linalg::matrix_row(proxy.lhs(), proxy.rhs(), lhs);
+        }
+      };
 
 
+      template <typename T, typename LHS>
+      struct op_executor<vector_base<T>, op_assign, vector_expression<const LHS, const unsigned int, op_column> >
+      {
+        template <typename F>
+        static void apply(vector_base<T> & lhs, vector_expression<const matrix_base<T, F>, const unsigned int, op_column> const & proxy)
+        {
+          viennacl::linalg::matrix_column(proxy.lhs(), proxy.rhs(), lhs);
+        }
+      };
 
 
       //////////////////// Element-wise operations ////////////////////////////////////////
