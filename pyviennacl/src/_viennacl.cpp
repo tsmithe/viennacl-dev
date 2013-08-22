@@ -10,9 +10,10 @@
 #include <boost/numeric/ublas/vector_sparse.hpp>
 #include <boost/numeric/ublas/vector_of_vector.hpp>
 
-#define VIENNACL_DEBUG_BUILD
+//#define VIENNACL_DEBUG_BUILD
+//#define VIENNACL_DEBUG_ALL
 #define VIENNACL_WITH_UBLAS
-//#define VIENNACL_WITH_OPENCL
+#define VIENNACL_WITH_OPENCL
 
 #include <viennacl/backend/memory.hpp>
 #include <viennacl/linalg/cg.hpp>
@@ -993,6 +994,93 @@ public:
 
 };
 
+/*******************************
+   Generic std::vector wrapper
+ *******************************/
+
+//
+// Do I really need this?...
+//
+
+template <class T>
+class vector_wrapper {
+  std::vector<T> vector_;
+  typedef std::vector<T>::iterator iter_t;
+  typedef std::vector<T>::const_iterator const_iter_t;
+
+public:
+  vector_wrapper(bp::list list_) {
+    for (std::size_t n = 0; n < bp::len(list_); ++n)
+      vector_.push_back(bp::extract<T>(list_[n]));
+  }
+
+  vector_wrapper(std::vector<T> v) : vector_(v) { }
+
+  bp::list to_list() {
+    bp::list l;
+    for (iter_t it = vector_.begin(); it != vector_.end(); it++)
+      l.append(*it);
+    return l;
+  }
+
+  std::size_t size() const {
+    return vector_.size();
+  }
+
+  void clear() {
+    vector_.clear();
+  }
+
+  std::vector<T> get() const {
+    return vector_;
+  }
+  
+  T get(std::size_t offset) const {
+    return vector_[offset];
+  }
+
+  void erase(std::size_t offset)
+  {
+    iter_t it = vector_.begin();
+    vector_.erase(it+offset);
+  }
+
+  void insert_at_index(std::size_t offset, const T& item)
+  {
+    iter_t it = vector_.begin();
+    _vector.insert(it+offset, item);
+  }
+
+  void insert_at_begin(const T& item)
+  {
+    iter_t it = vector_.begin();
+    vector_.insert(it, item);
+  }
+
+  void insert_at_end(const T& item)
+  {
+    vector_.push_back(item);
+  }
+
+};
+
+//////////////////////////////////// ...
+
+template <class T>
+std::vector<T> vector_from_list(bp::list l) {
+  std::vector<T> v(bp::len(l));
+  for (std::size_t n = 0; n < bp::len(l); n++)
+    v.push_back(bp::extract<T>(l[n]));
+  return v;
+}
+
+template <class T>
+bp::list list_from_vector(std::vector<T> v) {
+  bp::list l;
+  for (std::vector<T>::iterator it = v.begin(); it != v.end(); it++)
+    l.append(*it);
+  return l;
+}
 
 /*******************************
   Python module initialisation
@@ -1001,7 +1089,7 @@ public:
 #define DISAMBIGUATE_FUNCTION_PTR(RET, OLD_NAME, NEW_NAME, ARGS) \
   RET (*NEW_NAME) ARGS = &OLD_NAME;
 
-#define DISAMBIGUATE_CLASS_FUNCTION_PTR(CLASS, RET, OLD_NAME, NEW_NAME, ARGS) \
+#define DISAMBIGUATE_CLASS_FUNCTION_PTR(CLASS, RET, OLD_NAME, NEW_NAME, ARGS)\
   RET (CLASS::*NEW_NAME) ARGS = &CLASS::OLD_NAME;
 
 void translate_string_exception(const char* e)
@@ -1013,9 +1101,6 @@ void translate_string_exception(const char* e)
 
 BOOST_PYTHON_MODULE(_viennacl)
 {
-
-  //bp::register_ptr_to_python<boost::shared_ptr<double*> >();
-  //bp::register_ptr_to_python<boost::shared_ptr<float*> >();
 
   bp::register_exception_translator
     <const char*>
@@ -1832,5 +1917,19 @@ DISAMBIGUATE_CLASS_FUNCTION_PTR(statement_node_wrapper,         // class
     .def("insert_at_end", &statement_wrapper::insert_at_end)
     ;
     
+  // --------------------------------------------------
+
+  // OpenCL interface
+
+  /*
+
+   + vcl::ocl::kernel
+   + vcl::ocl::program
+   + vcl::ocl::context
+
+   PyOpenCL integration
+
+   */
+
 }
 

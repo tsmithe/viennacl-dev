@@ -156,14 +156,20 @@ class MagicMethods:
         return op
 
     def __iadd__(self, rhs):
-        op = InplaceAdd(self, rhs)
-        op.execute()        
-        return self
+        if isinstance(self, Node):
+            return Add(self, rhs)
+        else:
+            op = InplaceAdd(self, rhs)
+            op.execute()
+            return self
 
     def __isub__(self, rhs):
-        op = InplaceSub(self, rhs)
-        op.execute()
-        return self
+        if isinstance(self, Node):
+            return Sub(self, rhs)
+        else:
+            op = InplaceSub(self, rhs)
+            op.execute()
+            return self
 
     def __rmul__(self, rhs):
         op = Mul(self, rhs)
@@ -930,16 +936,6 @@ class Matrix(Leaf):
         return self.vcl_leaf.trans
     trans = T
 
-    #@deprecated
-    def __mul__(self, rhs):
-        if isinstance(rhs, Matrix):
-            return Matrix(self.vcl_leaf * rhs.vcl_leaf, dtype=self.dtype)
-        elif isinstance(rhs, Vector):
-            return Vector(self.vcl_leaf * rhs.vcl_leaf, dtype=self.dtype)
-        else:
-            op = Mul(self, rhs)
-            return op
-
 
 class Node(MagicMethods):
     """
@@ -1157,6 +1153,10 @@ class Node(MagicMethods):
     @result_shape.setter
     def result_shape(self, value):
         self._result_shape = value
+
+    @property
+    def shape(self):
+        return self.result_shape
 
     def express(self, statement=""):
         """
@@ -1527,21 +1527,26 @@ class Mul(Node):
                 issubclass(self.operands[1].result_container_type,
                            SparseMatrixBase)):
                 self.operation_node_type = _v.operation_node_type.OPERATION_BINARY_MAT_MAT_PROD_TYPE
+                self.result_shape = (self.operands[0].size1,
+                                     self.operands[1].size2)
             elif self.operands[1].result_container_type == Vector:
                 self.operation_node_type = _v.operation_node_type.OPERATION_BINARY_MAT_VEC_PROD_TYPE
-                # TODO: Make this more shapely..
                 self.result_shape = self.operands[1].shape
             elif self.operands[1].result_container_type == Scalar:
                 self.operation_node_type = _v.operation_node_type.OPERATION_BINARY_MULT_TYPE
+                self.result_shape = self.operands[0].shape
             elif self.operands[1].result_container_type == HostScalar:
                 self.operation_node_type = _v.operation_node_type.OPERATION_BINARY_MULT_TYPE
+                self.result_shape = self.operands[0].shape
             else:
                 self.operation_node_type = None
         elif self.operands[0].result_container_type == Vector: # Vector * ...
             if self.operands[1].result_container_type == Scalar:
                 self.operation_node_type = _v.operation_node_type.OPERATION_BINARY_MULT_TYPE
+                self.result_shape = self.operands[0].shape
             elif self.operands[1].result_container_type == HostScalar:
                 self.operation_node_type = _v.operation_node_type.OPERATION_BINARY_MULT_TYPE
+                self.result_shape = self.operands[0].shape
             else:
                 self.operation_node_type = None
         #elif self.operands[0].result_container_type == Scalar: 
