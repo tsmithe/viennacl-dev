@@ -950,6 +950,7 @@ class Node(MagicMethods):
     statement_node_subtype = _v.statement_node_subtype.INVALID_SUBTYPE
     statement_node_numeric_type = _v.statement_node_numeric_type.INVALID_NUMERIC_TYPE
 
+    # TODO: Construct Node from ndarray
     def __init__(self, *args):
         """
         Take the given operand(s) to an appropriate representation for this
@@ -1232,6 +1233,9 @@ class ElementAbs(Node):
     }
     operation_node_type = _v.operation_node_type.OPERATION_UNARY_ABS_TYPE
 
+    def _node_init(self):
+        self.result_shape = self.operands[0].shape
+
 
 class ElementAcos(Node):
     """
@@ -1242,6 +1246,9 @@ class ElementAcos(Node):
         ('Scalar',): Scalar
     }
     operation_node_type = _v.operation_node_type.OPERATION_UNARY_ACOS_TYPE
+
+    def _node_init(self):
+        self.result_shape = self.operands[0].shape
 
 
 class ElementAsin(Node):
@@ -1254,6 +1261,9 @@ class ElementAsin(Node):
     }
     operation_node_type = _v.operation_node_type.OPERATION_UNARY_ASIN_TYPE
 
+    def _node_init(self):
+        self.result_shape = self.operands[0].shape
+
 
 class ElementAtan(Node):
     """
@@ -1264,6 +1274,9 @@ class ElementAtan(Node):
         ('Scalar',): Scalar
     }
     operation_node_type = _v.operation_node_type.OPERATION_UNARY_ATAN_TYPE
+
+    def _node_init(self):
+        self.result_shape = self.operands[0].shape
 
 
 class ElementCeil(Node):
@@ -1276,6 +1289,9 @@ class ElementCeil(Node):
     }
     operation_node_type = _v.operation_node_type.OPERATION_UNARY_CEIL_TYPE
 
+    def _node_init(self):
+        self.result_shape = self.operands[0].shape
+
 
 class ElementCos(Node):
     """
@@ -1286,6 +1302,9 @@ class ElementCos(Node):
         ('Scalar',): Scalar
     }
     operation_node_type = _v.operation_node_type.OPERATION_UNARY_COS_TYPE
+
+    def _node_init(self):
+        self.result_shape = self.operands[0].shape
 
 
 class ElementCosh(Node):
@@ -1298,6 +1317,9 @@ class ElementCosh(Node):
     }
     operation_node_type = _v.operation_node_type.OPERATION_UNARY_COSH_TYPE
 
+    def _node_init(self):
+        self.result_shape = self.operands[0].shape
+
 
 class ElementExp(Node):
     """
@@ -1308,6 +1330,9 @@ class ElementExp(Node):
         ('Scalar',): Scalar
     }
     operation_node_type = _v.operation_node_type.OPERATION_UNARY_EXP_TYPE
+
+    def _node_init(self):
+        self.result_shape = self.operands[0].shape
 
 
 class ElementFabs(Node):
@@ -1320,6 +1345,9 @@ class ElementFabs(Node):
     }
     operation_node_type = _v.operation_node_type.OPERATION_UNARY_FABS_TYPE
 
+    def _node_init(self):
+        self.result_shape = self.operands[0].shape
+
 
 class ElementFloor(Node):
     """
@@ -1330,6 +1358,9 @@ class ElementFloor(Node):
         ('Scalar',): Scalar
     }
     operation_node_type = _v.operation_node_type.OPERATION_UNARY_FLOOR_TYPE
+
+    def _node_init(self):
+        self.result_shape = self.operands[0].shape
 
 
 class ElementLog(Node):
@@ -1342,6 +1373,9 @@ class ElementLog(Node):
     }
     operation_node_type = _v.operation_node_type.OPERATION_UNARY_LOG_TYPE
 
+    def _node_init(self):
+        self.result_shape = self.operands[0].shape
+
 
 class ElementLog10(Node):
     """
@@ -1352,6 +1386,9 @@ class ElementLog10(Node):
         ('Scalar',): Scalar
     }
     operation_node_type = _v.operation_node_type.OPERATION_UNARY_LOG10_TYPE
+
+    def _node_init(self):
+        self.result_shape = self.operands[0].shape
 
 
 class ElementSin(Node):
@@ -1364,6 +1401,9 @@ class ElementSin(Node):
     }
     operation_node_type = _v.operation_node_type.OPERATION_UNARY_SIN_TYPE
 
+    def _node_init(self):
+        self.result_shape = self.operands[0].shape
+
 
 class ElementSinh(Node):
     """
@@ -1374,6 +1414,9 @@ class ElementSinh(Node):
         ('Scalar',): Scalar
     }
     operation_node_type = _v.operation_node_type.OPERATION_UNARY_SINH_TYPE
+
+    def _node_init(self):
+        self.result_shape = self.operands[0].shape
 
 
 class ElementSqrt(Node):
@@ -1386,6 +1429,9 @@ class ElementSqrt(Node):
     }
     operation_node_type = _v.operation_node_type.OPERATION_UNARY_SQRT_TYPE
 
+    def _node_init(self):
+        self.result_shape = self.operands[0].shape
+
 
 class ElementTan(Node):
     """
@@ -1396,6 +1442,9 @@ class ElementTan(Node):
         ('Scalar',): Scalar
     }
     operation_node_type = _v.operation_node_type.OPERATION_UNARY_TAN_TYPE
+
+    def _node_init(self):
+        self.result_shape = self.operands[0].shape
 
 
 class ElementTanh(Node):
@@ -1408,6 +1457,9 @@ class ElementTanh(Node):
     }
     operation_node_type = _v.operation_node_type.OPERATION_UNARY_TANH_TYPE
 
+    def _node_init(self):
+        self.result_shape = self.operands[0].shape
+
 
 class Trans(Node):
     """
@@ -1416,6 +1468,10 @@ class Trans(Node):
         ('Matrix',): Matrix,
     }
     operation_node_type = _v.operation_node_type.OPERATION_UNARY_TRANS_TYPE
+
+    def _node_init(self):
+        self.result_shape = (self.operands[0].shape[1],
+                             self.operands[0].shape[0])
 
 
 class Assign(Node):
@@ -1442,6 +1498,11 @@ class InplaceAdd(Assign):
     }
     operation_node_type  = _v.operation_node_type.OPERATION_BINARY_INPLACE_ADD_TYPE
 
+    def _node_init(self):
+        if self.operands[0].shape != self.operands[1].shape:
+            raise TypeError("Cannot Add two differently shaped objects!")
+        self.result_shape = self.operands[0].shape
+
 
 class InplaceSub(Assign):
     """
@@ -1456,6 +1517,11 @@ class InplaceSub(Assign):
         ('Matrix', 'Matrix'): Matrix
     }
     operation_node_type  = _v.operation_node_type.OPERATION_BINARY_INPLACE_SUB_TYPE
+
+    def _node_init(self):
+        if self.operands[0].shape != self.operands[1].shape:
+            raise TypeError("Cannot Add two differently shaped objects!")
+        self.result_shape = self.operands[0].shape
 
 
 class Add(Node):
@@ -1578,6 +1644,7 @@ class Div(Node):
     }
     operation_node_type = _v.operation_node_type.OPERATION_BINARY_DIV_TYPE
 
+    # TODO: result_shape
 
 class ElementProd(Node):
     """
@@ -1589,6 +1656,8 @@ class ElementProd(Node):
         ('Matrix', 'Matrix'): Matrix
     }
     operation_node_type = _v.operation_node_type.OPERATION_BINARY_ELEMENT_PROD_TYPE
+
+    # TODO: result_shape
 
 
 class ElementDiv(Node):
@@ -1602,6 +1671,8 @@ class ElementDiv(Node):
     }
     operation_node_type = _v.operation_node_type.OPERATION_BINARY_ELEMENT_DIV_TYPE
 
+    # TODO: result_shape
+
 
 class Dot(Node):
     """
@@ -1610,6 +1681,8 @@ class Dot(Node):
         ('Vector', 'Vector'): Scalar
     }
     operation_node_type = _v.operation_node_type.OPERATION_BINARY_INNER_PROD_TYPE
+
+    # TODO: result_shape
 
 
 class Statement:

@@ -31,16 +31,8 @@ def diff(a, b):
     # The MagicMethods class guarantees that we have some useful facilities
     # (both Node and Leaf are derived from MagicMethods)
     if isinstance(a, p.MagicMethods) and isinstance(b, p.MagicMethods):
-        #print(a.as_ndarray())
-        #print(b.as_ndarray())
-        #print((a - b).as_ndarray())
-        #print(a.as_ndarray() - b.as_ndarray())
-        #d = p.ElementFabs(a - b)
-        # TODO: Construct Node from ndarray
-        d = p.ElementFabs(p.Matrix(a.as_ndarray() - b.as_ndarray()))
-        #print(d.express())
+        d = p.ElementFabs(a - b)
         cpu_d = d.as_ndarray()
-        #print(cpu_d)
         if len(d.shape) == 1:
             # vector
             for i in range(d.shape[0]):
