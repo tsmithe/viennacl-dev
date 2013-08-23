@@ -1,7 +1,8 @@
 from pyviennacl import (_viennacl as _v,
                         util)
 from numpy import (ndarray, array, zeros,
-                   inf, nan, dtype,
+                   inf, nan, dtype, 
+                   equal as np_equal, array_equal,
                    result_type as np_result_type,
                    int8, int16, int32, int64,
                    uint8, uint16, uint32, uint64,
@@ -107,6 +108,8 @@ class MagicMethods:
 
     Classes derived from this will inherit lots of useful goodies.
     """
+    flushed = False
+
     def norm(self, ord=None):
         if ord == 1:
             return Norm_1(self)
@@ -138,6 +141,24 @@ class MagicMethods:
 
     def element_div(self, rhs):
         return ElementDiv(self, rhs)
+
+    def __eq__(self, rhs):
+        if self.flushed:
+            if isinstance(rhs, MagicMethods):
+                return np_equal(self.as_ndarray(), rhs.as_ndarray())
+            elif isinstance(rhs, ndarray):
+                return np_equal(self.as_ndarray(), rhs)
+            else:
+                log.warning("Types not compatible")
+                return (hash(self) == hash(rhs))
+        else:
+            return (hash(self) == hash(rhs))
+
+    def __hash__(self):
+        return super().__hash__()
+
+    def __contains__(self, item):
+        return (item in self.as_ndarray())
 
     def __add__(self, rhs):
         op = Add(self, rhs)
@@ -752,6 +773,7 @@ class HybridMatrix(SparseMatrixBase):
         self.flushed = True
 
 
+# TODO: add ndarray flushing
 class Matrix(Leaf):
     """
     A generalised Matrix class: represents ViennaCL matrix objects of all
@@ -945,7 +967,7 @@ class Node(MagicMethods):
     If you're extending ViennaCL by adding an operation and want support for
     it in Python, then you should derive from this class.
     """
-    
+
     statement_node_type_family = _v.statement_node_type_family.COMPOSITE_OPERATION_FAMILY
     statement_node_subtype = _v.statement_node_subtype.INVALID_SUBTYPE
     statement_node_numeric_type = _v.statement_node_numeric_type.INVALID_NUMERIC_TYPE
@@ -1174,14 +1196,20 @@ class Node(MagicMethods):
         """
         Returns the result of computing the operation represented by this Node.
         """
-        s = Statement(self)
-        return s.execute()
+        if not self.flushed:
+            self.execute()
+            return self._result
+        else:
+            return self._result
 
     def execute(self):
         """
-        Synonymous with self.result
+        TODO
         """
-        return self.result
+        s = Statement(self)
+        self._result = s.execute()
+        self.flushed = True
+        return self._result
 
     @property
     def value(self):
@@ -1645,6 +1673,7 @@ class Div(Node):
     operation_node_type = _v.operation_node_type.OPERATION_BINARY_DIV_TYPE
 
     # TODO: result_shape
+
 
 class ElementProd(Node):
     """

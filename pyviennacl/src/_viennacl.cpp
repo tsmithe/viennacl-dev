@@ -45,6 +45,7 @@ namespace ublas = boost::numeric::ublas;
 
 typedef void* NoneT;
 
+// TODO: ELIMINATE SPECIFIC DTYPES
 typedef vcl::scalar<double> vcl_scalar_t;
 typedef double              cpu_scalar_t;
 
@@ -530,7 +531,7 @@ public:
 
 template<class SCALARTYPE, class F>
 boost::shared_ptr<vcl::matrix<SCALARTYPE, F> >
-matrix_init_scalar(uint32_t n, uint32_t m, cpu_scalar_t value)
+matrix_init_scalar(uint32_t n, uint32_t m, SCALARTYPE value)
 {
   ublas::scalar_matrix<SCALARTYPE> s_m(n, m, value);
   ublas::matrix<SCALARTYPE> cpu_m(s_m);
@@ -550,7 +551,7 @@ matrix_init_ndarray(const np::ndarray& array)
     bp::throw_error_already_set();
   }
   
-  ndarray_wrapper<cpu_scalar_t> wrapper(array);
+  ndarray_wrapper<SCALARTYPE> wrapper(array);
 
   vcl::matrix<SCALARTYPE, F>* mat = new vcl::matrix<SCALARTYPE, F>(wrapper.size1(), wrapper.size2());
 

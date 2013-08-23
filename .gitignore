@@ -7,3 +7,4 @@ build
 !build/README
 GSoC/*tex
 pyviennacl-puzzle.pdf
+__pycache__
