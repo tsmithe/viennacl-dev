@@ -364,53 +364,54 @@ def test_matrix_slice(test_func,
     return os.EX_OK
 
 
-def test_matrix_layout(test_func, epsilon, dtype):
+def test_matrix_layout(test_func, epsilon, dtype,
+                       size1 = 131, size2 = 67, size3 = 73):
     # A=row, B=row, C=row
     print("///////////////////////////////////////")
     print("/// Now testing A=row, B=row, C=row ///")
     print("///////////////////////////////////////")
-    test_matrix_slice(test_func, epsilon, dtype, p.ROW_MAJOR, p.ROW_MAJOR, p.ROW_MAJOR)
+    test_matrix_slice(test_func, epsilon, dtype, p.ROW_MAJOR, p.ROW_MAJOR, p.ROW_MAJOR, size1, size2, size3)
 
     # A=row, B=row, C=col
     print("///////////////////////////////////////")
     print("/// Now testing A=row, B=row, C=col ///")
     print("///////////////////////////////////////")
-    test_matrix_slice(test_func, epsilon, dtype, p.ROW_MAJOR, p.ROW_MAJOR, p.COL_MAJOR)
+    test_matrix_slice(test_func, epsilon, dtype, p.ROW_MAJOR, p.ROW_MAJOR, p.COL_MAJOR, size1, size2, size3)
 
     # A=row, B=col, C=row
     print("///////////////////////////////////////")
     print("/// Now testing A=row, B=col, C=row ///")
     print("///////////////////////////////////////")
-    test_matrix_slice(test_func, epsilon, dtype, p.ROW_MAJOR, p.COL_MAJOR, p.ROW_MAJOR)
+    test_matrix_slice(test_func, epsilon, dtype, p.ROW_MAJOR, p.COL_MAJOR, p.ROW_MAJOR, size1, size2, size3)
 
     # A=row, B=col, C=col
     print("///////////////////////////////////////")
     print("/// Now testing A=row, B=col, C=col ///")
     print("///////////////////////////////////////")
-    test_matrix_slice(test_func, epsilon, dtype, p.ROW_MAJOR, p.COL_MAJOR, p.COL_MAJOR)
+    test_matrix_slice(test_func, epsilon, dtype, p.ROW_MAJOR, p.COL_MAJOR, p.COL_MAJOR, size1, size2, size3)
 
     # A=col, B=row, C=row
     print("///////////////////////////////////////")
     print("/// Now testing A=col, B=row, C=row ///")
     print("///////////////////////////////////////")
-    test_matrix_slice(test_func, epsilon, dtype, p.COL_MAJOR, p.ROW_MAJOR, p.ROW_MAJOR)
+    test_matrix_slice(test_func, epsilon, dtype, p.COL_MAJOR, p.ROW_MAJOR, p.ROW_MAJOR, size1, size2, size3)
 
     # A=col, B=row, C=col
     print("///////////////////////////////////////")
     print("/// Now testing A=col, B=row, C=col ///")
     print("///////////////////////////////////////")
-    test_matrix_slice(test_func, epsilon, dtype, p.COL_MAJOR, p.ROW_MAJOR, p.COL_MAJOR)
+    test_matrix_slice(test_func, epsilon, dtype, p.COL_MAJOR, p.ROW_MAJOR, p.COL_MAJOR, size1, size2, size3)
 
     # A=col, B=col, C=row
     print("///////////////////////////////////////")
     print("/// Now testing A=col, B=col, C=row ///")
     print("///////////////////////////////////////")
-    test_matrix_slice(test_func, epsilon, dtype, p.COL_MAJOR, p.COL_MAJOR, p.ROW_MAJOR)
+    test_matrix_slice(test_func, epsilon, dtype, p.COL_MAJOR, p.COL_MAJOR, p.ROW_MAJOR, size1, size2, size3)
 
     # A=col, B=col, C=col
     print("///////////////////////////////////////")
     print("/// Now testing A=col, B=col, C=col ///")
     print("///////////////////////////////////////")
-    test_matrix_slice(test_func, epsilon, dtype, p.COL_MAJOR, p.COL_MAJOR, p.COL_MAJOR)
+    test_matrix_slice(test_func, epsilon, dtype, p.COL_MAJOR, p.COL_MAJOR, p.COL_MAJOR, size1, size2, size3)
 
     return os.EX_OK

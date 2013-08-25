@@ -149,16 +149,18 @@ class MagicMethods:
             elif isinstance(rhs, ndarray):
                 return np_equal(self.as_ndarray(), rhs)
             else:
-                log.warning("Types not compatible")
-                return (hash(self) == hash(rhs))
+                return self.value == rhs
         else:
-            return (hash(self) == hash(rhs))
+            return self.result == rhs
 
     def __hash__(self):
         return super().__hash__()
 
     def __contains__(self, item):
         return (item in self.as_ndarray())
+
+    def __str__(self):
+        return self.value.__str__()
 
     def __add__(self, rhs):
         op = Add(self, rhs)
@@ -1773,9 +1775,12 @@ class Statement:
             op_num = 0
             for operand in n.operands:
                 if isinstance(operand, Node):
-                    n.get_vcl_operand_setter(operand)(
-                        op_num, 
-                        self.statement.index(operand))
+                    op_idx = 0
+                    for next_op in self.statement:
+                        if hash(operand) == hash(next_op):
+                            break
+                        op_idx += 1
+                    n.get_vcl_operand_setter(operand)(op_num, op_idx)
                 elif isinstance(operand, Leaf):
                     n.get_vcl_operand_setter(operand)(op_num, operand.vcl_leaf)
                 elif np_result_type(operand).name in HostScalarTypes.keys():

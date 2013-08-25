@@ -550,12 +550,20 @@ matrix_init_ndarray(const np::ndarray& array)
     PyErr_SetString(PyExc_TypeError, "Can only create a matrix from a 2-D array!");
     bp::throw_error_already_set();
   }
-  
+
+  /*
+  std::cout << "NDARRAY_INIT: "
+            << bp::extract<const char*>(bp::str(array))
+            << std::endl;
+  */
+
   ndarray_wrapper<SCALARTYPE> wrapper(array);
 
   vcl::matrix<SCALARTYPE, F>* mat = new vcl::matrix<SCALARTYPE, F>(wrapper.size1(), wrapper.size2());
 
   vcl::copy(wrapper, (*mat));
+
+  // std::cout << "MAT_INIT: " << *mat << std::endl;
   
   return boost::shared_ptr<vcl::matrix<SCALARTYPE, F> >(mat);
 }
@@ -567,7 +575,7 @@ bp::tuple get_strides(const vcl::matrix_base<SCALARTYPE, vcl::row_major>& m) {
 
 template<class SCALARTYPE>
 bp::tuple get_strides(const vcl::matrix_base<SCALARTYPE, vcl::column_major>& m) {
-  return bp::make_tuple(m.stride1()*sizeof(SCALARTYPE), m.stride2()*m.size1()*sizeof(SCALARTYPE));
+  return bp::make_tuple(m.stride1()*sizeof(SCALARTYPE), m.stride2()*m.internal_size1()*sizeof(SCALARTYPE));
 }
 
 template<class SCALARTYPE>
@@ -585,13 +593,17 @@ template<class SCALARTYPE, class VCL_F, class CPU_F>
 np::ndarray vcl_matrix_to_ndarray(const vcl::matrix_base<SCALARTYPE, VCL_F>& m)
 {
 
+  //std::cout << "MAT_TEST: " << m << std::endl;
+
   std::size_t size = m.internal_size1() * m.internal_size2() * sizeof(SCALARTYPE);
 
   SCALARTYPE* data = (SCALARTYPE*)malloc(size);
 
+  vcl::backend::finish(); // To be sure...
+
   // Read the whole matrix
   vcl::backend::memory_read(m.handle(), 0, size, data);
- 
+
   np::dtype dt = np::dtype::get_builtin<SCALARTYPE>();
   bp::tuple shape = bp::make_tuple(m.size1(), m.size2());
 
@@ -599,6 +611,10 @@ np::ndarray vcl_matrix_to_ndarray(const vcl::matrix_base<SCALARTYPE, VCL_F>& m)
   bp::tuple strides = get_strides<SCALARTYPE>(m);
   np::ndarray array = np::from_data(data + get_offset<SCALARTYPE>(m),
                                     dt, shape, strides, bp::object(m));
+
+  //std::cout << "NDARRAY_TEST: "
+  //         << bp::extract<const char*>(bp::str(array))
+  //         << std::endl;
 
   return array;
 }

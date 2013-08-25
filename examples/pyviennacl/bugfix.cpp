@@ -2,6 +2,9 @@
 #include <boost/numeric/ublas/matrix.hpp>
 #include <stdint.h>
 
+#include <boost/python.hpp>
+#include <boost/numpy.hpp>
+
 #define VIENNACL_WITH_OPENCL
 #include "viennacl/matrix.hpp"
 #include "viennacl/matrix_proxy.hpp"
@@ -9,20 +12,110 @@
 #include "viennacl/scheduler/execute.hpp"
 #include "viennacl/scheduler/io.hpp"
 
+namespace vcl = viennacl;
+namespace bp = boost::python;
+namespace np = boost::numpy;
+namespace ublas = boost::numeric::ublas;
+
+template<class ScalarT>
+class ndarray_wrapper
+{
+  const np::ndarray array; // TODO: Perhaps reference to the wrapped ndarray
+
+public:
+  ndarray_wrapper(const np::ndarray& a)
+    : array(a)
+  { }
+
+  uint32_t size1() const { return array.shape(0); }
+
+  uint32_t size2() const { return array.shape(1); }
+
+  ScalarT operator()(uint32_t row, uint32_t col) const
+  {
+    return bp::extract<ScalarT>(array[row][col]);
+  } 
+
+};
+
+/** @brief Creates the matrix from the supplied ndarray */
+template<class SCALARTYPE, class F>
+boost::shared_ptr<vcl::matrix<SCALARTYPE, F> >
+matrix_init_ndarray(const np::ndarray& array)
+{
+  int d = array.get_nd();
+  if (d != 2) {
+    PyErr_SetString(PyExc_TypeError, "Can only create a matrix from a 2-D array!");
+    bp::throw_error_already_set();
+  }
+  
+  ndarray_wrapper<SCALARTYPE> wrapper(array);
+
+  vcl::matrix<SCALARTYPE, F>* mat = new vcl::matrix<SCALARTYPE, F>(wrapper.size1(), wrapper.size2());
+
+  vcl::copy(wrapper, (*mat));
+  
+  return boost::shared_ptr<vcl::matrix<SCALARTYPE, F> >(mat);
+}
+
+template<class SCALARTYPE>
+bp::tuple get_strides(const vcl::matrix_base<SCALARTYPE, vcl::row_major>& m) {
+  return bp::make_tuple((m.stride1()*m.internal_size2())*sizeof(SCALARTYPE), m.stride2()*sizeof(SCALARTYPE));
+}
+
+template<class SCALARTYPE>
+bp::tuple get_strides(const vcl::matrix_base<SCALARTYPE, vcl::column_major>& m) {
+  return bp::make_tuple(m.stride1()*sizeof(SCALARTYPE), m.stride2()*m.size1()*sizeof(SCALARTYPE));
+}
+
+template<class SCALARTYPE>
+std::size_t get_offset(const vcl::matrix_base<SCALARTYPE, vcl::row_major>& m) {
+  return m.start1()*m.internal_size2() + m.start2();
+}
+
+template<class SCALARTYPE>
+std::size_t get_offset(const vcl::matrix_base<SCALARTYPE, 
+                       vcl::column_major>& m) {
+  return m.start1() + m.start2()*m.internal_size1();
+}
+
+template<class SCALARTYPE, class VCL_F, class CPU_F>
+np::ndarray vcl_matrix_to_ndarray(const vcl::matrix_base<SCALARTYPE, VCL_F>& m)
+{
+
+  std::size_t size = m.internal_size1() * m.internal_size2() * sizeof(SCALARTYPE);
+
+  SCALARTYPE* data = (SCALARTYPE*)malloc(size);
+
+  // Read the whole matrix
+  vcl::backend::memory_read(m.handle(), 0, size, data);
+ 
+  np::dtype dt = np::dtype::get_builtin<SCALARTYPE>();
+  bp::tuple shape = bp::make_tuple(m.size1(), m.size2());
+
+  // Delegate determination of strides and start offset to function templates
+  bp::tuple strides = get_strides<SCALARTYPE>(m);
+  np::ndarray array = np::from_data(data + get_offset<SCALARTYPE>(m),
+                                    dt, shape, strides, bp::object(m));
+
+  return array;
+}
+
 int main() {
   
+  /*
+
   std::size_t x = 15, y = 15;
 
   boost::numeric::ublas::matrix<double> cpu_m(x, y);
 
   for (std::size_t i = 0; i < cpu_m.size1(); ++i) {
     for (std::size_t j = 0; j < cpu_m.size2(); ++j)
-      cpu_m(i, j) = (double) (3.142 * i + j);
+      cpu_m(i, j) = (double) (i*cpu_m.size2() + j); //(3.142 * i + j);
   }
 
+  
   typedef viennacl::scheduler::statement::container_type con_t;
-
-  /*
   
   viennacl::matrix<double> k(x, y);
   viennacl::matrix<double> l(x, y);
@@ -120,7 +213,7 @@ int main() {
 
   std::cout << "p = " << p << std::endl;
 
-  */
+  //////////////////////////
 
   viennacl::matrix<double, viennacl::column_major> m(x, y);
 
@@ -129,10 +222,8 @@ int main() {
   viennacl::range range1(1, 5);
   viennacl::range range2(2, 6);
 
-  viennacl::matrix_range<viennacl::matrix<double, viennacl::column_major> >
-    m_range(m, range1, range2);
-
-  viennacl::matrix<double, viennacl::column_major> n(m_range);
+  viennacl::matrix_base<double, viennacl::column_major> n 
+    = viennacl::project(m, range1, range2);
 
   con_t expr(1);
 
@@ -158,6 +249,36 @@ int main() {
   std::cout << "n = " << n << std::endl;
 
   std::cout << "m = " << m << std::endl;
+
+  */
+
+  Py_Initialize();
+  np::initialize();
+
+  const std::size_t x = 10, y = 10;
+
+  double raw_array[x][y]; // = new double[x][y];
+
+  for (std::size_t i = 0; i < x; ++i) {
+    for (std::size_t j = 0; j < y; ++j)
+      raw_array[i][j] = (double) (i*x + j); //(3.142 * i + j);
+  }
+
+  np::dtype dt = np::dtype::get_builtin<double>();
+  bp::object owner;
+
+  np::ndarray array = np::from_data(raw_array, dt,
+                                    bp::make_tuple(x, y),
+                                    bp::make_tuple(sizeof(double)*y,
+                                                   sizeof(double)),
+                                    owner);
+
+  boost::shared_ptr<vcl::matrix<double, vcl::column_major> >  m 
+    = matrix_init_ndarray<double, vcl::column_major>(array);
+
+  std::cout << *(m.get()) << std::endl;
+
+  // TODO: Compare operations on row+column matrices between ublas + scheduler
 
   return EXIT_SUCCESS;
 

@@ -59,28 +59,56 @@ def run_test(*args, **kwargs):
     
     # In-place add
     X = vcl_A.value
-    Y = vcl_A.value
-    X += X
-    old_shape = vcl_A.shape
-    vcl_A += vcl_A
+    X += vcl_B.value
+    vcl_A += vcl_B
     if not (vcl_A == X).all():
-        print(vcl_A.value - X)
-        print(old_shape, vcl_A.shape)
-        print(Y)
-        print(vcl_A.value)
+        print("VCL_A", vcl_A.value)
+        print("X", X)
+        print(vcl_A == X)
         raise RuntimeError("Failed: in-place add")
 
     # Scaled in-place add
-    X += X * alpha.value
-    vcl_A += vcl_A * alpha
+    X += vcl_B.value * alpha.value
+    vcl_A += vcl_B * alpha
     if not (vcl_A == X).all():
-        print(vcl_A.value - X)
-        #raise RuntimeError("Failed: scaled in-place add")
+        raise RuntimeError("Failed: scaled in-place add")
 
     # Add
+    Y = vcl_A.value + vcl_B.value
+    Z = vcl_A + vcl_B
+    if not (Y == Z).all():
+        print(Y)
+        print(Z)
+        print(Z == Y)
+        raise RuntimeError("Failed: add")
+
     # Scaled add (left)
+    Y = dtype(alpha.value) * vcl_B.value + vcl_C.value
+    Z = alpha * vcl_B + vcl_C
+    act_diff = math.fabs(diff(Y, Z))
+    #if not np.allclose(Y, Z, epsilon): # (Z == Y).all():
+    if act_diff > epsilon:
+        print("Y", Y)
+        print("Z", Z)
+        print(Z == Y)
+        print(act_diff)
+        raise RuntimeError("Failed: scaled add (left)")
+
     # Scaled add (right)
+    #X = vcl_A.value
+    #Y = X + alpha.value * X
+    #Z = (vcl_A + alpha * vcl_A).as_ndarray()
+    #if not np.allclose(Y, Z, epsilon): # (Z == Y).all():
+    #    print(Y)
+    #    print(Z)
+    #    print(Z == Y)
+    #    raise RuntimeError("Failed: scaled add (left)")
+
     # Scaled add (both)
+    Y = alpha.value * vcl_B.value + beta.value * vcl_C.value
+    Z = (alpha * vcl_B + beta * vcl_C).as_ndarray()
+    if not np.allclose(Y, Z, epsilon):
+        raise RuntimeError("Failed: scaled add (both)")
 
     # In-place sub
     # Scaled in-place sub
@@ -145,7 +173,7 @@ def test():
     print("# Testing setup:")
     epsilon = 1.0E-11
     print("  eps:      %s" % epsilon)
-    test_matrix_layout(run_test, epsilon, p.float64)
+    test_matrix_layout(run_test, epsilon, p.float64, 11, 11, 11)
 
     print("# Test passed")
     
