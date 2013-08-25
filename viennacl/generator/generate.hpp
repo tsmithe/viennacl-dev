@@ -114,7 +114,7 @@ namespace viennacl{
             if(is_lhs_flow_transposed(statement,root_node))
               descriptor.type=VECTOR_REDUCE_Tx_TYPE;
             else
-              descriptor.type=VECTOR_REDUCE_Ax_TYPE;
+              descriptor.type=VECTOR_REDUCE_Nx_TYPE;
           }
           if(descriptor.type_family!=INVALID_EXPRESSION_FAMILY && root_node.lhs.type_family==scheduler::COMPOSITE_OPERATION_FAMILY)
             fill_expression_descriptor_vector(statement, expr[root_node.lhs.node_index],descriptor);
@@ -136,11 +136,11 @@ namespace viennacl{
             bool lhs_trans = is_lhs_flow_transposed(statement,root_node);
             bool rhs_trans = is_rhs_flow_transposed(statement,root_node);
             if(!lhs_trans && !rhs_trans)
-              descriptor.type=MATRIX_PRODUCT_AA_TYPE;
+              descriptor.type=MATRIX_PRODUCT_NN_TYPE;
             else if(lhs_trans && !rhs_trans)
-              descriptor.type=MATRIX_PRODUCT_TA_TYPE;
+              descriptor.type=MATRIX_PRODUCT_TN_TYPE;
             else if(!lhs_trans && rhs_trans)
-              descriptor.type=MATRIX_PRODUCT_AT_TYPE;
+              descriptor.type=MATRIX_PRODUCT_NT_TYPE;
             else if(lhs_trans && rhs_trans)
               descriptor.type=MATRIX_PRODUCT_TT_TYPE;
 
