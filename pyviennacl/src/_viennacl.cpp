@@ -601,7 +601,7 @@ np::ndarray vcl_matrix_to_ndarray(const vcl::matrix_base<SCALARTYPE, VCL_F>& m)
   // Delegate determination of strides and start offset to function templates
   bp::tuple strides = get_strides<SCALARTYPE>(m);
   np::ndarray array = np::from_data(data + get_offset<SCALARTYPE>(m),
-                                    dt, shape, strides, bp::object());
+                                    dt, shape, strides, bp::object(m));
 
   //std::cout << "NDARRAY_TEST:\n"
   //        << bp::extract<const char*>(bp::str(array))
