@@ -1,8 +1,11 @@
 #SET(BOOST_INCLUDEDIR ${PROJECT_SOURCE_DIR}/external/boost_numpy)
 #SET(BOOST_LIBRARYDIR ${PROJECT_BINARY_DIR}/lib)
 SET(Boost_USE_STATIC_LIBS OFF)
-SET(BOOST_COMPONENTS python-py27)
-find_package(Boost REQUIRED COMPONENTS ${BOOST_COMPONENTS})
+if (BOOST_COMPONENTS)
+  find_package(Boost REQUIRED COMPONENTS ${BOOST_COMPONENTS})
+else ()
+  find_package(Boost REQUIRED COMPONENTS python-py27)
+endif ()
 
 include_directories(
   ${PYTHON_INCLUDE_DIRS}

@@ -68,10 +68,11 @@ endif()
 if(BUILD_PYVIENNACL)
   #set(PythonLibs_FIND_VERSION 2)
   #set(PythonInterp_FIND_VERSION 2)
-  find_package(PythonInterp 2.7.5 EXACT)
+  find_package(PythonInterp 3.3.2 EXACT)
   message(${PYTHON_VERSION_STRING})
   find_package(PythonLibs ${PYTHON_VERSION_STRING} EXACT)
   find_package(Numpy REQUIRED)
+  set(BOOST_COMPONENTS python-py33)
 endif()
 
 # Compile options
