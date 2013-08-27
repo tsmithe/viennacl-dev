@@ -63,15 +63,15 @@ if (ENABLE_CUDA)
                       ${PROJECT_SOURCE_DIR}/external/pugixml/src/pugixml.cpp)
 endif (ENABLE_CUDA)
 
-if (BUILD_PYVIENNACL)
-  # TODO: Add tests implementing puzzles
-  find_package(Matplotlib)
-  if (MATPLOTLIB_FOUND)
-    add_test(pyviennacl ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/src/pyviennacl-puzzle.py)
-  else (MATPLOTLIB_FOUND)
-    message(SEND_ERROR "Can't configure pyviennacl puzzle test, as python3-matplotlib not found")
-  endif (MATPLOTLIB_FOUND)
-endif (BUILD_PYVIENNACL)
+#if (BUILD_PYVIENNACL)
+#  # TODO: Add tests implementing puzzles
+#  find_package(Matplotlib)
+#  if (MATPLOTLIB_FOUND)
+#    add_test(pyviennacl ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/src/pyviennacl-puzzle.py)
+#  else (MATPLOTLIB_FOUND)
+#    message(SEND_ERROR "Can't configure pyviennacl puzzle test, as python3-matplotlib not found")
+#  endif (MATPLOTLIB_FOUND)
+#endif (BUILD_PYVIENNACL)
 
 # test shared library
 #include_directories(${PROJECT_SOURCE_DIR}/libviennacl/include/)
