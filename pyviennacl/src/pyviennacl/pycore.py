@@ -92,7 +92,7 @@ def deprecated(func):
     return deprecated_function
 
 
-class NoResult: 
+class NoResult(object): 
     """
     This no-op class is used to represent when some ViennaCL operation produces
     no explicit result, aside from any effects it may have on the operands.
@@ -102,7 +102,7 @@ class NoResult:
     pass
 
 
-class MagicMethods:
+class MagicMethods(object):
     """
     A class to provide convenience methods for arithmetic and BLAS access.
 
@@ -154,7 +154,7 @@ class MagicMethods:
             return self.result == rhs
 
     def __hash__(self):
-        return super().__hash__()
+        return super(type(self)).__hash__()
 
     def __contains__(self, item):
         return (item in self.as_ndarray())
@@ -194,12 +194,20 @@ class MagicMethods:
             op.execute()
             return self
 
+    def __radd__(self, rhs):
+        return self + rhs
+
+    def __rsub__(self, rhs):
+        return self - rhs
+
     def __rmul__(self, rhs):
-        op = Mul(self, rhs)
-        return op
+        return self * rhs
+
+    def __rtruediv__(self, rhs):
+        return self // rhs
 
 
-class View:
+class View(object):
     start = None
     stop = None
     step = None
@@ -1041,8 +1049,13 @@ class Node(MagicMethods):
                 self.operands[0].statement_node_subtype,       # rhs
                 self.operands[0].statement_node_numeric_type)  # rhs
 
+        self.test_init() # Make sure we can execute
+
     def _node_init(self):
         pass
+
+    def test_init(self):
+        layout_test = self.layout # NB QUIRK
 
     def get_vcl_operand_setter(self, operand):
         """
@@ -1116,6 +1129,27 @@ class Node(MagicMethods):
             return np_result_type(dtypes[0], dtypes[1])
 
     @property
+    def layout(self):
+        """
+        TODO
+        """
+        layout = None
+        if self.result_container_type == Matrix:
+            for opand in self.operands:
+                try:
+                    next_layout = opand.layout
+                except:
+                    continue
+                if layout is None:
+                    layout = next_layout
+                if (next_layout != layout) and (self.operation_node_type != _v.operation_node_type.OPERATION_BINARY_MAT_MAT_PROD_TYPE):
+                    raise TypeError("Matrices do not have the same layout")
+            if layout is None:
+                # May as well now choose a default layout ...
+                layout = p.ROW_MAJOR
+        return layout
+
+    @property
     def result_ndim(self):
         """
         Determine the maximum number of dimensions required to store the
@@ -1152,7 +1186,7 @@ class Node(MagicMethods):
         return max_size
 
     @property
-    def result_shape(self):
+    def shape(self):
         """
         Determine the upper-bound shape of the object needed to store the
         result of any operation on the given operands. The len of this tuple
@@ -1162,8 +1196,8 @@ class Node(MagicMethods):
         TODO: IMPROVE DOCSTRING: MENTION SETTER
         """
         try:
-            if isinstance(self._result_shape, tuple):
-                return self._result_shape
+            if isinstance(self._shape, tuple):
+                return self._shape
         except: pass
 
         ndim = self.result_ndim
@@ -1171,15 +1205,13 @@ class Node(MagicMethods):
         shape = []
         for n in range(ndim):
             shape.append(max_size)
-        return tuple(shape)
+        shape = tuple(shape)
+        self._shape = shape
+        return shape
     
-    @result_shape.setter
-    def result_shape(self, value):
-        self._result_shape = value
-
-    @property
-    def shape(self):
-        return self.result_shape
+    @shape.setter
+    def shape(self, value):
+        self._shape = value
 
     def express(self, statement=""):
         """
@@ -1264,7 +1296,7 @@ class ElementAbs(Node):
     operation_node_type = _v.operation_node_type.OPERATION_UNARY_ABS_TYPE
 
     def _node_init(self):
-        self.result_shape = self.operands[0].shape
+        self.shape = self.operands[0].shape
 
 
 class ElementAcos(Node):
@@ -1278,7 +1310,7 @@ class ElementAcos(Node):
     operation_node_type = _v.operation_node_type.OPERATION_UNARY_ACOS_TYPE
 
     def _node_init(self):
-        self.result_shape = self.operands[0].shape
+        self.shape = self.operands[0].shape
 
 
 class ElementAsin(Node):
@@ -1292,7 +1324,7 @@ class ElementAsin(Node):
     operation_node_type = _v.operation_node_type.OPERATION_UNARY_ASIN_TYPE
 
     def _node_init(self):
-        self.result_shape = self.operands[0].shape
+        self.shape = self.operands[0].shape
 
 
 class ElementAtan(Node):
@@ -1306,7 +1338,7 @@ class ElementAtan(Node):
     operation_node_type = _v.operation_node_type.OPERATION_UNARY_ATAN_TYPE
 
     def _node_init(self):
-        self.result_shape = self.operands[0].shape
+        self.shape = self.operands[0].shape
 
 
 class ElementCeil(Node):
@@ -1320,7 +1352,7 @@ class ElementCeil(Node):
     operation_node_type = _v.operation_node_type.OPERATION_UNARY_CEIL_TYPE
 
     def _node_init(self):
-        self.result_shape = self.operands[0].shape
+        self.shape = self.operands[0].shape
 
 
 class ElementCos(Node):
@@ -1334,7 +1366,7 @@ class ElementCos(Node):
     operation_node_type = _v.operation_node_type.OPERATION_UNARY_COS_TYPE
 
     def _node_init(self):
-        self.result_shape = self.operands[0].shape
+        self.shape = self.operands[0].shape
 
 
 class ElementCosh(Node):
@@ -1348,7 +1380,7 @@ class ElementCosh(Node):
     operation_node_type = _v.operation_node_type.OPERATION_UNARY_COSH_TYPE
 
     def _node_init(self):
-        self.result_shape = self.operands[0].shape
+        self.shape = self.operands[0].shape
 
 
 class ElementExp(Node):
@@ -1362,7 +1394,7 @@ class ElementExp(Node):
     operation_node_type = _v.operation_node_type.OPERATION_UNARY_EXP_TYPE
 
     def _node_init(self):
-        self.result_shape = self.operands[0].shape
+        self.shape = self.operands[0].shape
 
 
 class ElementFabs(Node):
@@ -1376,7 +1408,7 @@ class ElementFabs(Node):
     operation_node_type = _v.operation_node_type.OPERATION_UNARY_FABS_TYPE
 
     def _node_init(self):
-        self.result_shape = self.operands[0].shape
+        self.shape = self.operands[0].shape
 
 
 class ElementFloor(Node):
@@ -1390,7 +1422,7 @@ class ElementFloor(Node):
     operation_node_type = _v.operation_node_type.OPERATION_UNARY_FLOOR_TYPE
 
     def _node_init(self):
-        self.result_shape = self.operands[0].shape
+        self.shape = self.operands[0].shape
 
 
 class ElementLog(Node):
@@ -1404,7 +1436,7 @@ class ElementLog(Node):
     operation_node_type = _v.operation_node_type.OPERATION_UNARY_LOG_TYPE
 
     def _node_init(self):
-        self.result_shape = self.operands[0].shape
+        self.shape = self.operands[0].shape
 
 
 class ElementLog10(Node):
@@ -1418,7 +1450,7 @@ class ElementLog10(Node):
     operation_node_type = _v.operation_node_type.OPERATION_UNARY_LOG10_TYPE
 
     def _node_init(self):
-        self.result_shape = self.operands[0].shape
+        self.shape = self.operands[0].shape
 
 
 class ElementSin(Node):
@@ -1432,7 +1464,7 @@ class ElementSin(Node):
     operation_node_type = _v.operation_node_type.OPERATION_UNARY_SIN_TYPE
 
     def _node_init(self):
-        self.result_shape = self.operands[0].shape
+        self.shape = self.operands[0].shape
 
 
 class ElementSinh(Node):
@@ -1446,7 +1478,7 @@ class ElementSinh(Node):
     operation_node_type = _v.operation_node_type.OPERATION_UNARY_SINH_TYPE
 
     def _node_init(self):
-        self.result_shape = self.operands[0].shape
+        self.shape = self.operands[0].shape
 
 
 class ElementSqrt(Node):
@@ -1460,7 +1492,7 @@ class ElementSqrt(Node):
     operation_node_type = _v.operation_node_type.OPERATION_UNARY_SQRT_TYPE
 
     def _node_init(self):
-        self.result_shape = self.operands[0].shape
+        self.shape = self.operands[0].shape
 
 
 class ElementTan(Node):
@@ -1474,7 +1506,7 @@ class ElementTan(Node):
     operation_node_type = _v.operation_node_type.OPERATION_UNARY_TAN_TYPE
 
     def _node_init(self):
-        self.result_shape = self.operands[0].shape
+        self.shape = self.operands[0].shape
 
 
 class ElementTanh(Node):
@@ -1488,7 +1520,7 @@ class ElementTanh(Node):
     operation_node_type = _v.operation_node_type.OPERATION_UNARY_TANH_TYPE
 
     def _node_init(self):
-        self.result_shape = self.operands[0].shape
+        self.shape = self.operands[0].shape
 
 
 class Trans(Node):
@@ -1500,7 +1532,7 @@ class Trans(Node):
     operation_node_type = _v.operation_node_type.OPERATION_UNARY_TRANS_TYPE
 
     def _node_init(self):
-        self.result_shape = (self.operands[0].shape[1],
+        self.shape = (self.operands[0].shape[1],
                              self.operands[0].shape[0])
 
 
@@ -1531,7 +1563,7 @@ class InplaceAdd(Assign):
     def _node_init(self):
         if self.operands[0].shape != self.operands[1].shape:
             raise TypeError("Cannot Add two differently shaped objects!")
-        self.result_shape = self.operands[0].shape
+        self.shape = self.operands[0].shape
 
 
 class InplaceSub(Assign):
@@ -1551,7 +1583,7 @@ class InplaceSub(Assign):
     def _node_init(self):
         if self.operands[0].shape != self.operands[1].shape:
             raise TypeError("Cannot Add two differently shaped objects!")
-        self.result_shape = self.operands[0].shape
+        self.shape = self.operands[0].shape
 
 
 class Add(Node):
@@ -1570,7 +1602,7 @@ class Add(Node):
     def _node_init(self):
         if self.operands[0].shape != self.operands[1].shape:
             raise TypeError("Cannot Add two differently shaped objects!")
-        self.result_shape = self.operands[0].shape
+        self.shape = self.operands[0].shape
 
 
 class Sub(Node):
@@ -1589,7 +1621,7 @@ class Sub(Node):
     def _node_init(self):
         if self.operands[0].shape != self.operands[1].shape:
             raise TypeError("Cannot Sub two differently shaped objects!")
-        self.result_shape = self.operands[0].shape
+        self.shape = self.operands[0].shape
 
 
 class Mul(Node):
@@ -1613,8 +1645,10 @@ class Mul(Node):
         #('Vector', 'Vector'): Matrix, # TODO NOT IMPLEMENTED IN SCHEDULER
 
         # OPERATION_BINARY_MULT_TYPE
-        ('Matrix', 'HostScalar'): Matrix,
-        ('Matrix', 'Scalar'): Matrix,
+        #('Matrix', 'HostScalar'): Matrix,
+        #('Matrix', 'Scalar'): Matrix,
+        ('HostScalar', 'Matrix'): Matrix,
+        ('Scalar', 'Matrix'): Matrix,
         ('Vector', 'HostScalar'): Vector,
         ('Vector', 'Scalar'): Vector,
         ('Scalar', 'Scalar'): Scalar,
@@ -1631,32 +1665,46 @@ class Mul(Node):
                 issubclass(self.operands[1].result_container_type,
                            SparseMatrixBase)):
                 self.operation_node_type = _v.operation_node_type.OPERATION_BINARY_MAT_MAT_PROD_TYPE
-                self.result_shape = (self.operands[0].shape[0],
+                self.shape = (self.operands[0].shape[0],
                                      self.operands[1].shape[1])
             elif self.operands[1].result_container_type == Vector:
                 self.operation_node_type = _v.operation_node_type.OPERATION_BINARY_MAT_VEC_PROD_TYPE
-                self.result_shape = self.operands[1].shape
+                self.shape = self.operands[1].shape
             elif self.operands[1].result_container_type == Scalar:
                 self.operation_node_type = _v.operation_node_type.OPERATION_BINARY_MULT_TYPE
-                self.result_shape = self.operands[0].shape
+                self.shape = self.operands[0].shape
             elif self.operands[1].result_container_type == HostScalar:
                 self.operation_node_type = _v.operation_node_type.OPERATION_BINARY_MULT_TYPE
-                self.result_shape = self.operands[0].shape
+                self.shape = self.operands[0].shape
             else:
                 self.operation_node_type = None
         elif self.operands[0].result_container_type == Vector: # Vector * ...
             if self.operands[1].result_container_type == Scalar:
                 self.operation_node_type = _v.operation_node_type.OPERATION_BINARY_MULT_TYPE
-                self.result_shape = self.operands[0].shape
+                self.shape = self.operands[0].shape
             elif self.operands[1].result_container_type == HostScalar:
                 self.operation_node_type = _v.operation_node_type.OPERATION_BINARY_MULT_TYPE
-                self.result_shape = self.operands[0].shape
+                self.shape = self.operands[0].shape
             else:
                 self.operation_node_type = None
-        #elif self.operands[0].result_container_type == Scalar: 
-        #    pass
-        #elif self.operands[0].result_container_type == HostScalar:
-        #    pass
+        elif self.operands[0].result_container_type == Scalar: 
+            #
+            # TODO
+            #
+            if self.operands[1].result_container_type == Matrix:
+                self.operation_node_type = _v.operation_node_type.OPERATION_BINARY_MULT_TYPE
+                self.shape = self.operands[1].shape
+            else:
+                self.operation_node_type = None
+        elif self.operands[0].result_container_type == HostScalar:
+            #
+            # TODO
+            #
+            if self.operands[1].result_container_type == Matrix:
+                self.operation_node_type = _v.operation_node_type.OPERATION_BINARY_MULT_TYPE
+                self.shape = self.operands[1].shape
+            else:
+                self.operation_node_type = None
         else:
             self.operation_node_type = None
 
@@ -1674,7 +1722,7 @@ class Div(Node):
     }
     operation_node_type = _v.operation_node_type.OPERATION_BINARY_DIV_TYPE
 
-    # TODO: result_shape
+    # TODO: shape
 
 
 class ElementProd(Node):
@@ -1688,7 +1736,7 @@ class ElementProd(Node):
     }
     operation_node_type = _v.operation_node_type.OPERATION_BINARY_ELEMENT_PROD_TYPE
 
-    # TODO: result_shape
+    # TODO: shape
 
 
 class ElementDiv(Node):
@@ -1702,7 +1750,7 @@ class ElementDiv(Node):
     }
     operation_node_type = _v.operation_node_type.OPERATION_BINARY_ELEMENT_DIV_TYPE
 
-    # TODO: result_shape
+    # TODO: shape
 
 
 class Dot(Node):
@@ -1713,7 +1761,7 @@ class Dot(Node):
     }
     operation_node_type = _v.operation_node_type.OPERATION_BINARY_INNER_PROD_TYPE
 
-    # TODO: result_shape
+    # TODO: shape
 
 
 class Statement:
@@ -1724,7 +1772,7 @@ class Statement:
     object.
     """
 
-    def __init__(self, node):
+    def __init__(self, root):
         """
         Given a Node instance, return an object representing the ViennaCL
         statement of the corresponding expression graph, as connected to the
@@ -1737,28 +1785,29 @@ class Statement:
         The new Assign node is then taken to be the root node of the graph,
         having transposed the rest.
         """
-        if not isinstance(node, Node):
+        if not isinstance(root, Node):
             raise RuntimeError("Statement must be initialised on a Node")
 
         self.statement = []  # A list to hold the flattened expression tree
         next_node = []       # Holds nodes as we travel down the tree
 
         # Test to see that we can actually do the operation
-        if not node.result_container_type:
-            raise TypeError("Unsupported expression: %s" %(node.express()))
+        if not root.result_container_type:
+            raise TypeError("Unsupported expression: %s" %(root.express()))
 
         # If the root node is not an Assign instance, then construct a
         # temporary to hold the result.
-        if isinstance(node, Assign):
-            self.result = node.operands[0]
+        if isinstance(root, Assign):
+            self.result = root.operands[0]
         else:
-            self.result = node.result_container_type(
-                shape = node.result_shape,
-                dtype = node.dtype )
-            top = Assign(self.result, node)
+            self.result = root.result_container_type(
+                shape = root.shape,
+                dtype = root.dtype,
+                layout = root.layout)
+            top = Assign(self.result, root)
             next_node.append(top)
 
-        next_node.append(node)
+        next_node.append(root)
         # Flatten the tree
         for n in next_node:
             self.statement.append(n)

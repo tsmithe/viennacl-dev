@@ -540,6 +540,7 @@ matrix_init_scalar(uint32_t n, uint32_t m, SCALARTYPE value)
   return boost::shared_ptr<vcl::matrix<SCALARTYPE, F> >(mat);
 }
 
+
 /** @brief Creates the matrix from the supplied ndarray */
 template<class SCALARTYPE, class F>
 boost::shared_ptr<vcl::matrix<SCALARTYPE, F> >
@@ -550,20 +551,12 @@ matrix_init_ndarray(const np::ndarray& array)
     PyErr_SetString(PyExc_TypeError, "Can only create a matrix from a 2-D array!");
     bp::throw_error_already_set();
   }
-
-  /*
-  std::cout << "NDARRAY_INIT: "
-            << bp::extract<const char*>(bp::str(array))
-            << std::endl;
-  */
-
+  
   ndarray_wrapper<SCALARTYPE> wrapper(array);
 
   vcl::matrix<SCALARTYPE, F>* mat = new vcl::matrix<SCALARTYPE, F>(wrapper.size1(), wrapper.size2());
 
   vcl::copy(wrapper, (*mat));
-
-  // std::cout << "MAT_INIT: " << *mat << std::endl;
   
   return boost::shared_ptr<vcl::matrix<SCALARTYPE, F> >(mat);
 }
@@ -589,32 +582,30 @@ std::size_t get_offset(const vcl::matrix_base<SCALARTYPE,
   return m.start1() + m.start2()*m.internal_size1();
 }
 
-template<class SCALARTYPE, class VCL_F, class CPU_F>
+template<class SCALARTYPE, class VCL_F>
 np::ndarray vcl_matrix_to_ndarray(const vcl::matrix_base<SCALARTYPE, VCL_F>& m)
 {
-
-  //std::cout << "MAT_TEST: " << m << std::endl;
 
   std::size_t size = m.internal_size1() * m.internal_size2() * sizeof(SCALARTYPE);
 
   SCALARTYPE* data = (SCALARTYPE*)malloc(size);
 
-  vcl::backend::finish(); // To be sure...
+  vcl::backend::finish();
 
   // Read the whole matrix
   vcl::backend::memory_read(m.handle(), 0, size, data);
-
+ 
   np::dtype dt = np::dtype::get_builtin<SCALARTYPE>();
   bp::tuple shape = bp::make_tuple(m.size1(), m.size2());
 
   // Delegate determination of strides and start offset to function templates
   bp::tuple strides = get_strides<SCALARTYPE>(m);
   np::ndarray array = np::from_data(data + get_offset<SCALARTYPE>(m),
-                                    dt, shape, strides, bp::object(m));
+                                    dt, shape, strides, bp::object());
 
-  //std::cout << "NDARRAY_TEST: "
-  //         << bp::extract<const char*>(bp::str(array))
-  //         << std::endl;
+  //std::cout << "NDARRAY_TEST:\n"
+  //        << bp::extract<const char*>(bp::str(array))
+  //        << std::endl;
 
   return array;
 }
@@ -1358,7 +1349,7 @@ BOOST_PYTHON_MODULE(_viennacl)
   bp::class_<vcl::matrix_base<TYPE, F>,                                 \
 	     boost::shared_ptr<vcl::matrix_base<TYPE, F> > >            \
     ("matrix_base", bp::no_init)                                        \
-    .def("as_ndarray", &vcl_matrix_to_ndarray<TYPE, F, CPU_F>)          \
+    .def("as_ndarray", &vcl_matrix_to_ndarray<TYPE, F>)                 \
     .def("clear", &vcl::matrix_base<TYPE, F>::clear)                    \
     .add_property("size1", &vcl::matrix_base<TYPE, F>::size1)           \
     .add_property("internal_size1",                                     \
