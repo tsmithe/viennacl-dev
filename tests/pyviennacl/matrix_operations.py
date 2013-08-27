@@ -8,6 +8,7 @@ import sys
 
 from test_common import diff, test_matrix_layout
 
+#TODO: Change print statements to log statements
 
 def run_test(*args, **kwargs):
     """
@@ -35,80 +36,81 @@ def run_test(*args, **kwargs):
     #X = p.Matrix(A.shape, alpha)
     #if not (X == (np.ones(A.shape, dtype = dtype) * alpha.value)).all():
     #    raise RuntimeError("Failed: GPU scalar matrix init")
+    #print("Test: initialisation of matrix with GPU scalar passed")
 
     # + CPU scalar TODO
     Y = p.Matrix(A.shape, beta.value) # TODO
     if not (Y == (np.ones(A.shape, dtype = dtype) * beta.value)).all():
         raise RuntimeError("Failed: CPU scalar matrix init")
+    print("Test: initialisation of matrix with CPU scalar passed")
 
     # + ndarray
     X = p.Matrix(np.ones(A.shape, dtype = dtype) * beta.value)
     if not (X == (np.ones(A.shape, dtype = dtype) * beta.value)).all():
         raise RuntimeError("Failed: ndarray matrix init")
+    print("Test: initialisation of matrix with ndarray passed")
 
     # + Matrix
     X = p.Matrix(Y)
     if not (X == Y).all():
         raise RuntimeError("Failed: Matrix Matrix init")
+    print("Test: initialisation of matrix with Matrix passed")
 
     # + CompressedMatrix
     Y = p.CompressedMatrix(X)
     X = p.Matrix(Y)
     if not (X == Y).all():
         raise RuntimeError("Failed: Matrix CompressedMatrix init")
+    print("Test: initialisation of matrix with CompressedMatrix passed")
     
     # In-place add
     X = vcl_A.value
     X += vcl_B.value
     vcl_A += vcl_B
     if not (vcl_A == X).all():
-        print("VCL_A", vcl_A.value)
-        print("X", X)
-        print(vcl_A == X)
         raise RuntimeError("Failed: in-place add")
+    print("Test: in-place add passed")
 
     # Scaled in-place add
     X += vcl_B.value * alpha.value
-    vcl_A += vcl_B * alpha
+    print(vcl_B)
+    vcl_A += alpha * vcl_B
+    print(vcl_A.express())
     if not (vcl_A == X).all():
         raise RuntimeError("Failed: scaled in-place add")
+    print("Test: scaled in-place add passed")
 
     # Add
     Y = vcl_A.value + vcl_B.value
     Z = vcl_A + vcl_B
     if not (Y == Z).all():
-        print(Y)
-        print(Z)
-        print(Z == Y)
         raise RuntimeError("Failed: add")
+    print("Test: add passed")
 
     # Scaled add (left)
     Y = dtype(alpha.value) * vcl_B.value + vcl_C.value
     Z = alpha * vcl_B + vcl_C
     act_diff = math.fabs(diff(Y, Z))
-    #if not np.allclose(Y, Z, epsilon): # (Z == Y).all():
     if act_diff > epsilon:
-        print("Y", Y)
-        print("Z", Z)
-        print(Z == Y)
-        print(act_diff)
         raise RuntimeError("Failed: scaled add (left)")
+    print("Test: scaled add (left) passed")
 
     # Scaled add (right)
-    #X = vcl_A.value
-    #Y = X + alpha.value * X
-    #Z = (vcl_A + alpha * vcl_A).as_ndarray()
-    #if not np.allclose(Y, Z, epsilon): # (Z == Y).all():
-    #    print(Y)
-    #    print(Z)
-    #    print(Z == Y)
-    #    raise RuntimeError("Failed: scaled add (left)")
+    Y = vcl_B.value + dtype(alpha.value) * vcl_C.value
+    Z = vcl_B + alpha * vcl_C
+    print(type(Z), Z.express())
+    act_diff = math.fabs(diff(Y, Z))
+    if act_diff > epsilon: # (Z == Y).all():
+        raise RuntimeError("Failed: scaled add (left)")
+    print("Test: scaled add (right) passed")
 
     # Scaled add (both)
-    Y = alpha.value * vcl_B.value + beta.value * vcl_C.value
-    Z = (alpha * vcl_B + beta * vcl_C).as_ndarray()
-    if not np.allclose(Y, Z, epsilon):
+    Y = alpha.value * vcl_B.value + alpha.value * vcl_C.value
+    Z = alpha * vcl_B + alpha * vcl_C
+    act_diff = math.fabs(diff(Y, Z))
+    if act_diff > epsilon:
         raise RuntimeError("Failed: scaled add (both)")
+    print("Test: scaled add (both) passed")
 
     # In-place sub
     # Scaled in-place sub

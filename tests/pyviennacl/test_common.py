@@ -14,22 +14,36 @@ def diff(a, b):
     # Convert NumPy types to ViennaCL types (they're much more convenient!)
     if isinstance(a, np.ndarray):
         if a.ndim == 1:
-            a = p.Vector(a)
+            a = p.Vector(a, dtype = a.dtype)
         elif a.ndim == 2:
-            a = p.Matrix(a)
+            if isinstance(b, p.MagicMethods):
+                a = p.Matrix(a, dtype = a.dtype, layout = b.layout)
+            else:
+                a = p.Matrix(a, dtype = a.dtype)
         else:
             raise TypeError("Something went wrong")
+
     if isinstance(b, np.ndarray):
         if b.ndim == 1:
             b = p.Vector(b)
         elif b.ndim == 2:
-            b = p.Matrix(b)
+            if isinstance(a, p.MagicMethods):
+                b = p.Matrix(b, dtype = b.dtype, layout = a.layout)
+            else:
+                b = p.Matrix(b, dtype = b.dtype)
         else:
             raise TypeError("Something went wrong")
 
     # The MagicMethods class guarantees that we have some useful facilities
     # (both Node and Leaf are derived from MagicMethods)
     if isinstance(a, p.MagicMethods) and isinstance(b, p.MagicMethods):
+        if a.layout != b.layout:
+            # We want to make sure that a and b have the same layout
+            # So construct a temporary matrix, and assign b to it
+            temp = p.Matrix(b.shape, dtype = b.dtype, layout = a.layout)
+            p.Assign(temp, b.result).execute()
+            b = temp
+            log.warning("HERE")
         d = p.ElementFabs(a - b)
         cpu_d = d.as_ndarray()
         if len(d.shape) == 1:
@@ -147,219 +161,381 @@ def test_matrix_slice(test_func,
 
     # A=matrix, B=matrix, C=matrix
     print("Now using A=matrix, B=matrix, C=matrix")
-    ret = test_func(epsilon,
-                    A, A_trans, B, B_trans, C,
-                    vcl_A, vcl_A_trans,
-                    vcl_B, vcl_B_trans, vcl_C,
-                    dtype = dtype)
+    try:
+        ret = test_func(epsilon,
+                        A, A_trans, B, B_trans, C,
+                        vcl_A, vcl_A_trans,
+                        vcl_B, vcl_B_trans, vcl_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Matrices do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=matrix, B=matrix, C=range
     print("Now using A=matrix, B=matrix, C=range")
-    ret = test_func(epsilon,
-                    A, A_trans, B, B_trans, C,
-                    vcl_A, vcl_A_trans,
-                    vcl_B, vcl_B_trans, vcl_range_C,
-                    dtype = dtype)
+    try:
+        ret = test_func(epsilon,
+                        A, A_trans, B, B_trans, C,
+                        vcl_A, vcl_A_trans,
+                        vcl_B, vcl_B_trans, vcl_range_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Matrices do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=matrix, B=matrix, C=slice
     print("Now using A=matrix, B=matrix, C=slice")
-    ret = test_func(epsilon,
-                    A, A_trans, B, B_trans, C,
-                    vcl_A, vcl_A_trans,
-                    vcl_B, vcl_B_trans, vcl_slice_C,
-                    dtype = dtype)
+    try:
+        ret = test_func(epsilon,
+                        A, A_trans, B, B_trans, C,
+                        vcl_A, vcl_A_trans,
+                        vcl_B, vcl_B_trans, vcl_slice_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Matrices do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=matrix, B=range, C=matrix
     print("Now using A=matrix, B=range, C=matrix")
-    ret = test_func(epsilon,
-                    A, A_trans, B, B_trans, C,
-                    vcl_A, vcl_A_trans,
-                    vcl_range_B, vcl_range_B_trans, vcl_C,
-                    dtype = dtype)
+    try:
+        ret = test_func(epsilon,
+                        A, A_trans, B, B_trans, C,
+                        vcl_A, vcl_A_trans,
+                        vcl_range_B, vcl_range_B_trans, vcl_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Matrices do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=matrix, B=range, C=range
     print("Now using A=matrix, B=range, C=range")
-    ret = test_func(epsilon,
-                    A, A_trans, B, B_trans, C,
-                    vcl_A, vcl_A_trans,
-                    vcl_range_B, vcl_range_B_trans, vcl_range_C,
-                    dtype = dtype)
+    try:
+        ret = test_func(epsilon,
+                        A, A_trans, B, B_trans, C,
+                        vcl_A, vcl_A_trans,
+                        vcl_range_B, vcl_range_B_trans, vcl_range_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Matrices do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=matrix, B=range, C=slice
     print("Now using A=matrix, B=range, C=slice")
-    ret = test_func(epsilon,
-                    A, A_trans, B, B_trans, C,
-                    vcl_A, vcl_A_trans,
-                    vcl_range_B, vcl_range_B_trans, vcl_slice_C,
-                    dtype = dtype)
+    try:
+        ret = test_func(epsilon,
+                        A, A_trans, B, B_trans, C,
+                        vcl_A, vcl_A_trans,
+                        vcl_range_B, vcl_range_B_trans, vcl_slice_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Matrices do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=matrix, B=slice, C=matrix
     print("Now using A=matrix, B=slice, C=matrix")
-    ret = test_func(epsilon,
-                    A, A_trans, B, B_trans, C,
-                    vcl_A, vcl_A_trans,
-                    vcl_slice_B, vcl_slice_B_trans, vcl_C,
-                    dtype = dtype)
+    try:
+        ret = test_func(epsilon,
+                        A, A_trans, B, B_trans, C,
+                        vcl_A, vcl_A_trans,
+                        vcl_slice_B, vcl_slice_B_trans, vcl_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Matrices do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=matrix, B=slice, C=range
     print("Now using A=matrix, B=slice, C=range")
-    ret = test_func(epsilon,
-                    A, A_trans, B, B_trans, C,
-                    vcl_A, vcl_A_trans,
-                    vcl_slice_B, vcl_slice_B_trans, vcl_range_C,
-                    dtype = dtype)
+    try:
+        ret = test_func(epsilon,
+                        A, A_trans, B, B_trans, C,
+                        vcl_A, vcl_A_trans,
+                        vcl_slice_B, vcl_slice_B_trans, vcl_range_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Matrices do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=matrix, B=slice, C=slice
     print("Now using A=matrix, B=slice, C=slice")
-    ret = test_func(epsilon,
-                    A, A_trans, B, B_trans, C,
-                    vcl_A, vcl_A_trans,
-                    vcl_slice_B, vcl_slice_B_trans, vcl_slice_C,
-                    dtype = dtype)
+    try:
+        ret = test_func(epsilon,
+                        A, A_trans, B, B_trans, C,
+                        vcl_A, vcl_A_trans,
+                        vcl_slice_B, vcl_slice_B_trans, vcl_slice_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Matrices do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=range, B=matrix, C=matrix
     print("Now using A=range, B=matrix, C=matrix")
-    ret = test_func(epsilon,
-                    A, A_trans, B, B_trans, C,
-                    vcl_range_A, vcl_range_A_trans,
-                    vcl_B, vcl_B_trans, vcl_C,
-                    dtype = dtype)
+    try:
+        ret = test_func(epsilon,
+                        A, A_trans, B, B_trans, C,
+                        vcl_range_A, vcl_range_A_trans,
+                        vcl_B, vcl_B_trans, vcl_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Matrices do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=range, B=matrix, C=range
     print("Now using A=range, B=matrix, C=range")
-    ret = test_func(epsilon,
-                    A, A_trans, B, B_trans, C,
-                    vcl_range_A, vcl_range_A_trans,
-                    vcl_B, vcl_B_trans, vcl_range_C,
-                    dtype = dtype)
+    try:
+        ret = test_func(epsilon,
+                        A, A_trans, B, B_trans, C,
+                        vcl_range_A, vcl_range_A_trans,
+                        vcl_B, vcl_B_trans, vcl_range_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Matrices do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=range, B=matrix, C=slice
     print("Now using A=range, B=matrix, C=slice")
-    ret = test_func(epsilon,
-                    A, A_trans, B, B_trans, C,
-                    vcl_range_A, vcl_range_A_trans,
-                    vcl_B, vcl_B_trans, vcl_slice_C,
-                    dtype = dtype)
+    try:
+        ret = test_func(epsilon,
+                        A, A_trans, B, B_trans, C,
+                        vcl_range_A, vcl_range_A_trans,
+                        vcl_B, vcl_B_trans, vcl_slice_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Matrices do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=range, B=range, C=matrix
     print("Now using A=range, B=range, C=matrix")
-    ret = test_func(epsilon,
-                    A, A_trans, B, B_trans, C,
-                    vcl_range_A, vcl_range_A_trans,
-                    vcl_range_B, vcl_range_B_trans, vcl_C,
-                    dtype = dtype)
+    try:
+        ret = test_func(epsilon,
+                        A, A_trans, B, B_trans, C,
+                        vcl_range_A, vcl_range_A_trans,
+                        vcl_range_B, vcl_range_B_trans, vcl_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Matrices do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=range, B=range, C=range
     print("Now using A=range, B=range, C=range")
-    ret = test_func(epsilon,
-                    A, A_trans, B, B_trans, C,
-                    vcl_range_A, vcl_range_A_trans,
-                    vcl_range_B, vcl_range_B_trans, vcl_range_C,
-                    dtype = dtype)
+    try:
+        ret = test_func(epsilon,
+                        A, A_trans, B, B_trans, C,
+                        vcl_range_A, vcl_range_A_trans,
+                        vcl_range_B, vcl_range_B_trans, vcl_range_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Matrices do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=range, B=range, C=slice
     print("Now using A=range, B=range, C=slice")
-    ret = test_func(epsilon,
-                    A, A_trans, B, B_trans, C,
-                    vcl_range_A, vcl_range_A_trans,
-                    vcl_range_B, vcl_range_B_trans, vcl_slice_C,
-                    dtype = dtype)
+    try:
+        ret = test_func(epsilon,
+                        A, A_trans, B, B_trans, C,
+                        vcl_range_A, vcl_range_A_trans,
+                        vcl_range_B, vcl_range_B_trans, vcl_slice_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Matrices do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=range, B=slice, C=matrix
     print("Now using A=range, B=slice, C=matrix")
-    ret = test_func(epsilon,
-                    A, A_trans, B, B_trans, C,
-                    vcl_range_A, vcl_range_A_trans,
-                    vcl_slice_B, vcl_slice_B_trans, vcl_C,
-                    dtype = dtype)
+    try:
+        ret = test_func(epsilon,
+                        A, A_trans, B, B_trans, C,
+                        vcl_range_A, vcl_range_A_trans,
+                        vcl_slice_B, vcl_slice_B_trans, vcl_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Matrices do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=range, B=slice, C=range
     print("Now using A=range, B=slice, C=range")
-    ret = test_func(epsilon,
-                    A, A_trans, B, B_trans, C,
-                    vcl_range_A, vcl_range_A_trans,
-                    vcl_slice_B, vcl_slice_B_trans, vcl_range_C,
-                    dtype = dtype)
+    try:
+        ret = test_func(epsilon,
+                        A, A_trans, B, B_trans, C,
+                        vcl_range_A, vcl_range_A_trans,
+                        vcl_slice_B, vcl_slice_B_trans, vcl_range_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Matrices do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=range, B=slice, C=slice
     print("Now using A=range, B=slice, C=slice")
-    ret = test_func(epsilon,
-                    A, A_trans, B, B_trans, C,
-                    vcl_range_A, vcl_range_A_trans,
-                    vcl_slice_B, vcl_slice_B_trans, vcl_slice_C,
-                    dtype = dtype)
+    try:
+        ret = test_func(epsilon,
+                        A, A_trans, B, B_trans, C,
+                        vcl_range_A, vcl_range_A_trans,
+                        vcl_slice_B, vcl_slice_B_trans, vcl_slice_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Matrices do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=slice, B=matrix, C=matrix
     print("Now using A=slice, B=matrix, C=matrix")
-    ret = test_func(epsilon,
-                    A, A_trans, B, B_trans, C,
-                    vcl_slice_A, vcl_slice_A_trans,
-                    vcl_B, vcl_B_trans, vcl_C,
-                    dtype = dtype)
+    try:
+        ret = test_func(epsilon,
+                        A, A_trans, B, B_trans, C,
+                        vcl_slice_A, vcl_slice_A_trans,
+                        vcl_B, vcl_B_trans, vcl_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Matrices do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=slice, B=matrix, C=range
     print("Now using A=slice, B=matrix, C=range")
-    ret = test_func(epsilon,
-                    A, A_trans, B, B_trans, C,
-                    vcl_slice_A, vcl_slice_A_trans,
-                    vcl_B, vcl_B_trans, vcl_range_C,
-                    dtype = dtype)
+    try:
+        ret = test_func(epsilon,
+                        A, A_trans, B, B_trans, C,
+                        vcl_slice_A, vcl_slice_A_trans,
+                        vcl_B, vcl_B_trans, vcl_range_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Matrices do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=slice, B=matrix, C=slice
     print("Now using A=slice, B=matrix, C=slice")
-    ret = test_func(epsilon,
-                    A, A_trans, B, B_trans, C,
-                    vcl_slice_A, vcl_slice_A_trans,
-                    vcl_B, vcl_B_trans, vcl_slice_C,
-                    dtype = dtype)
+    try:
+        ret = test_func(epsilon,
+                        A, A_trans, B, B_trans, C,
+                        vcl_slice_A, vcl_slice_A_trans,
+                        vcl_B, vcl_B_trans, vcl_slice_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Matrices do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=slice, B=range, C=matrix
     print("Now using A=slice, B=range, C=matrix")
-    ret = test_func(epsilon,
-                    A, A_trans, B, B_trans, C,
-                    vcl_slice_A, vcl_slice_A_trans,
-                    vcl_range_B, vcl_range_B_trans, vcl_C,
-                    dtype = dtype)
+    try:
+        ret = test_func(epsilon,
+                        A, A_trans, B, B_trans, C,
+                        vcl_slice_A, vcl_slice_A_trans,
+                        vcl_range_B, vcl_range_B_trans, vcl_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Matrices do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=slice, B=range, C=range
     print("Now using A=slice, B=range, C=range")
-    ret = test_func(epsilon,
-                    A, A_trans, B, B_trans, C,
-                    vcl_slice_A, vcl_slice_A_trans,
-                    vcl_range_B, vcl_range_B_trans, vcl_range_C,
-                    dtype = dtype)
+    try:
+        ret = test_func(epsilon,
+                        A, A_trans, B, B_trans, C,
+                        vcl_slice_A, vcl_slice_A_trans,
+                        vcl_range_B, vcl_range_B_trans, vcl_range_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Matrices do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=slice, B=range, C=slice
     print("Now using A=slice, B=range, C=slice")
-    ret = test_func(epsilon,
-                    A, A_trans, B, B_trans, C,
-                    vcl_slice_A, vcl_slice_A_trans,
-                    vcl_range_B, vcl_range_B_trans, vcl_slice_C,
-                    dtype = dtype)
+    try:
+        ret = test_func(epsilon,
+                        A, A_trans, B, B_trans, C,
+                        vcl_slice_A, vcl_slice_A_trans,
+                        vcl_range_B, vcl_range_B_trans, vcl_slice_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Matrices do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=slice, B=slice, C=matrix
     print("Now using A=slice, B=slice, C=matrix")
-    ret = test_func(epsilon,
-                    A, A_trans, B, B_trans, C,
-                    vcl_slice_A, vcl_slice_A_trans,
-                    vcl_slice_B, vcl_slice_B_trans, vcl_C,
-                    dtype = dtype)
+    try:
+        ret = test_func(epsilon,
+                        A, A_trans, B, B_trans, C,
+                        vcl_slice_A, vcl_slice_A_trans,
+                        vcl_slice_B, vcl_slice_B_trans, vcl_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Matrices do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=slice, B=slice, C=range
     print("Now using A=slice, B=slice, C=range")
-    ret = test_func(epsilon,
-                    A, A_trans, B, B_trans, C,
-                    vcl_slice_A, vcl_slice_A_trans,
-                    vcl_slice_B, vcl_slice_B_trans, vcl_range_C,
-                    dtype = dtype)
+    try:
+        ret = test_func(epsilon,
+                        A, A_trans, B, B_trans, C,
+                        vcl_slice_A, vcl_slice_A_trans,
+                        vcl_slice_B, vcl_slice_B_trans, vcl_range_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Matrices do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=slice, B=slice, C=slice
     print("Now using A=slice, B=slice, C=slice")
-    ret = test_func(epsilon,
-                    A, A_trans, B, B_trans, C,
-                    vcl_slice_A, vcl_slice_A_trans,
-                    vcl_slice_B, vcl_slice_B_trans, vcl_slice_C,
-                    dtype = dtype)
+    try:
+        ret = test_func(epsilon,
+                        A, A_trans, B, B_trans, C,
+                        vcl_slice_A, vcl_slice_A_trans,
+                        vcl_slice_B, vcl_slice_B_trans, vcl_slice_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Matrices do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     return os.EX_OK
 
@@ -407,7 +583,7 @@ def test_matrix_layout(test_func, epsilon, dtype,
     print("/// Now testing A=col, B=col, C=row ///")
     print("///////////////////////////////////////")
     test_matrix_slice(test_func, epsilon, dtype, p.COL_MAJOR, p.COL_MAJOR, p.ROW_MAJOR, size1, size2, size3)
-
+    
     # A=col, B=col, C=col
     print("///////////////////////////////////////")
     print("/// Now testing A=col, B=col, C=col ///")

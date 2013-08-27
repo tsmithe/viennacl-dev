@@ -24,6 +24,43 @@ def run_test(*args, **kwargs):
     vcl_B_trans = args[9]
     vcl_C = args[10]
 
+    act_diff = math.fabs(diff(A, vcl_A))
+    if act_diff > epsilon:
+        raise Exception("Error copying A")
+
+    act_diff = math.fabs(diff(B, vcl_B))
+    if act_diff > epsilon:
+        x = p.Matrix(vcl_B.shape, dtype = vcl_B.dtype, layout = p.ROW_MAJOR)
+        p.Assign(x, vcl_B).execute()
+        print(x.value)
+        print(B)
+        print(x == B)
+        print(act_diff)
+        raise Exception("Error copying B")
+
+    #act_diff = math.fabs(diff(C, vcl_C))
+    #if act_diff > epsilon:
+    #    raise Exception("Error copying C")
+
+    act_diff = math.fabs(diff(A_trans, vcl_A_trans))
+    if act_diff > epsilon:
+        raise Exception("Error copying A_trans")
+
+    act_diff = math.fabs(diff(B_trans, vcl_B_trans))
+    if act_diff > epsilon:
+        raise Exception("Error copying B_trans")
+
+    #act_diff = math.fabs(diff(C_trans, vcl_C_trans))
+    #if act_diff > epsilon:
+    #    raise Exception("Error copying C_trans")
+
+    #A = vcl_A.value
+    #A_trans = vcl_A_trans.value
+    #B = vcl_B.value
+    #B_trans = vcl_B_trans.value
+    #C = vcl_C.value
+    #C_trans = C.T
+
     # C +-= A * B
     C = A.dot(B)
     vcl_C = vcl_A * vcl_B
@@ -141,7 +178,7 @@ def test():
     print("# Testing setup:")
     epsilon = 1.0E-3
     print("  eps:      %s" % epsilon)
-    test_matrix_layout(run_test, epsilon, p.float32)
+    test_matrix_layout(run_test, epsilon, p.float32, 11, 11, 11)
 
     print("*** Using double numeric type ***")
     print("# Testing setup:")
