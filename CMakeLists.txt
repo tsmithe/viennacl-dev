@@ -66,12 +66,12 @@ if(BUILD_MANUAL)
 endif()
 
 if(BUILD_PYVIENNACL)
-  set(PythonLibs_FIND_VERSION 3)
-  set(PythonInterp_FIND_VERSION 3)
-  find_package(PythonInterp REQUIRED)
-  find_package(PythonLibs REQUIRED)
+  #set(PythonLibs_FIND_VERSION 2)
+  #set(PythonInterp_FIND_VERSION 2)
+  find_package(PythonInterp 2.7.5 EXACT)
+  message(${PYTHON_VERSION_STRING})
+  find_package(PythonLibs ${PYTHON_VERSION_STRING} EXACT)
   find_package(Numpy REQUIRED)
-  find_package(Boost REQUIRED COMPONENTS filesystem system thread python-py33)
 endif()
 
 # Compile options

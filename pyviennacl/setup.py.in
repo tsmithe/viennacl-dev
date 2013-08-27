@@ -1,8 +1,22 @@
 from distutils.core import setup, Extension
+from os.path import basename
 
 include_dirs = '${INCLUDE_DIRS}'.split(";")
-libraries = [ 'boost_python-py33', 'boost_numpy', 'OpenCL' ]
-library_dirs = ['${PROJECT_BINARY_DIR}/lib','/usr/lib/nvidia-319']
+libraries = [ 'OpenCL' ] # TODO: MOVE BOOST_NUMPY TO MAIN BOOST?
+library_dirs = ['${PROJECT_BINARY_DIR}/lib']
+extra_library_dirs = "$ENV{LD_LIBRARY_PATH}".split(":")
+if extra_library_dirs:
+    library_dirs += extra_library_dirs
+
+static_libs = []
+
+boost_libraries = "${BOOST_COMPONENTS}".split(";")
+for boost_lib in boost_libraries:
+    #libraries.append(basename(boost_lib)[3:-3]) # TODO: ONLY WORKS ON LINUX
+    libraries.append("boost_" + boost_lib)
+
+# boost_numpy -- TODO: portability
+static_libs.append("${PROJECT_BINARY_DIR}/lib/libboost_numpy.a")
 
 if __name__=="__main__":
     setup( name="pyviennacl",
@@ -13,9 +27,11 @@ if __name__=="__main__":
            ext_package="pyviennacl",
            ext_modules=[Extension( "_viennacl",
                                    ["${CMAKE_CURRENT_SOURCE_DIR}/src/_viennacl.cpp"],
-                                   extra_compile_args=["-std=c++03"],
+                                   #extra_compile_args=["${CMAKE_CXX_FLAGS}"],
+                                   undef_macros=["NDEBUG"],
                                    include_dirs=include_dirs,
                                    library_dirs=library_dirs,
+                                   extra_link_args=static_libs,
                                    libraries=libraries ) ] )#, 
                         #Extension( "_puzzle",
                         #           ["${CMAKE_CURRENT_SOURCE_DIR}/src/_puzzle.cpp"],
