@@ -154,7 +154,7 @@ class MagicMethods(object):
             return self.result == rhs
 
     def __hash__(self):
-        return super(type(self)).__hash__()
+        return object.__hash__(self)
 
     def __contains__(self, item):
         return (item in self.as_ndarray())

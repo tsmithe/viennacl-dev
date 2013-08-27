@@ -1836,18 +1836,23 @@ BOOST_PYTHON_MODULE(_viennacl)
     VALUE(vcl::scheduler, DOUBLE_TYPE)
     ;
 
-  /*
-  typedef vcl::scheduler::statement_node vcl_node_t;
-
-  bp::class_<vcl_node_t>("vcl_statement_node")
-    .def_readonly("lhs_type_family", &vcl_node_t::lhs.type_family)
-    .def_readonly("lhs_type", &vcl_node_t::lhs.type)
-    .def_readonly("rhs_type_family", &vcl_node_t::rhs.type_family)
-    .def_readonly("rhs_type", &vcl_node_t::rhs.type)
-    .def_readonly("op_family", &vcl_node_t::op.family)
-    .def_readonly("op_type", &vcl_node_t::op.type)
+  bp::class_<vcl::scheduler::lhs_rhs_element>("lhs_rhs_element")
+    .def_readonly("type_family", &vcl::scheduler::lhs_rhs_element::type_family)
+    .def_readonly("subtype", &vcl::scheduler::lhs_rhs_element::subtype)
+    .def_readonly("numeric_type", &vcl::scheduler::lhs_rhs_element::numeric_type)
     ;
-  */
+
+  bp::class_<vcl::scheduler::op_element>("op_element")
+    .def_readonly("type_family", &vcl::scheduler::op_element::type_family)
+    .def_readonly("type", &vcl::scheduler::op_element::type)
+    ;
+
+  bp::class_<vcl::scheduler::statement_node>("vcl_statement_node")
+    .def_readonly("lhs", &vcl::scheduler::statement_node::lhs)
+    .def_readonly("rhs", &vcl::scheduler::statement_node::rhs)
+    .def_readonly("op", &vcl::scheduler::statement_node::op)
+    ;
+
 
 #define STRINGIFY(S) #S
 #define SET_OPERAND(I)					\
