@@ -98,13 +98,12 @@ namespace viennacl
                && mat3.type_family == MATRIX_TYPE_FAMILY
                && bool("Arguments are not matrix types!"));
 
-        assert(   (mat1.subtype == mat2.subtype)
-               && (mat2.subtype == mat3.subtype)
-               && bool("Matrices do not have the same layout"));
-
         assert(   (mat1.numeric_type == mat2.numeric_type)
                && (mat2.numeric_type == mat3.numeric_type)
                && bool("Matrices do not have the same scalar type"));
+
+        if((mat1.subtype != mat2.subtype) || (mat2.subtype != mat3.subtype))
+          throw statement_not_supported_exception("Matrices do not have the same layout");
 
         if (mat1.subtype == DENSE_ROW_MATRIX_TYPE)
         {
@@ -155,9 +154,8 @@ namespace viennacl
                && mat3.type_family == MATRIX_TYPE_FAMILY
                && bool("Arguments are not matrix types!"));
 
-        assert(   (mat1.subtype == mat2.subtype)
-               && (mat2.subtype == mat3.subtype)
-               && bool("Matrices do not have the same layout"));
+        if((mat1.subtype != mat2.subtype) || (mat2.subtype != mat3.subtype))
+          throw statement_not_supported_exception("Matrices do not have the same layout");
 
         assert(   (mat1.numeric_type == mat2.numeric_type)
                && (mat2.numeric_type == mat3.numeric_type)
