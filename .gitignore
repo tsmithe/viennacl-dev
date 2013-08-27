@@ -8,3 +8,4 @@ build
 GSoC/*tex
 pyviennacl-puzzle.pdf
 __pycache__
+*.pyc
