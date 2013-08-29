@@ -388,24 +388,9 @@ int main(int , char **)
 {
     createHeaders("compressed_matrix");
     createHeaders("coordinate_matrix");
-    createHeaders("ell_matrix");
     createHeaders("hyb_matrix");
-    createHeaders("matrix_prod_row_row_row");
-    createHeaders("matrix_prod_row_row_col");
-    createHeaders("matrix_prod_row_col_row");
-    createHeaders("matrix_prod_row_col_col");
-    createHeaders("matrix_prod_col_row_row");
-    createHeaders("matrix_prod_col_row_col");
-    createHeaders("matrix_prod_col_col_row");
-    createHeaders("matrix_prod_col_col_col");
-    createHeaders("matrix_solve_col_col");
-    createHeaders("matrix_solve_col_row");
-    createHeaders("matrix_solve_row_col");
-    createHeaders("matrix_solve_row_row");
     createHeaders("rand");
     createHeaders("svd");
     createHeaders("spai");
-    createHeaders("nmf");
-    createHeaders("ilu");
 }
 
