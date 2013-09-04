@@ -72,10 +72,8 @@ def run_test(*args, **kwargs):
     print("Test: in-place add passed")
 
     # Scaled in-place add
-    X += vcl_B.value * alpha.value
-    print(vcl_B)
+    X += alpha.value * vcl_B.value
     vcl_A += alpha * vcl_B
-    print(vcl_A.express())
     if not (vcl_A == X).all():
         raise RuntimeError("Failed: scaled in-place add")
     print("Test: scaled in-place add passed")
@@ -98,7 +96,6 @@ def run_test(*args, **kwargs):
     # Scaled add (right)
     Y = vcl_B.value + dtype(alpha.value) * vcl_C.value
     Z = vcl_B + alpha * vcl_C
-    print(type(Z), Z.express())
     act_diff = math.fabs(diff(Y, Z))
     if act_diff > epsilon: # (Z == Y).all():
         raise RuntimeError("Failed: scaled add (left)")
@@ -113,44 +110,146 @@ def run_test(*args, **kwargs):
     print("Test: scaled add (both) passed")
 
     # In-place sub
-    # Scaled in-place sub
-    # Sub
-    # Scaled sub (left)
-    # Scaled sub (right)
-    # Scaled sub (both)
+    X = vcl_A.value
+    X -= vcl_B.value
+    vcl_A -= vcl_B
+    if not (vcl_A == X).all():
+        raise RuntimeError("Failed: in-place sub")
+    print("Test: in-place sub passed")
 
-    # Scalar multiplication (CPU scalar)
+    # Scaled in-place sub
+    X -= alpha.value * vcl_B.value
+    vcl_A -= alpha * vcl_B
+    if not (vcl_A == X).all():
+        raise RuntimeError("Failed: scaled in-place sub")
+    print("Test: scaled in-place sub passed")
+
+    # Sub
+    Y = vcl_A.value - vcl_B.value
+    Z = vcl_A - vcl_B
+    if not (Y == Z).all():
+        raise RuntimeError("Failed: sub")
+    print("Test: sub passed")
+
+    # Scaled sub (left)
+    Y = alpha.value * vcl_B.value - vcl_C.value
+    Z = alpha * vcl_B - vcl_C
+    act_diff = math.fabs(diff(Y, Z))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed: scaled sub (left)")
+    print("Test: scaled sub (left) passed")
+
+    # Scaled sub (right)
+    Y = vcl_B.value - alpha.value * vcl_C.value
+    Z = vcl_B - alpha * vcl_C
+    act_diff = math.fabs(diff(Y, Z))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed: scaled sub (right)")
+    print("Test: scaled sub (right) passed")
+
+    # Scaled sub (both)
+    Y = alpha.value * vcl_B.value - alpha.value * vcl_C.value
+    Z = alpha * vcl_B - alpha * vcl_C
+    act_diff = math.fabs(diff(Y, Z))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed: scaled sub (both)")
+    print("Test: scaled sub (both) passed")
+
+    # Scalar multiplication (CPU scalar) -- not supported yet
+    #gamma_py = beta.value * beta.value
+    #gamma_vcl = beta * beta
+    # ...
     # Scalar multiplication (GPU scalar)
 
     # Matrix-vector multiplication
+    vec = p.Vector(vcl_A.shape[0], 3.1415, dtype = dtype)
+    X = vcl_A * vec
+    Y = vcl_A.value.dot(vec.value)
+    act_diff = math.fabs(diff(X, Y))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed: matrix-vector multiplication")
+    print("Test: matrix-vector multiplication passed")
 
-    # Binary elementwise operations
+    # Matrix divided by scalar
+    X = vcl_A.value / alpha.value
+    Y = vcl_A / alpha
+    act_diff = math.fabs(diff(X, Y))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed: matrix-scalar division")
+    print("Test: matrix-scalar division passed")
+
+    # Binary elementwise operations -- prod and div
+    X = vcl_A.value * vcl_B.value
+    Y = p.ElementProd(vcl_A, vcl_B)
+    act_diff = math.fabs(diff(X, Y))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed: elementwise matrix-matrix multiplication")
+    print("Test: elementwise matrix-matrix multiplication passed")
+
+    X = vcl_A.value / vcl_B.value
+    Y = p.ElementDiv(vcl_A, vcl_B)
+    act_diff = math.fabs(diff(X, Y))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed: elementwise matrix-matrix division")
+    print("Test: elementwise matrix-matrix division passed")
+
     # Unary elementwise operations
+    # - abs TODO
+    #X = abs(vcl_A.value)
+    #Y = p.ElementAbs(vcl_A)
+    #act_diff = math.fabs(diff(X, Y))
+    #if act_diff > epsilon:
+    #    raise RuntimeError("Failed: elementwise abs")
+    #print("Test: elementwise abs passed")
 
-    # C +-= A * B
-    #C = A.dot(B)
-    #vcl_C = vcl_A * vcl_B
-    #act_diff = math.fabs(diff(C, vcl_C))
-    #if (act_diff > epsilon):
-    #    raise Exception("Error at operation: matrix-matrix product; diff = %s"
-    #                    % act_diff)
-    #print("Test C = A * B passed!")
+    # - acos
+    X = np.arccos(vcl_A.value)
+    Y = p.ElementAcos(vcl_A).result # TODO THIS SHOULDN'T BE REQUIRED
+    act_diff = math.fabs(diff(X, Y))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed: elementwise acos")
+    print("Test: elementwise acos passed")
 
-    #C += A.dot(B)
-    #vcl_C += vcl_A * vcl_B
-    #act_diff = math.fabs(diff(C, vcl_C))
-    #if (act_diff > epsilon):
-    #    raise Exception("Error at operation: matrix-matrix product; diff = %s"
-    #                    % act_diff)
-    #print("Test C += A * B passed!")
+    # - asin
+    X = np.arcsin(vcl_A.value)
+    Y = p.ElementAsin(vcl_A).result
+    act_diff = math.fabs(diff(X, Y))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed: elementwise asin")
+    print("Test: elementwise asin passed")
 
-    #C -= A.dot(B)
-    #vcl_C -= vcl_A * vcl_B
-    #act_diff = math.fabs(diff(C, vcl_C))
-    #if (act_diff > epsilon):
-    #    raise Exception("Error at operation: matrix-matrix product; diff = %s"
-    #                    % act_diff)
-    #print("Test C -= A * B passed!")
+    # - atan
+    X = np.arctan(vcl_A.value)
+    Y = p.ElementAtan(vcl_A).result
+    act_diff = math.fabs(diff(X, Y))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed: elementwise atan")
+    print("Test: elementwise atan passed")
+
+    # - ceil
+    X = np.ceil(vcl_A.value)
+    Y = p.ElementCeil(vcl_A).result
+    act_diff = math.fabs(diff(X, Y))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed: elementwise ceil")
+    print("Test: elementwise ceil passed")
+
+    # - cos
+    # - cosh
+    # - exp
+    # - fabs
+    # - floor
+    # - log
+    # - log10
+    # - sin
+    # - sinh
+    # - sqrt
+    # - tan
+    # - tanh
+    # - trans
+    # - norm1
+    # - norm2
+    # - norm_inf
 
     return os.EX_OK
 

@@ -154,7 +154,9 @@ class MagicMethods(object):
             return self.result == rhs
 
     def __hash__(self):
+        ## TODO implement better hash function
         return object.__hash__(self)
+        #return id(self)
 
     def __contains__(self, item):
         return (item in self.as_ndarray())
@@ -238,6 +240,7 @@ class Leaf(MagicMethods):
     """
     shape = None # No shape yet -- not even 0 dimensions
     flushed = True # Are host and device data synchronised?
+    complexity = 0 # A leaf does not contribute computationally to a tree
 
     def __init__(self, *args, **kwargs):
         """
@@ -428,6 +431,7 @@ class Vector(Leaf):
     Also provides convenience functions for arithmetic.
     """
     ndim = 1
+    layout = None
     statement_node_type_family = _v.statement_node_type_family.VECTOR_TYPE_FAMILY
     statement_node_subtype = _v.statement_node_subtype.DENSE_VECTOR_TYPE
 
@@ -453,7 +457,7 @@ class Vector(Leaf):
                 def get_leaf(vcl_t):
                     return vcl_t(args[0].vcl_leaf)
             elif isinstance(args[0], ndarray):
-                self.dtype = dtype(args[0])
+                self.dtype = np_result_type(args[0])
                 def get_leaf(vcl_t):
                     return vcl_t(args[0])
             elif isinstance(args[0], _v.vector_base):
@@ -1022,6 +1026,13 @@ class Node(MagicMethods):
         if self.operation_node_type is None:
             raise TypeError("Unsupported expression: %s" % (self.express()))
 
+        self._vcl_node_init()
+        self._test_init() # Make sure we can execute
+
+    def _node_init(self):
+        pass
+
+    def _vcl_node_init(self):
         # At the moment, ViennaCL does not do dtype promotion, so check that
         # the operands all have the same dtype.
         if len(self.operands) > 1:
@@ -1049,12 +1060,7 @@ class Node(MagicMethods):
                 self.operands[0].statement_node_subtype,       # rhs
                 self.operands[0].statement_node_numeric_type)  # rhs
 
-        self.test_init() # Make sure we can execute
-
-    def _node_init(self):
-        pass
-
-    def test_init(self):
+    def _test_init(self):
         layout_test = self.layout # NB QUIRK
 
     def get_vcl_operand_setter(self, operand):
@@ -1074,6 +1080,16 @@ class Node(MagicMethods):
                 operand.statement_node_numeric_type] ]
         return getattr(self.vcl_node,
                        "".join(vcl_operand_setter))
+
+    @property
+    def complexity(self):
+        """
+        TODO
+        """
+        complexity = 1
+        for op in self.operands:
+            complexity += op.complexity
+        return complexity
 
     @property
     def result_container_type(self):
@@ -1251,8 +1267,7 @@ class Node(MagicMethods):
         Returns the value of the result of computing the operation represented 
         by this Node.
         """
-        s = Statement(self)
-        return s.execute().value
+        return self.result.value
 
     def as_ndarray(self):
         return array(self.value, dtype=self.dtype)
@@ -1645,10 +1660,8 @@ class Mul(Node):
         #('Vector', 'Vector'): Matrix, # TODO NOT IMPLEMENTED IN SCHEDULER
 
         # OPERATION_BINARY_MULT_TYPE
-        #('Matrix', 'HostScalar'): Matrix,
-        #('Matrix', 'Scalar'): Matrix,
-        ('HostScalar', 'Matrix'): Matrix,
-        ('Scalar', 'Matrix'): Matrix,
+        ('Matrix', 'HostScalar'): Matrix,
+        ('Matrix', 'Scalar'): Matrix,
         ('Vector', 'HostScalar'): Vector,
         ('Vector', 'Scalar'): Vector,
         ('Scalar', 'Scalar'): Scalar,
@@ -1810,10 +1823,24 @@ class Statement:
         next_node.append(root)
         # Flatten the tree
         for n in next_node:
-            self.statement.append(n)
+            op_num = 0
             for operand in n.operands:
                 if isinstance(operand, Node):
+                    #if op_num == 0 and len(n.operands) > 1:
+                    #    # ViennaCL cannot cope with complex LHS
+                    #    operand = operand.result
+                    #    n.operands[0] = operand
+                    #    n._vcl_node_init()
+                    #else:
                     next_node.append(operand)
+                op_num += 1
+            append_node = True
+            for N in self.statement:
+                if id(N) == id(n):
+                    append_node = False
+                    break
+            if append_node:
+                self.statement.append(n)
 
         # Contruct a ViennaCL statement object
         self.vcl_statement = _v.statement()
@@ -1823,15 +1850,15 @@ class Statement:
         for n in self.statement:
             op_num = 0
             for operand in n.operands:
-                if isinstance(operand, Node):
+                if isinstance(operand, Leaf):
+                    n.get_vcl_operand_setter(operand)(op_num, operand.vcl_leaf)
+                elif isinstance(operand, Node):
                     op_idx = 0
                     for next_op in self.statement:
                         if hash(operand) == hash(next_op):
                             break
                         op_idx += 1
                     n.get_vcl_operand_setter(operand)(op_num, op_idx)
-                elif isinstance(operand, Leaf):
-                    n.get_vcl_operand_setter(operand)(op_num, operand.vcl_leaf)
                 elif np_result_type(operand).name in HostScalarTypes.keys():
                     n.get_vcl_operand_setter(HostScalar(operand))(
                         op_num, operand)
