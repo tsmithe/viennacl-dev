@@ -255,8 +255,11 @@ namespace viennacl
         if (current_node.lhs.type_family == COMPOSITE_OPERATION_FAMILY)
           print_node(os, s, current_node.lhs.node_index, indent+1);
 
-        if (current_node.rhs.type_family == COMPOSITE_OPERATION_FAMILY)
-          print_node(os, s, current_node.rhs.node_index, indent+1);
+        if (current_node.op.type_family == OPERATION_BINARY_TYPE_FAMILY) {
+          if (current_node.rhs.type_family == COMPOSITE_OPERATION_FAMILY)
+            print_node(os, s, current_node.rhs.node_index, indent+1);
+        }
+
       }
     }
 
