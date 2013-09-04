@@ -363,9 +363,10 @@ DO_OP_FUNC(op_inplace_solve)
 // Scalar
 
 /** @brief Returns a double describing the VCL_T */
-cpu_scalar_t vcl_scalar_to_float(const vcl_scalar_t& vcl_s)
+template <class HostT>
+HostT vcl_scalar_to_host(const vcl::scalar<HostT>& vcl_s)
 {
-  cpu_scalar_t cpu_s = vcl_s;
+  HostT cpu_s = vcl_s;
   return cpu_s;
 }
 
@@ -1127,11 +1128,18 @@ BOOST_PYTHON_MODULE(_viennacl)
 
   // TODO: EXPOSE ALL NUMERIC TYPES
 
-  bp::class_<vcl_scalar_t>("scalar_double")
+  bp::class_<vcl::scalar<float> >("scalar_float") // TODO
     // Utility functions
     .def(bp::init<float>())
     .def(bp::init<int>())
-    .def("as_double", &vcl_scalar_to_float)
+    .def("to_host", &vcl_scalar_to_host<float>)
+    ;
+
+  bp::class_<vcl::scalar<double> >("scalar_double")
+    // Utility functions
+    .def(bp::init<double>())
+    .def(bp::init<int>())
+    .def("to_host", &vcl_scalar_to_host<double>)
 
     /*
     // Scalar-scalar operations
@@ -1510,8 +1518,8 @@ BOOST_PYTHON_MODULE(_viennacl)
 
   // *** Sparse matrix types ***
 
-    bp::class_<vcl::compressed_matrix<double>,
-               boost::shared_ptr<vcl::compressed_matrix<double> > >
+  bp::class_<vcl::compressed_matrix<double>,
+             boost::shared_ptr<vcl::compressed_matrix<double> > >
     ("compressed_matrix", bp::no_init)
     .add_property("size1",
 		  make_function(&vcl::compressed_matrix<double>::size1,

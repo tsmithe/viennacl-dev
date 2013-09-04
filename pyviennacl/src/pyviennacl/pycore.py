@@ -416,7 +416,7 @@ class Scalar(ScalarBase):
 
     @property
     def value(self):
-        return self.vcl_leaf.as_double()
+        return self.vcl_leaf.to_host()
 
 
 class Vector(Leaf):

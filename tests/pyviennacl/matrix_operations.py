@@ -56,12 +56,12 @@ def run_test(*args, **kwargs):
         raise RuntimeError("Failed: Matrix Matrix init")
     print("Test: initialisation of matrix with Matrix passed")
 
-    # + CompressedMatrix
-    Y = p.CompressedMatrix(X)
-    X = p.Matrix(Y)
-    if not (X == Y).all():
-        raise RuntimeError("Failed: Matrix CompressedMatrix init")
-    print("Test: initialisation of matrix with CompressedMatrix passed")
+    # + CompressedMatrix -- TODO: sparse matrices + dtypes
+    #Y = p.CompressedMatrix(X)
+    #X = p.Matrix(Y)
+    #if not (X == Y).all():
+    #    raise RuntimeError("Failed: Matrix CompressedMatrix init")
+    #print("Test: initialisation of matrix with CompressedMatrix passed")
     
     # In-place add
     X = vcl_A.value
@@ -235,21 +235,112 @@ def run_test(*args, **kwargs):
     print("Test: elementwise ceil passed")
 
     # - cos
+    X = np.cos(vcl_A.value)
+    Y = p.ElementCos(vcl_A).result
+    act_diff = math.fabs(diff(X, Y))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed: elementwise cos")
+    print("Test: elementwise cos passed")
+
     # - cosh
+    X = np.cosh(vcl_A.value)
+    Y = p.ElementCosh(vcl_A).result
+    act_diff = math.fabs(diff(X, Y))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed: elementwise cosh")
+    print("Test: elementwise cosh passed")
+
     # - exp
+    X = np.exp(vcl_A.value)
+    Y = p.ElementExp(vcl_A).result
+    act_diff = math.fabs(diff(X, Y))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed: elementwise exp")
+    print("Test: elementwise exp passed")
+
     # - fabs
+    X = np.fabs(vcl_A.value)
+    Y = p.ElementFabs(vcl_A).result
+    act_diff = math.fabs(diff(X, Y))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed: elementwise fabs")
+    print("Test: elementwise fabs passed")
+
     # - floor
+    X = np.floor(vcl_A.value)
+    Y = p.ElementFloor(vcl_A).result
+    act_diff = math.fabs(diff(X, Y))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed: elementwise floor")
+    print("Test: elementwise floor passed")
+
     # - log
+    X = np.log(vcl_A.value)
+    Y = p.ElementLog(vcl_A).result
+    act_diff = math.fabs(diff(X, Y))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed: elementwise log")
+    print("Test: elementwise log passed")
+
     # - log10
+    X = np.log10(vcl_A.value)
+    Y = p.ElementLog10(vcl_A).result
+    act_diff = math.fabs(diff(X, Y))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed: elementwise log10")
+    print("Test: elementwise log10 passed")
+
     # - sin
+    X = np.sin(vcl_A.value)
+    Y = p.ElementSin(vcl_A).result
+    act_diff = math.fabs(diff(X, Y))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed: elementwise sin")
+    print("Test: elementwise sin passed")
+
     # - sinh
+    X = np.sinh(vcl_A.value)
+    Y = p.ElementSinh(vcl_A).result
+    act_diff = math.fabs(diff(X, Y))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed: elementwise sinh")
+    print("Test: elementwise sinh passed")
+
     # - sqrt
+    X = np.sqrt(vcl_A.value)
+    Y = p.ElementSqrt(vcl_A).result
+    act_diff = math.fabs(diff(X, Y))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed: elementwise sqrt")
+    print("Test: elementwise sqrt passed")
+
     # - tan
+    X = np.tan(vcl_A.value)
+    Y = p.ElementTan(vcl_A).result
+    act_diff = math.fabs(diff(X, Y))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed: elementwise tan")
+    print("Test: elementwise tan passed")
+
     # - tanh
-    # - trans
-    # - norm1
-    # - norm2
-    # - norm_inf
+    X = np.tanh(vcl_A.value)
+    Y = p.ElementTanh(vcl_A).result
+    act_diff = math.fabs(diff(X, Y))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed: elementwise tanh")
+    print("Test: elementwise tanh passed")
+
+    # - trans TODO ?!!!
+    #X = vcl_A.value.T
+    #Y = vcl_A.T.result #p.Trans(vcl_A).result
+    #act_diff = math.fabs(diff(X, Y))
+    #if act_diff > epsilon:
+    #    raise RuntimeError("Failed: elementwise trans")
+    #print("Test: elementwise trans passed")
+
+    # - norm1 -- TODO ONLY FOR VECTORS
+    # - norm2 -- TODO ONLY FOR VECTORS
+    # - norm_inf -- TODO ONLY FOR VECTORS
 
     return os.EX_OK
 
@@ -268,7 +359,7 @@ def test():
     print("# Testing setup:")
     epsilon = 1.0E-3
     print("  eps:      %s" % epsilon)
-    #test_matrix_layout(run_test, epsilon, p.float32)
+    test_matrix_layout(run_test, epsilon, p.float32, 11, 11, 11)
 
     print("*** Using double numeric type ***")
     print("# Testing setup:")
