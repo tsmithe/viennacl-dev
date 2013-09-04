@@ -214,7 +214,7 @@ namespace viennacl
     public:
       typedef scalar<SCALARTYPE>            value_type;
       typedef long                          difference_type;
-      typedef backend::mem_handle           handle_type;
+      typedef viennacl::backend::mem_handle handle_type;
 
       //const_vector_iterator() {};
 
@@ -363,7 +363,7 @@ namespace viennacl
     public:
       typedef scalar<SCALARTYPE>                                value_type;
       typedef SCALARTYPE                                        cpu_value_type;
-      typedef backend::mem_handle                               handle_type;
+      typedef viennacl::backend::mem_handle                     handle_type;
       typedef SizeType                                        size_type;
       typedef DistanceType                                     difference_type;
       typedef const_vector_iterator<SCALARTYPE, 1>              const_iterator;
@@ -400,7 +400,7 @@ namespace viennacl
       }
 
       // CUDA or host memory:
-      explicit vector_base(SCALARTYPE * ptr_to_mem, size_type vec_size, viennacl::memory_types mem_type, std::size_t start = 0, difference_type stride = 1)
+      explicit vector_base(SCALARTYPE * ptr_to_mem, viennacl::memory_types mem_type, size_type vec_size, std::size_t start = 0, difference_type stride = 1)
         : size_(vec_size), start_(start), stride_(stride), internal_size_(vec_size)
       {
         if (mem_type == viennacl::CUDA_MEMORY)
@@ -1014,8 +1014,8 @@ namespace viennacl
 
     explicit vector(size_type vec_size, viennacl::context ctx) : base_type(vec_size, ctx) {}
 
-    explicit vector(SCALARTYPE * ptr_to_mem, size_type vec_size, viennacl::memory_types mem_type, size_type start = 0, difference_type stride = 1)
-        : base_type(ptr_to_mem, vec_size, mem_type, start, stride) {}
+    explicit vector(SCALARTYPE * ptr_to_mem, viennacl::memory_types mem_type, size_type vec_size, size_type start = 0, difference_type stride = 1)
+        : base_type(ptr_to_mem, mem_type, vec_size, start, stride) {}
 
 #ifdef VIENNACL_WITH_OPENCL
     /** @brief Create a vector from existing OpenCL memory
@@ -1648,7 +1648,7 @@ namespace viennacl
 
   //global functions for handling vectors:
   /** @brief Output stream. Output format is ublas compatible.
-  * @param s    STL output stream
+  * @param os   STL output stream
   * @param val  The vector that should be printed
   */
   template <typename T>
@@ -1962,7 +1962,7 @@ namespace viennacl
 
   /** @brief Operator overload for the expression alpha * v1, where alpha is a scalar expression and v1 is a ViennaCL vector.
   *
-  * @param value   The host scalar (float or double)
+  * @param expr    The scalar expression
   * @param vec     A ViennaCL vector
   */
   template <typename LHS, typename RHS, typename OP, typename T>

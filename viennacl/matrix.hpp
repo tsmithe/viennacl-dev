@@ -152,8 +152,8 @@ namespace viennacl
   template <typename LHS, typename RHS, typename OP>
   class matrix_expression
   {
-      typedef typename result_of::reference_if_nonscalar<LHS>::type     lhs_reference_type;
-      typedef typename result_of::reference_if_nonscalar<RHS>::type     rhs_reference_type;
+      typedef typename viennacl::result_of::reference_if_nonscalar<LHS>::type     lhs_reference_type;
+      typedef typename viennacl::result_of::reference_if_nonscalar<RHS>::type     rhs_reference_type;
 
     public:
       typedef vcl_size_t       size_type;
@@ -234,7 +234,7 @@ namespace viennacl
       typedef SCALARTYPE                                                          cpu_value_type;
       typedef SizeType                                                            size_type;
       typedef DistanceType                                                        difference_type;
-      typedef backend::mem_handle                                                 handle_type;
+      typedef viennacl::backend::mem_handle                                       handle_type;
       typedef F                                                                   orientation_functor;
       typedef typename F::orientation_category                                    orientation_category;
 
@@ -248,6 +248,7 @@ namespace viennacl
       *
       * @param rows     Number of rows
       * @param columns  Number of columns
+      * @param ctx      Optional context in which the matrix is created (one out of multiple OpenCL contexts, CUDA, host)
       */
       explicit matrix_base(size_type rows, size_type columns, viennacl::context ctx = viennacl::context())
           : size1_(rows), size2_(columns), start1_(0), start2_(0), stride1_(1), stride2_(1),
@@ -287,12 +288,56 @@ namespace viennacl
         }
       }
 
+      // CUDA or host memory:
+      explicit matrix_base(SCALARTYPE * ptr_to_mem, viennacl::memory_types mem_type,
+                           size_type mat_size1, size_type mat_start1, difference_type mat_stride1, size_type mat_internal_size1,
+                           size_type mat_size2, size_type mat_start2, difference_type mat_stride2, size_type mat_internal_size2)
+        : size1_(mat_size1), size2_(mat_size2),
+          start1_(mat_start1), start2_(mat_start2),
+          stride1_(mat_stride1), stride2_(mat_stride2),
+          internal_size1_(mat_internal_size1), internal_size2_(mat_internal_size2)
+      {
+        if (mem_type == viennacl::CUDA_MEMORY)
+        {
+#ifdef VIENNACL_WITH_CUDA
+          elements_.switch_active_handle_id(viennacl::CUDA_MEMORY);
+          elements_.cuda_handle().reset(reinterpret_cast<char*>(ptr_to_mem));
+          elements_.cuda_handle().inc(); //prevents that the user-provided memory is deleted once the vector object is destroyed.
+#else
+          throw "CUDA not activated!";
+#endif
+        }
+        else if (mem_type == viennacl::MAIN_MEMORY)
+        {
+          elements_.switch_active_handle_id(viennacl::MAIN_MEMORY);
+          elements_.ram_handle().reset(reinterpret_cast<char*>(ptr_to_mem));
+          elements_.ram_handle().inc(); //prevents that the user-provided memory is deleted once the vector object is destroyed.
+        }
+
+        elements_.raw_size(sizeof(SCALARTYPE) * internal_size());
+      }
+
 #ifdef VIENNACL_WITH_OPENCL
       explicit matrix_base(cl_mem mem, size_type rows, size_type columns, viennacl::context ctx = viennacl::context())
         : size1_(rows), size2_(columns),
           start1_(0), start2_(0),
           stride1_(1), stride2_(1),
           internal_size1_(rows), internal_size2_(columns)
+      {
+        elements_.switch_active_handle_id(viennacl::OPENCL_MEMORY);
+        elements_.opencl_handle() = mem;
+        elements_.opencl_handle().inc();  //prevents that the user-provided memory is deleted once the vector object is destroyed.
+        elements_.opencl_handle().context(ctx.opencl_context());
+        elements_.raw_size(sizeof(SCALARTYPE)*internal_size());
+      }
+
+      explicit matrix_base(cl_mem mem, viennacl::context ctx,
+                           size_type mat_size1, size_type mat_start1, difference_type mat_stride1, size_type mat_internal_size1,
+                           size_type mat_size2, size_type mat_start2, difference_type mat_stride2, size_type mat_internal_size2)
+        : size1_(mat_size1), size2_(mat_size2),
+          start1_(mat_start1), start2_(mat_start2),
+          stride1_(mat_stride1), stride2_(mat_stride2),
+          internal_size1_(mat_internal_size1), internal_size2_(mat_internal_size2)
       {
         elements_.switch_active_handle_id(viennacl::OPENCL_MEMORY);
         elements_.opencl_handle() = mem;
@@ -707,6 +752,7 @@ namespace viennacl
       *
       * @param rows     Number of rows
       * @param columns  Number of columns
+      * @param ctx      Optional context in which the matrix is created (one out of multiple OpenCL contexts, CUDA, host)
       */
       explicit matrix(size_type rows, size_type columns, viennacl::context ctx = viennacl::context()) : base_type(rows, columns, ctx) {}
 
