@@ -1,5 +1,6 @@
 from pyviennacl import _viennacl as _v
-from pyviennacl.pycore import Matrix, ScalarBase, Vector
+from pyviennacl.pycore import (Matrix, ScalarBase, Vector, Node, MagicMethods,
+                               Mul)
 from numpy import (ndarray, array, dtype,
                    result_type as np_result_type)
 import logging
@@ -279,6 +280,14 @@ def plane_rotation(vec1, vec2, alpha, beta):
     TODO
     """
     # Do an assortment of type and dtype checks...
+    if isinstance(vec1, Node):
+        vec1 = vec1.result
+    if isinstance(vec2, Node):
+        vec2 = vec2.result
+    if isinstance(alpha, Node):
+        alpha = alpha.result
+    if isinstance(beta, Node):
+        beta = beta.result
     if isinstance(vec1, Vector):
         x = vec1.vcl_leaf
         if isinstance(vec2, Vector):
@@ -318,6 +327,8 @@ def norm(x, ord=None):
 
 
 def prod(A, B):
+    if not isinstance(A, MagicMethods):
+        return Mul(A, B)
     return (A * B)
 
 

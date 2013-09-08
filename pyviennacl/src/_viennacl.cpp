@@ -1246,13 +1246,13 @@ BOOST_PYTHON_MODULE(_viennacl)
              bp::bases<vcl::vector_base<TYPE> > >                       \
     ( NAME )								\
     .def(bp::init<int>())						\
-    .def(bp::init<vcl::vector<TYPE> >())				\
+    .def(bp::init<vcl::vector_base<TYPE> >())				\
     .def("__init__", bp::make_constructor(vcl_vector_init_ndarray<TYPE>)) \
     .def("__init__", bp::make_constructor(vcl_vector_init_list<TYPE>))	\
     .def("__init__", bp::make_constructor(vcl_vector_init_scalar<TYPE>))\
     ;                                                                   \
   bp::def("plane_rotation", pyvcl_do_4ary_op<bp::object,                \
-	  vcl::vector<TYPE>&, vcl::vector<TYPE>&,                       \
+	  vcl::vector_base<TYPE>&, vcl::vector_base<TYPE>&,             \
 	  TYPE, TYPE,                                                   \
 	  op_plane_rotation, 0>);                                       \
   bp::class_<std::vector<TYPE>,						\

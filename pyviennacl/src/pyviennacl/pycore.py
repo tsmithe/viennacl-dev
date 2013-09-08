@@ -1,7 +1,7 @@
 from pyviennacl import (_viennacl as _v,
                         util)
 from numpy import (ndarray, array, zeros,
-                   inf, nan, dtype, 
+                   inf, nan, dtype,
                    equal as np_equal, array_equal,
                    result_type as np_result_type,
                    int8, int16, int32, int64,
@@ -110,13 +110,19 @@ class MagicMethods(object):
     """
     flushed = False
 
+    def result_container_type(self):
+        raise NotImplementedError("Why is this happening to you?")
+
+    def copy(self):
+        return type(self)(self)
+
     def norm(self, ord=None):
         if ord == 1:
-            return Norm_1(self)
+            return Norm_1(self).value # Is this the best idea?
         elif ord == 2:
-            return Norm_2(self)
+            return Norm_2(self).value
         elif ord == inf:
-            return Norm_Inf(self)
+            return Norm_Inf(self).value 
         else:
             return NotImplemented
 
@@ -143,6 +149,12 @@ class MagicMethods(object):
         return ElementDiv(self, rhs)
 
     def __eq__(self, rhs):
+        if issubclass(self.result_container_type, ScalarBase):
+            if isinstance(rhs, MagicMethods):
+                if issubclass(rhs.result_container_type, ScalarBase):
+                    return self.value == rhs.value
+            else:
+                return self.value == rhs
         if self.flushed:
             if isinstance(rhs, MagicMethods):
                 return np_equal(self.as_ndarray(), rhs.as_ndarray())
@@ -165,22 +177,52 @@ class MagicMethods(object):
         return self.value.__str__()
 
     def __add__(self, rhs):
+        if issubclass(self.result_container_type, ScalarBase):
+            if isinstance(rhs, MagicMethods):
+                if issubclass(rhs.result_container_type, ScalarBase):
+                    return self.value + rhs.value
+            else:
+                return self.value + rhs
         op = Add(self, rhs)
         return op
 
     def __sub__(self, rhs):
+        if issubclass(self.result_container_type, ScalarBase):
+            if isinstance(rhs, MagicMethods):
+                if issubclass(rhs.result_container_type, ScalarBase):
+                    return self.value - rhs.value
+            else:
+                return self.value - rhs
         op = Sub(self, rhs)
         return op
 
     def __mul__(self, rhs):
+        if issubclass(self.result_container_type, ScalarBase):
+            if isinstance(rhs, MagicMethods):
+                if issubclass(rhs.result_container_type, ScalarBase):
+                    return self.value * rhs.value
+            else:
+                return self.value * rhs
         op = Mul(self, rhs)
         return op
 
     def __truediv__(self, rhs):
+        if issubclass(self.result_container_type, ScalarBase):
+            if isinstance(rhs, MagicMethods):
+                if issubclass(rhs.result_container_type, ScalarBase):
+                    return self.value // rhs.value
+            else:
+                return self.value // rhs
         op = Div(self, rhs)
         return op
 
     def __iadd__(self, rhs):
+        if issubclass(self.result_container_type, ScalarBase):
+            if isinstance(rhs, MagicMethods):
+                if issubclass(rhs.result_container_type, ScalarBase):
+                    self.value += rhs.value
+            else:
+                self.value += rhs
         if isinstance(self, Node):
             return Add(self, rhs)
         else:
@@ -189,6 +231,12 @@ class MagicMethods(object):
             return self
 
     def __isub__(self, rhs):
+        if issubclass(self.result_container_type, ScalarBase):
+            if isinstance(rhs, MagicMethods):
+                if issubclass(rhs.result_container_type, ScalarBase):
+                    self.value -= rhs.value
+            else:
+                self.value -= rhs
         if isinstance(self, Node):
             return Sub(self, rhs)
         else:
@@ -199,14 +247,40 @@ class MagicMethods(object):
     def __radd__(self, rhs):
         return self + rhs
 
-    def __rsub__(self, rhs):
-        return self - rhs
+    # TODO
+    #def __rsub__(self, rhs):
+    #    return self - rhs
 
     def __rmul__(self, rhs):
         return self * rhs
 
-    def __rtruediv__(self, rhs):
-        return self // rhs
+    # TODO
+    #def __rtruediv__(self, rhs):
+    #    return self // rhs
+
+    def __neg__(self):
+        if issubclass(self.result_container_type, ScalarBase):
+            return type(self)(-self.value, dtype = self.dtype)
+        return Mul(self.dtype.type(-1), self)
+
+    def __abs__(self):
+        if issubclass(self.result_container_type, ScalarBase):
+            return type(self)(abs(self.value), dtype = self.dtype)
+        elif issubclass(np_result_type(self).type, float):
+            # No floating abs in OpenCL
+            return ElementFabs(self)
+        else:
+            return ElementAbs(self)
+
+    def __floor__(self):
+        if issubclass(self.result_container_type, ScalarBase):
+            return type(self)(math.floor(self.value), dtype = self.dtype)
+        return ElementFloor(self)
+
+    def __ceil__(self):
+        if issubclass(self.result_container_type, ScalarBase):
+            return type(self)(math.ceil(self.value), dtype = self.dtype)
+        return ElementCeil(self)
 
 
 class View(object):
@@ -368,11 +442,16 @@ class ScalarBase(Leaf):
 
     @property
     def shape(self):
-        raise TypeError("Scalars are 0-dimensional and thus have no shape")
+        return ()
 
     @property
     def value(self):
         return self._value
+
+    @value.setter
+    def value(self, value):
+        self._value = value
+        self._init_scalar()
 
     def as_ndarray(self):
         """
@@ -999,15 +1078,15 @@ class Node(MagicMethods):
         elif len(args) == 2:
             self.operation_node_type_family = _v.operation_node_type_family.OPERATION_BINARY_TYPE_FAMILY
         else:
-            raise TypeError("Only unary or binary nodes support currently")
+            raise TypeError("Only unary or binary nodes supported currently")
 
         def fix_operand(opand):
             """
             If opand is a scalar type, wrap it in a PyViennaCL scalar class.
             """
             if (np_result_type(opand).name in HostScalarTypes
-                and not (isinstance(opand, Node)
-                         or isinstance(opand, Leaf))):
+                and not (isinstance(opand, MagicMethods)
+                         or isinstance(opand, ndarray))):
                 return HostScalar(opand)
             else: return opand
         self.operands = list(map(fix_operand, args))
@@ -1037,7 +1116,7 @@ class Node(MagicMethods):
         # the operands all have the same dtype.
         if len(self.operands) > 1:
             if dtype(self.operands[0]) != dtype(self.operands[1]):
-                raise TypeError("dtypes on operands do not match: %s and %s" % (dtype(self.operands[0]), dtype(self.operands[1])))
+                raise TypeError("dtypes on operands do not match: %s with %s and %s" % (self.express(), dtype(self.operands[0]), dtype(self.operands[1])))
             # Set up the ViennaCL statement_node with two operands
             self.vcl_node = _v.statement_node(
                 self.operands[0].statement_node_type_family,   # lhs
@@ -1107,22 +1186,38 @@ class Node(MagicMethods):
             try:
                 op0_t = self.operands[0].result_container_type.__name__
             except AttributeError:
-                # Not a PyViennaCL type, so we have a number of options
-                # However, since HostScalar can cope with any normal Pythonic
-                # scalar type, we assume that and hope for the best.
-                op0_t = 'HostScalar'
+                # Not a PyViennaCL type, so we have a number of options.
+                # Suppose an ndarray...
+                if isinstance(self.operands[0], ndarray):
+                    if self.operands[0].ndim == 1:
+                        self.operands[0] = Vector(self.operands[0])
+                    elif self.operands[0].ndim == 2:
+                        self.operands[0] = Matrix(self.operands[0])
+                    else:
+                        raise AttributeError("Cannot cope with %d dimensions!" % self.operands[0].ndim)
+                    op0_t = self.operands[0].result_container_type.__name__
+                else:
+                    # Otherwise, assume some scalar and hope for the best
+                    op0_t = 'HostScalar'
         else:
             raise RuntimeError("What is a 0-ary operation?")
 
         if len(self.operands) > 1:
             try:
                 op1_t = self.operands[1].result_container_type.__name__
-                return self.result_types[(op0_t, op1_t)]
             except AttributeError:
-                # Not a PyViennaCL type, so we have a number of options.
-                # However, since HostScalar can cope with any normal Pythonic
-                # scalar type, we assume that and hope for the best.
-                op1_t = 'HostScalar'
+                if isinstance(self.operands[1], ndarray):
+                    if self.operands[1].ndim == 1:
+                        self.operands[1] = Vector(self.operands[1])
+                    elif self.operands[1].ndim == 2:
+                        self.operands[1] = Matrix(self.operands[1])
+                    else:
+                        raise AttributeError("Cannot cope with %d dimensions!" % self.operands[1].ndim)
+                    op1_t = self.operands[1].result_container_type.__name__
+                else:
+                    # Again, hope for the best..
+                    op1_t = 'HostScalar'
+            try: return self.result_types[(op0_t, op1_t)]
             except KeyError:
                 # Operation not supported for given operand types
                 return None
@@ -1238,7 +1333,11 @@ class Node(MagicMethods):
         statement += type(self).__name__ + "("
         for op in self.operands:
             statement = op.express(statement) + ", "
-        statement = statement[:-2] + ")"
+        if self.result_container_type is None:
+            result_expression = "None"
+        else:
+            result_expression = self.result_container_type.__name__
+        statement = statement[:-2] + ")=>" + result_expression
         return statement
 
     @property
@@ -1568,8 +1667,8 @@ class InplaceAdd(Assign):
     to assignation. Provides convenience magic methods for arithmetic.
     """
     result_types = {
-        ('Scalar', 'Scalar'): Scalar,
-        ('HostScalar', 'HostScalar'): HostScalar,
+        #('Scalar', 'Scalar'): Scalar,
+        #('HostScalar', 'HostScalar'): HostScalar,
         ('Vector', 'Vector'): Vector,
         ('Matrix', 'Matrix'): Matrix
     }
@@ -1577,8 +1676,12 @@ class InplaceAdd(Assign):
 
     def _node_init(self):
         if self.operands[0].shape != self.operands[1].shape:
-            raise TypeError("Cannot Add two differently shaped objects!")
+            raise TypeError("Cannot add two differently shaped objects! %s" % self.express())
         self.shape = self.operands[0].shape
+        #if self.operands[0].result_container_type == Scalar and self.operands[1].result_container_type == HostScalar:
+        #    self.operands[1] = Scalar(self.operands[1])
+        #if self.operands[1].result_container_type == Scalar and self.operands[0].result_container_type == HostScalar:
+        #    self.operands[0] = Scalar(self.operands[0])
 
 
 class InplaceSub(Assign):
@@ -1588,8 +1691,8 @@ class InplaceSub(Assign):
     to assignation. Provides convenience magic methods for arithmetic.
     """
     result_types = {
-        ('Scalar', 'Scalar'): Scalar,
-        ('HostScalar', 'HostScalar'): HostScalar,
+        #('Scalar', 'Scalar'): Scalar,
+        #('HostScalar', 'HostScalar'): HostScalar,
         ('Vector', 'Vector'): Vector,
         ('Matrix', 'Matrix'): Matrix
     }
@@ -1597,7 +1700,7 @@ class InplaceSub(Assign):
 
     def _node_init(self):
         if self.operands[0].shape != self.operands[1].shape:
-            raise TypeError("Cannot Add two differently shaped objects!")
+            raise TypeError("Cannot subtract two differently shaped objects! %s" % self.express())
         self.shape = self.operands[0].shape
 
 
@@ -1607,8 +1710,8 @@ class Add(Node):
     arithmetic.
     """
     result_types = {
-        ('Scalar', 'Scalar'): Scalar,
-        ('HostScalar', 'HostScalar'): HostScalar,
+        #('Scalar', 'Scalar'): Scalar,
+        #('HostScalar', 'HostScalar'): HostScalar,
         ('Vector', 'Vector'): Vector,
         ('Matrix', 'Matrix'): Matrix
     }
@@ -1616,7 +1719,7 @@ class Add(Node):
 
     def _node_init(self):
         if self.operands[0].shape != self.operands[1].shape:
-            raise TypeError("Cannot Add two differently shaped objects!")
+            raise TypeError("Cannot Add two differently shaped objects! %s" % self.express())
         self.shape = self.operands[0].shape
 
 
@@ -1626,8 +1729,8 @@ class Sub(Node):
     for arithmetic.
     """
     result_types = {
-        ('Scalar', 'Scalar'): Scalar,
-        ('HostScalar', 'HostScalar'): HostScalar,
+        #('Scalar', 'Scalar'): Scalar,
+        #('HostScalar', 'HostScalar'): HostScalar,
         ('Vector', 'Vector'): Vector,
         ('Matrix', 'Matrix'): Matrix
     }
@@ -1635,8 +1738,16 @@ class Sub(Node):
 
     def _node_init(self):
         if self.operands[0].shape != self.operands[1].shape:
-            raise TypeError("Cannot Sub two differently shaped objects!")
+            print(self.operands[0].shape, self.operands[1].shape)
+            print(self.operands[0], type(self.operands[0]))
+            print(self.operands[1], type(self.operands[1]))
+            raise TypeError("Cannot Sub two differently shaped objects! %s" % self.express())
         self.shape = self.operands[0].shape
+        if self.operands[0].result_container_type == Scalar and self.operands[1].result_container_type == HostScalar:
+            temp = self.operands[1].result
+            self.operands[1] = Scalar(temp)
+        if self.operands[1].result_container_type == Scalar and self.operands[0].result_container_type == HostScalar:
+            self.operands[0] = Scalar(self.operands[0].result)
 
 
 class Mul(Node):
@@ -1773,8 +1884,7 @@ class Dot(Node):
         ('Vector', 'Vector'): Scalar
     }
     operation_node_type = _v.operation_node_type.OPERATION_BINARY_INNER_PROD_TYPE
-
-    # TODO: shape
+    shape = ()
 
 
 class Statement:

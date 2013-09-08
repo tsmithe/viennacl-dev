@@ -67,6 +67,406 @@ def diff(a, b):
         return math.fabs(a - b) / max(math.fabs(a), math.fabs(b))
 
 
+def test_vector_slice(test_func,
+                      epsilon, dtype,
+                      size = 131):
+    # Create reference numpy types
+    A = np.empty((size,), dtype = dtype)
+    big_A = np.ones((size*4,), dtype = dtype) * 3.1415
+    B = np.empty((size,), dtype = dtype)
+    big_B = np.ones((size*4,), dtype = dtype) * 42.0
+    C = np.empty((size,), dtype = dtype)
+    big_C = np.ones((size*4,), dtype = dtype) * 2.718
+
+    # Fill A and B with random values
+    for i in range(A.shape[0]):
+        A[i] = random.random()
+    for i in range(B.shape[0]):
+        B[i] = random.random()
+
+    # Construct appropriate ViennaCL objects
+    vcl_A = p.Vector(A)
+
+    vcl_big_range_A = p.Vector(big_A)
+    vcl_big_range_A[size:2*size] = vcl_A
+    vcl_range_A = vcl_big_range_A[size:2*size]
+
+    vcl_big_slice_A = p.Vector(big_A)
+    vcl_big_slice_A[size:-size:2] = vcl_A
+    vcl_slice_A = vcl_big_slice_A[size:-size:2]
+
+    vcl_B = p.Vector(B)
+
+    vcl_big_range_B = p.Vector(big_B)
+    vcl_big_range_B[size:2*size] = vcl_B
+    vcl_range_B = vcl_big_range_B[size:2*size]
+
+    vcl_big_slice_B = p.Vector(big_B)
+    vcl_big_slice_B[size:-size:2] = vcl_B
+    vcl_slice_B = vcl_big_slice_B[size:-size:2]
+
+    vcl_C = p.Vector(C)
+
+    vcl_big_range_C = p.Vector(big_C)
+    vcl_range_C = vcl_big_range_C[(size - 1):(2*size - 1)]
+
+    vcl_big_slice_C = p.Vector(big_C)
+    vcl_slice_C = vcl_big_slice_C[(size - 1):(4*size - 1):3]
+
+    # A=vector, B=vector, C=vector
+    print("Now using A=vector, B=vector, C=vector")
+    try:
+        ret = test_func(epsilon,
+                        A, B, C,
+                        vcl_A, vcl_B, vcl_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Vectors do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+
+    # A=vector, B=vector, C=range
+    print("Now using A=vector, B=vector, C=range")
+    try:
+        ret = test_func(epsilon,
+                        A, B, C,
+                        vcl_A, vcl_B, vcl_range_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Vectors do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+
+    # A=vector, B=vector, C=slice
+    print("Now using A=vector, B=vector, C=slice")
+    try:
+        ret = test_func(epsilon,
+                        A, B, C,
+                        vcl_A, vcl_B, vcl_slice_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Vectors do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+
+    # A=vector, B=range, C=vector
+    print("Now using A=vector, B=range, C=vector")
+    try:
+        ret = test_func(epsilon,
+                        A, B, C,
+                        vcl_A, vcl_range_B, vcl_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Vectors do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+
+    # A=vector, B=range, C=range
+    print("Now using A=vector, B=range, C=range")
+    try:
+        ret = test_func(epsilon,
+                        A, B, C,
+                        vcl_A, vcl_range_B, vcl_range_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Vectors do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+
+    # A=vector, B=range, C=slice
+    print("Now using A=vector, B=range, C=slice")
+    try:
+        ret = test_func(epsilon,
+                        A, B, C,
+                        vcl_A, vcl_range_B, vcl_slice_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Vectors do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+
+    # A=vector, B=slice, C=vector
+    print("Now using A=vector, B=slice, C=vector")
+    try:
+        ret = test_func(epsilon,
+                        A, B, C,
+                        vcl_A, vcl_slice_B, vcl_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Vectors do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+
+    # A=vector, B=slice, C=range
+    print("Now using A=vector, B=slice, C=range")
+    try:
+        ret = test_func(epsilon,
+                        A, B, C,
+                        vcl_A, vcl_slice_B, vcl_range_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Vectors do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+
+    # A=vector, B=slice, C=slice
+    print("Now using A=vector, B=slice, C=slice")
+    try:
+        ret = test_func(epsilon,
+                        A, B, C,
+                        vcl_A, vcl_slice_B, vcl_slice_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Vectors do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+
+    # A=range, B=vector, C=vector
+    print("Now using A=range, B=vector, C=vector")
+    try:
+        ret = test_func(epsilon,
+                        A, B, C,
+                        vcl_range_A, vcl_B, vcl_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Vectors do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+
+    # A=range, B=vector, C=range
+    print("Now using A=range, B=vector, C=range")
+    try:
+        ret = test_func(epsilon,
+                        A, B, C,
+                        vcl_range_A, vcl_B, vcl_range_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Vectors do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+
+    # A=range, B=vector, C=slice
+    print("Now using A=range, B=vector, C=slice")
+    try:
+        ret = test_func(epsilon,
+                        A, B, C,
+                        vcl_range_A, vcl_B, vcl_slice_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Vectors do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+
+    # A=range, B=range, C=vector
+    print("Now using A=range, B=range, C=vector")
+    try:
+        ret = test_func(epsilon,
+                        A, B, C,
+                        vcl_range_A, vcl_range_B, vcl_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Vectors do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+
+    # A=range, B=range, C=range
+    print("Now using A=range, B=range, C=range")
+    try:
+        ret = test_func(epsilon,
+                        A, B, C,
+                        vcl_range_A, vcl_range_B, vcl_range_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Vectors do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+
+    # A=range, B=range, C=slice
+    print("Now using A=range, B=range, C=slice")
+    try:
+        ret = test_func(epsilon,
+                        A, B, C,
+                        vcl_range_A, vcl_range_B, vcl_slice_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Vectors do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+
+    # A=range, B=slice, C=vector
+    print("Now using A=range, B=slice, C=vector")
+    try:
+        ret = test_func(epsilon,
+                        A, B, C,
+                        vcl_range_A, vcl_slice_B, vcl_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Vectors do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+
+    # A=range, B=slice, C=range
+    print("Now using A=range, B=slice, C=range")
+    try:
+        ret = test_func(epsilon,
+                        A, B, C,
+                        vcl_range_A, vcl_slice_B, vcl_range_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Vectors do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+
+    # A=range, B=slice, C=slice
+    print("Now using A=range, B=slice, C=slice")
+    try:
+        ret = test_func(epsilon,
+                        A, B, C,
+                        vcl_range_A, vcl_slice_B, vcl_slice_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Vectors do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+
+    # A=slice, B=vector, C=vector
+    print("Now using A=slice, B=vector, C=vector")
+    try:
+        ret = test_func(epsilon,
+                        A, B, C,
+                        vcl_slice_A, vcl_B, vcl_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Vectors do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+
+    # A=slice, B=vector, C=range
+    print("Now using A=slice, B=vector, C=range")
+    try:
+        ret = test_func(epsilon,
+                        A, B, C,
+                        vcl_slice_A, vcl_B, vcl_range_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Vectors do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+
+    # A=slice, B=vector, C=slice
+    print("Now using A=slice, B=vector, C=slice")
+    try:
+        ret = test_func(epsilon,
+                        A, B, C,
+                        vcl_slice_A, vcl_B, vcl_slice_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Vectors do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+
+    # A=slice, B=range, C=vector
+    print("Now using A=slice, B=range, C=vector")
+    try:
+        ret = test_func(epsilon,
+                        A, B, C,
+                        vcl_slice_A, vcl_range_B, vcl_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Vectors do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+
+    # A=slice, B=range, C=range
+    print("Now using A=slice, B=range, C=range")
+    try:
+        ret = test_func(epsilon,
+                        A, B, C,
+                        vcl_slice_A, vcl_range_B, vcl_range_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Vectors do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+
+    # A=slice, B=range, C=slice
+    print("Now using A=slice, B=range, C=slice")
+    try:
+        ret = test_func(epsilon,
+                        A, B, C,
+                        vcl_slice_A, vcl_range_B, vcl_slice_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Vectors do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+
+    # A=slice, B=slice, C=vector
+    print("Now using A=slice, B=slice, C=vector")
+    try:
+        ret = test_func(epsilon,
+                        A, B, C,
+                        vcl_slice_A, vcl_slice_B, vcl_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Vectors do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+
+    # A=slice, B=slice, C=range
+    print("Now using A=slice, B=slice, C=range")
+    try:
+        ret = test_func(epsilon,
+                        A, B, C,
+                        vcl_slice_A, vcl_slice_B, vcl_range_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Vectors do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+
+    # A=slice, B=slice, C=slice
+    print("Now using A=slice, B=slice, C=slice")
+    try:
+        ret = test_func(epsilon,
+                        A, B, C,
+                        vcl_slice_A, vcl_slice_B, vcl_slice_C,
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Vectors do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+
+    return os.EX_OK
+
+
 def test_matrix_slice(test_func,
                       epsilon, dtype,
                       A_layout = p.ROW_MAJOR, B_layout = p.ROW_MAJOR, 
