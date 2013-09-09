@@ -29,7 +29,6 @@ def run_test(*args, **kwargs):
 
     ###
     ### TODO MISSING:
-    ### + plane_rotation
     ### + cpu / gpu combos
     ### + elementwise power function?
     ###
@@ -68,9 +67,9 @@ def run_test(*args, **kwargs):
     print("Test: negation passed")
 
     # Inner product
-    X = vcl_A.dot(vcl_B) # .value?? TODO..
+    X = vcl_A.dot(vcl_B)
     Y = vcl_A.value.dot(vcl_B.value)
-    act_diff = math.fabs(X - Y) # TODO..
+    act_diff = math.fabs(X - Y)
     if act_diff > 1E-1: # NB: numpy seems to be imprecise here
         print(act_diff)
         print(X)
@@ -434,7 +433,7 @@ def run_test(*args, **kwargs):
 def test():
     print("----------------------------------------------")
     print("----------------------------------------------")
-    print("## Test :: BLAS 3 routines")
+    print("## Test :: BLAS 3 routines") #TODO
     print("----------------------------------------------")
     print("----------------------------------------------")
     print()
