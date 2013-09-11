@@ -5,7 +5,7 @@ import os
 import pyviennacl as p
 import sys
 
-from test_common import diff, test_matrix_layout
+from test_common import diff, test_matrix_layout, test_matrix_slice
 
 
 def run_test(*args, **kwargs):
@@ -178,13 +178,15 @@ def test():
     print("# Testing setup:")
     epsilon = 1.0E-3
     print("  eps:      %s" % epsilon)
-    test_matrix_layout(run_test, epsilon, p.float32, 11, 11, 11)
+    test_matrix_layout(test_matrix_slice, run_test,
+                       epsilon, p.float32) #, 11, 11, 11)
 
     print("*** Using double numeric type ***")
     print("# Testing setup:")
     epsilon = 1.0E-11
     print("  eps:      %s" % epsilon)
-    test_matrix_layout(run_test, epsilon, p.float64)
+    test_matrix_layout(test_matrix_slice, run_test,
+                       epsilon, p.float64)
 
     print("# Test passed")
     

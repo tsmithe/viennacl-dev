@@ -6,6 +6,8 @@ import os
 import pyviennacl as p
 import random
 
+def noop(*args, **kwargs):
+    return os.EX_OK
 
 def diff(a, b):
     p.util.backend_finish()
@@ -35,7 +37,7 @@ def diff(a, b):
             raise TypeError("Something went wrong")
 
     # The MagicMethods class guarantees that we have some useful facilities
-    # (both Node and Leaf are derived from MagicMethods)
+    #   (and both Node and Leaf are derived from MagicMethods)
     if isinstance(a, p.MagicMethods) and isinstance(b, p.MagicMethods):
         if a.layout != b.layout:
             # We want to make sure that a and b have the same layout
@@ -940,54 +942,593 @@ def test_matrix_slice(test_func,
     return os.EX_OK
 
 
-def test_matrix_layout(test_func, epsilon, dtype,
-                       size1 = 131, size2 = 67, size3 = 73):
+def test_matrix_solvers(test_func,
+                        epsilon, dtype,
+                        A_layout = p.ROW_MAJOR, B_layout = p.ROW_MAJOR, 
+                        C_layout = p.ROW_MAJOR,
+                        size1 = 131, size2 = 131, size3 = 99):
+
+    if size1 != size2:
+        raise AttributeError("size1 must equal size2 for solving a system: %d and %d" % (size1, size2))
+
+    if A_layout == p.ROW_MAJOR:
+        A_order = 'C'
+    else:
+        A_order = 'F'
+
+    if B_layout == p.ROW_MAJOR:
+        B_order = 'C'
+    else:
+        B_order = 'F'
+
+    if C_layout == p.ROW_MAJOR:
+        C_order = 'C'
+    else:
+        C_order = 'F'
+
+    # Create reference numpy types
+    A = np.empty((size1, size2), dtype = dtype, order = A_order)
+    big_A = np.ones((size1 * 4, size2 * 4), dtype = dtype, order = A_order) * 3.1415
+
+    B = np.empty((size2, size3), dtype = dtype, order = B_order)
+    big_B = np.ones((size2 * 4, size3 * 4), dtype = dtype, order = B_order) * 42.0
+
+    # Fill A and B with random values
+    for i in range(A.shape[0]):
+        for j in range(A.shape[1]):
+            A[i, j] = random.random()
+    for i in range(B.shape[0]):
+        for j in range(B.shape[1]):
+            B[i, j] = random.random()
+
+    A_trans = A.T
+    big_A_trans = big_A.T
+    B_trans = B.T
+    big_B_trans = big_B.T
+
+    A_upper = A.copy()
+    for i in range(A.shape[0]):
+        for j in range(A.shape[1]):
+            if j > i:
+                A_upper[i, j] = 0
+
+    A_lower = A.copy()
+    for i in range(A.shape[0]):
+        for j in range(A.shape[1]):
+            if j < i:
+                A_lower[i, j] = 0
+
+    A_unit_upper = A_upper.copy()
+    for i in range(A.shape[0]):
+        for j in range(A.shape[1]):
+            if i == j:
+                A_unit_upper[i, j] = 1.0
+
+    A_unit_lower = A_lower.copy()
+    for i in range(A.shape[0]):
+        for j in range(A.shape[1]):
+            if i == j:
+                A_unit_lower[i, j] = 1.0
+
+    A_trans_upper = A_trans.copy()
+    for i in range(A_trans.shape[0]):
+        for j in range(A_trans.shape[1]):
+            if j > i:
+                A_trans_upper[i, j] = 0
+
+    A_trans_lower = A_trans.copy()
+    for i in range(A_trans.shape[0]):
+        for j in range(A_trans.shape[1]):
+            if j < i:
+                A_trans_lower[i, j] = 0
+
+    A_trans_unit_upper = A_trans_upper.copy()
+    for i in range(A_trans.shape[0]):
+        for j in range(A_trans.shape[1]):
+            if i == j:
+                A_trans_unit_upper[i, j] = 1.0
+
+    A_trans_unit_lower = A_trans_lower.copy()
+    for i in range(A_trans.shape[0]):
+        for j in range(A_trans.shape[1]):
+            if i == j:
+                A_trans_unit_lower[i, j] = 1.0
+
+    B_upper = B.copy()
+    for i in range(B.shape[0]):
+        for j in range(B.shape[1]):
+            if j > i:
+                B_upper[i, j] = 0
+
+    B_lower = B.copy()
+    for i in range(B.shape[0]):
+        for j in range(B.shape[1]):
+            if j < i:
+                B_lower[i, j] = 0
+
+    B_unit_upper = B_upper.copy()
+    for i in range(B.shape[0]):
+        for j in range(B.shape[1]):
+            if i == j:
+                B_unit_upper[i, j] = 1.0
+
+    B_unit_lower = B_lower.copy()
+    for i in range(B.shape[0]):
+        for j in range(B.shape[1]):
+            if i == j:
+                B_unit_lower[i, j] = 1.0
+
+    B_trans_upper = B_trans.copy()
+    for i in range(B_trans.shape[0]):
+        for j in range(B_trans.shape[1]):
+            if j > i:
+                B_trans_upper[i, j] = 0
+
+    B_trans_lower = B_trans.copy()
+    for i in range(B_trans.shape[0]):
+        for j in range(B_trans.shape[1]):
+            if j < i:
+                B_trans_lower[i, j] = 0
+
+    B_trans_unit_upper = B_trans_upper.copy()
+    for i in range(B_trans.shape[0]):
+        for j in range(B_trans.shape[1]):
+            if i == j:
+                B_trans_unit_upper[i, j] = 1.0
+
+    B_trans_unit_lower = B_trans_lower.copy()
+    for i in range(B_trans.shape[0]):
+        for j in range(B_trans.shape[1]):
+            if i == j:
+                B_trans_unit_lower[i, j] = 1.0
+
+    # Construct appropriate ViennaCL objects
+
+    #  -- A_upper
+    vcl_A_upper = p.Matrix(A_upper, layout = A_layout)
+
+    vcl_big_range_A_upper = p.Matrix(big_A, layout = A_layout)
+    vcl_big_range_A_upper[size1:2*size1, size2:2*size2] = vcl_A_upper
+    vcl_A_range_upper = vcl_big_range_A_upper[size1:2*size1, size2:2*size2]
+
+    vcl_big_slice_A_upper = p.Matrix(big_A, layout = A_layout)
+    vcl_big_slice_A_upper[size1:-size1:2, size2::3] = vcl_A_upper
+    vcl_A_slice_upper = vcl_big_slice_A_upper[size1:-size1:2, size2::3]
+
+    vcl_A_trans_upper = p.Matrix(A_trans, layout = A_layout)
+
+    vcl_big_range_A_trans_upper = p.Matrix(big_A_trans, layout = A_layout)
+    vcl_big_range_A_trans_upper[size2:2*size2, size1:2*size1] = vcl_A_trans_upper
+    vcl_range_A_trans_upper = vcl_big_range_A_trans_upper[size2:2*size2, size1:2*size1]
+
+    vcl_big_slice_A_trans_upper = p.Matrix(big_A_trans, layout = A_layout)
+    vcl_big_slice_A_trans_upper[size2:-size2:2, size1::3] = vcl_A_trans_upper
+    vcl_slice_A_trans_upper = vcl_big_slice_A_trans_upper[size2:-size2:2, size1::3]
+
+    #  -- A_unit_upper
+    vcl_A_unit_upper = p.Matrix(A_unit_upper, layout = A_layout)
+
+    vcl_big_range_A_unit_upper = p.Matrix(big_A, layout = A_layout)
+    vcl_big_range_A_unit_upper[size1:2*size1, size2:2*size2] = vcl_A_unit_upper
+    vcl_range_A_unit_upper = vcl_big_range_A_unit_upper[size1:2*size1, size2:2*size2]
+
+    vcl_big_slice_A_unit_upper = p.Matrix(big_A, layout = A_layout)
+    vcl_big_slice_A_unit_upper[size1:-size1:2, size2::3] = vcl_A_unit_upper
+    vcl_slice_A_unit_upper = vcl_big_slice_A_unit_upper[size1:-size1:2, size2::3]
+
+    vcl_A_trans_unit_upper = p.Matrix(A_trans_unit_upper, layout = A_layout)
+
+    vcl_big_range_A_trans_unit_upper = p.Matrix(big_A_trans, layout = A_layout)
+    vcl_big_range_A_trans_unit_upper[size2:2*size2, size1:2*size1] = vcl_A_trans_unit_upper
+    vcl_range_A_trans_unit_upper = vcl_big_range_A_trans_unit_upper[size2:2*size2, size1:2*size1]
+
+    vcl_big_slice_A_trans_unit_upper = p.Matrix(big_A_trans, layout = A_layout)
+    vcl_big_slice_A_trans_unit_upper[size2:-size2:2, size1::3] = vcl_A_trans_unit_upper
+    vcl_slice_A_trans_unit_upper = vcl_big_slice_A_trans_unit_upper[size2:-size2:2, size1::3]
+
+    #  -- A_lower
+    vcl_A_lower = p.Matrix(A_lower, layout = A_layout)
+
+    vcl_big_range_A_lower = p.Matrix(big_A, layout = A_layout)
+    vcl_big_range_A_lower[size1:2*size1, size2:2*size2] = vcl_A_lower
+    vcl_range_A_lower = vcl_big_range_A_lower[size1:2*size1, size2:2*size2]
+
+    vcl_big_slice_A_lower = p.Matrix(big_A, layout = A_layout)
+    vcl_big_slice_A_lower[size1:-size1:2, size2::3] = vcl_A_lower
+    vcl_slice_A_lower = vcl_big_slice_A_lower[size1:-size1:2, size2::3]
+
+    vcl_A_trans_lower = p.Matrix(A_trans_lower, layout = A_layout)
+
+    vcl_big_range_A_trans_lower = p.Matrix(big_A_trans, layout = A_layout)
+    vcl_big_range_A_trans_lower[size2:2*size2, size1:2*size1] = vcl_A_trans_lower
+    vcl_range_A_trans_lower = vcl_big_range_A_trans_lower[size2:2*size2, size1:2*size1]
+
+    vcl_big_slice_A_trans_lower = p.Matrix(big_A_trans, layout = A_layout)
+    vcl_big_slice_A_trans_lower[size2:-size2:2, size1::3] = vcl_A_trans_lower
+    vcl_slice_A_trans_lower = vcl_big_slice_A_trans_lower[size2:-size2:2, size1::3]
+
+    #  -- A_unit_lower
+    vcl_A_unit_lower = p.Matrix(A_unit_lower, layout = A_layout)
+
+    vcl_big_range_A_unit_lower = p.Matrix(big_A, layout = A_layout)
+    vcl_big_range_A_unit_lower[size1:2*size1, size2:2*size2] = vcl_A_unit_lower
+    vcl_range_A_unit_lower = vcl_big_range_A_unit_lower[size1:2*size1, size2:2*size2]
+
+    vcl_big_slice_A_unit_lower = p.Matrix(big_A, layout = A_layout)
+    vcl_big_slice_A_unit_lower[size1:-size1:2, size2::3] = vcl_A_unit_lower
+    vcl_slice_A_unit_lower = vcl_big_slice_A_unit_lower[size1:-size1:2, size2::3]
+
+    vcl_A_trans_unit_lower = p.Matrix(A_trans_unit_lower, layout = A_layout)
+
+    vcl_big_range_A_trans_unit_lower = p.Matrix(big_A_trans, layout = A_layout)
+    vcl_big_range_A_trans_unit_lower[size2:2*size2, size1:2*size1] = vcl_A_trans_unit_lower
+    vcl_range_A_trans_unit_lower = vcl_big_range_A_trans_unit_lower[size2:2*size2, size1:2*size1]
+
+    vcl_big_slice_A_trans_unit_lower = p.Matrix(big_A_trans, layout = A_layout)
+    vcl_big_slice_A_trans_unit_lower[size2:-size2:2, size1::3] = vcl_A_trans_unit_lower
+    vcl_slice_A_trans_unit_lower = vcl_big_slice_A_trans_unit_lower[size2:-size2:2, size1::3]
+
+    #  -- B_upper
+    vcl_B_upper = p.Matrix(B_upper, layout = B_layout)
+
+    vcl_big_range_B_upper = p.Matrix(big_B, layout = B_layout)
+    vcl_big_range_B_upper[size2:2*size2, size3:2*size3] = vcl_B_upper
+    vcl_B_range_upper = vcl_big_range_B_upper[size2:2*size2, size3:2*size3]
+
+    vcl_big_slice_B_upper = p.Matrix(big_B, layout = B_layout)
+    vcl_big_slice_B_upper[size2:-size2:2, size3::3] = vcl_B_upper
+    vcl_B_slice_upper = vcl_big_slice_B_upper[size2:-size2:2, size3::3]
+
+    vcl_B_trans_upper = p.Matrix(B_trans, layout = B_layout)
+
+    vcl_big_range_B_trans_upper = p.Matrix(big_B_trans, layout = B_layout)
+    vcl_big_range_B_trans_upper[size3:2*size3, size2:2*size2] = vcl_B_trans_upper
+    vcl_range_B_trans_upper = vcl_big_range_B_trans_upper[size3:2*size3, size2:2*size2]
+
+    vcl_big_slice_B_trans_upper = p.Matrix(big_B_trans, layout = B_layout)
+    vcl_big_slice_B_trans_upper[size3:-size3:2, size2::3] = vcl_B_trans_upper
+    vcl_slice_B_trans_upper = vcl_big_slice_B_trans_upper[size3:-size3:2, size2::3]
+
+    #  -- B_unit_upper
+    vcl_B_unit_upper = p.Matrix(B_unit_upper, layout = B_layout)
+
+    vcl_big_range_B_unit_upper = p.Matrix(big_B, layout = B_layout)
+    vcl_big_range_B_unit_upper[size2:2*size2, size3:2*size3] = vcl_B_unit_upper
+    vcl_range_B_unit_upper = vcl_big_range_B_unit_upper[size2:2*size2, size3:2*size3]
+
+    vcl_big_slice_B_unit_upper = p.Matrix(big_B, layout = B_layout)
+    vcl_big_slice_B_unit_upper[size2:-size2:2, size3::3] = vcl_B_unit_upper
+    vcl_slice_B_unit_upper = vcl_big_slice_B_unit_upper[size2:-size2:2, size3::3]
+
+    vcl_B_trans_unit_upper = p.Matrix(B_trans_unit_upper, layout = B_layout)
+
+    vcl_big_range_B_trans_unit_upper = p.Matrix(big_B_trans, layout = B_layout)
+    vcl_big_range_B_trans_unit_upper[size3:2*size3, size2:2*size2] = vcl_B_trans_unit_upper
+    vcl_range_B_trans_unit_upper = vcl_big_range_B_trans_unit_upper[size3:2*size3, size2:2*size2]
+
+    vcl_big_slice_B_trans_unit_upper = p.Matrix(big_B_trans, layout = B_layout)
+    vcl_big_slice_B_trans_unit_upper[size3:-size3:2, size2::3] = vcl_B_trans_unit_upper
+    vcl_slice_B_trans_unit_upper = vcl_big_slice_B_trans_unit_upper[size3:-size3:2, size2::3]
+
+    #  -- B_lower
+    vcl_B_lower = p.Matrix(B_lower, layout = B_layout)
+
+    vcl_big_range_B_lower = p.Matrix(big_B, layout = B_layout)
+    vcl_big_range_B_lower[size2:2*size2, size3:2*size3] = vcl_B_lower
+    vcl_range_B_lower = vcl_big_range_B_lower[size2:2*size2, size3:2*size3]
+
+    vcl_big_slice_B_lower = p.Matrix(big_B, layout = B_layout)
+    vcl_big_slice_B_lower[size2:-size2:2, size3::3] = vcl_B_lower
+    vcl_slice_B_lower = vcl_big_slice_B_lower[size2:-size2:2, size3::3]
+
+    vcl_B_trans_lower = p.Matrix(B_trans_lower, layout = B_layout)
+
+    vcl_big_range_B_trans_lower = p.Matrix(big_B_trans, layout = B_layout)
+    vcl_big_range_B_trans_lower[size3:2*size3, size2:2*size2] = vcl_B_trans_lower
+    vcl_range_B_trans_lower = vcl_big_range_B_trans_lower[size3:2*size3, size2:2*size2]
+
+    vcl_big_slice_B_trans_lower = p.Matrix(big_B_trans, layout = B_layout)
+    vcl_big_slice_B_trans_lower[size3:-size3:2, size2::3] = vcl_B_trans_lower
+    vcl_slice_B_trans_lower = vcl_big_slice_B_trans_lower[size3:-size2:2, size1::3]
+
+    #  -- B_unit_lower
+    vcl_B_unit_lower = p.Matrix(B_unit_lower, layout = B_layout)
+
+    vcl_big_range_B_unit_lower = p.Matrix(big_B, layout = B_layout)
+    vcl_big_range_B_unit_lower[size2:2*size2, size3:2*size3] = vcl_B_unit_lower
+    vcl_range_B_unit_lower = vcl_big_range_B_unit_lower[size2:2*size2, size3:2*size3]
+
+    vcl_big_slice_B_unit_lower = p.Matrix(big_B, layout = B_layout)
+    vcl_big_slice_B_unit_lower[size2:-size2:2, size3::3] = vcl_B_unit_lower
+    vcl_slice_B_unit_lower = vcl_big_slice_B_unit_lower[size2:-size2:2, size3::3]
+
+    vcl_B_trans_unit_lower = p.Matrix(B_trans_unit_lower, layout = B_layout)
+
+    vcl_big_range_B_trans_unit_lower = p.Matrix(big_B_trans, layout = B_layout)
+    vcl_big_range_B_trans_unit_lower[size3:2*size3, size2:2*size2] = vcl_B_trans_unit_lower
+    vcl_range_B_trans_unit_lower = vcl_big_range_B_trans_unit_lower[size3:2*size3, size2:2*size2]
+
+    vcl_big_slice_B_trans_unit_lower = p.Matrix(big_B_trans, layout = B_layout)
+    vcl_big_slice_B_trans_unit_lower[size3:-size3:2, size2::3] = vcl_B_trans_unit_lower
+    vcl_slice_B_trans_unit_lower = vcl_big_slice_B_trans_unit_lower[size3:-size3:2, size2::3]
+
+
+    # A=matrix, B=matrix
+    print("Now using A=matrix, B=matrix")
+    try:
+        ret = test_func(epsilon,
+                        (A_upper, A_unit_upper, A_lower, A_unit_lower,
+                         A_trans_upper, A_trans_unit_upper,
+                         A_trans_lower, A_trans_unit_lower,),
+                        (B_upper, B_unit_upper, B_lower, B_unit_lower,
+                         B_trans_upper, B_trans_unit_upper,
+                         B_trans_lower, B_trans_unit_lower,),
+                        (vcl_A_upper, vcl_A_unit_upper,
+                         vcl_A_lower, vcl_A_unit_lower,
+                         vcl_A_trans_upper, vcl_A_trans_unit_upper,
+                         vcl_A_trans_lower, vcl_A_trans_unit_lower,),
+                        (vcl_B_upper, vcl_B_unit_upper,
+                         vcl_B_lower, vcl_B_unit_lower,
+                         vcl_B_trans_upper, vcl_B_trans_unit_upper,
+                         vcl_B_trans_lower, vcl_B_trans_unit_lower,),
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Matrices do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+
+    # A=matrix, B=range
+    print("Now using A=matrix, B=range")
+    try:
+        ret = test_func(epsilon,
+                        (A_upper, A_unit_upper, A_lower, A_unit_lower,
+                         A_trans_upper, A_trans_unit_upper,
+                         A_trans_lower, A_trans_unit_lower,),
+                        (B_upper, B_unit_upper, B_lower, B_unit_lower,
+                         B_trans_upper, B_trans_unit_upper,
+                         B_trans_lower, B_trans_unit_lower,),
+                        (vcl_A_upper, vcl_A_unit_upper,
+                         vcl_A_lower, vcl_A_unit_lower,
+                         vcl_A_trans_upper, vcl_A_trans_unit_upper,
+                         vcl_A_trans_lower, vcl_A_trans_unit_lower,),
+                        (vcl_B_range_upper, vcl_B_range_unit_upper,
+                         vcl_B_range_lower, vcl_B_range_unit_lower,
+                         vcl_B_range_trans_upper,vcl_B_range_trans_unit_upper,
+                         vcl_B_range_trans_lower,vcl_B_range_trans_unit_lower,),
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Matrices do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+
+    # A=matrix, B=slice
+    print("Now using A=matrix, B=slice")
+    try:
+        ret = test_func(epsilon,
+                        (A_upper, A_unit_upper, A_lower, A_unit_lower,
+                         A_trans_upper, A_trans_unit_upper,
+                         A_trans_lower, A_trans_unit_lower,),
+                        (B_upper, B_unit_upper, B_lower, B_unit_lower,
+                         B_trans_upper, B_trans_unit_upper,
+                         B_trans_lower, B_trans_unit_lower,),
+                        (vcl_A_upper, vcl_A_unit_upper,
+                         vcl_A_lower, vcl_A_unit_lower,
+                         vcl_A_trans_upper, vcl_A_trans_unit_upper,
+                         vcl_A_trans_lower, vcl_A_trans_unit_lower,),
+                        (vcl_B_slice_upper, vcl_B_slice_unit_upper,
+                         vcl_B_slice_lower, vcl_B_slice_unit_lower,
+                         vcl_B_slice_trans_upper,vcl_B_slice_trans_unit_upper,
+                         vcl_B_slice_trans_lower,vcl_B_slice_trans_unit_lower,),
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Matrices do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+
+    # A=range, B=matrix
+    print("Now using A=range, B=matrix")
+    try:
+        ret = test_func(epsilon,
+                        (A_upper, A_unit_upper, A_lower, A_unit_lower,
+                         A_trans_upper, A_trans_unit_upper,
+                         A_trans_lower, A_trans_unit_lower,),
+                        (B_upper, B_unit_upper, B_lower, B_unit_lower,
+                         B_trans_upper, B_trans_unit_upper,
+                         B_trans_lower, B_trans_unit_lower,),
+                        (vcl_A_range_upper, vcl_A_range_unit_upper,
+                         vcl_A_range_lower, vcl_A_range_unit_lower,
+                         vcl_A_range_trans_upper,vcl_A_range_trans_unit_upper,
+                         vcl_A_range_trans_lower,vcl_A_range_trans_unit_lower,),
+                        (vcl_B_upper, vcl_B_unit_upper,
+                         vcl_B_lower, vcl_B_unit_lower,
+                         vcl_B_trans_upper, vcl_B_trans_unit_upper,
+                         vcl_B_trans_lower, vcl_B_trans_unit_lower,),
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Matrices do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+
+    # A=range, B=range
+    print("Now using A=range, B=range")
+    try:
+        ret = test_func(epsilon,
+                        (A_upper, A_unit_upper, A_lower, A_unit_lower,
+                         A_trans_upper, A_trans_unit_upper,
+                         A_trans_lower, A_trans_unit_lower,),
+                        (B_upper, B_unit_upper, B_lower, B_unit_lower,
+                         B_trans_upper, B_trans_unit_upper,
+                         B_trans_lower, B_trans_unit_lower,),
+                        (vcl_A_range_upper, vcl_A_range_unit_upper,
+                         vcl_A_range_lower, vcl_A_range_unit_lower,
+                         vcl_A_range_trans_upper,vcl_A_range_trans_unit_upper,
+                         vcl_A_range_trans_lower,vcl_A_range_trans_unit_lower,),
+                        (vcl_B_range_upper, vcl_B_range_unit_upper,
+                         vcl_B_range_lower, vcl_B_range_unit_lower,
+                         vcl_B_range_trans_upper,vcl_B_range_trans_unit_upper,
+                         vcl_B_range_trans_lower,vcl_B_range_trans_unit_lower,),
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Matrices do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+
+    # A=range, B=slice
+    print("Now using A=range, B=slice")
+    try:
+        ret = test_func(epsilon,
+                        (A_upper, A_unit_upper, A_lower, A_unit_lower,
+                         A_trans_upper, A_trans_unit_upper,
+                         A_trans_lower, A_trans_unit_lower,),
+                        (B_upper, B_unit_upper, B_lower, B_unit_lower,
+                         B_trans_upper, B_trans_unit_upper,
+                         B_trans_lower, B_trans_unit_lower,),
+                        (vcl_A_range_upper, vcl_A_range_unit_upper,
+                         vcl_A_range_lower, vcl_A_range_unit_lower,
+                         vcl_A_range_trans_upper,vcl_A_range_trans_unit_upper,
+                         vcl_A_range_trans_lower,vcl_A_range_trans_unit_lower,),
+                        (vcl_B_slice_upper, vcl_B_slice_unit_upper,
+                         vcl_B_slice_lower, vcl_B_slice_unit_lower,
+                         vcl_B_slice_trans_upper,vcl_B_slice_trans_unit_upper,
+                         vcl_B_slice_trans_lower,vcl_B_slice_trans_unit_lower,),
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Matrices do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+
+    # A=slice, B=matrix
+    print("Now using A=slice, B=matrix")
+    try:
+        ret = test_func(epsilon,
+                        (A_upper, A_unit_upper, A_lower, A_unit_lower,
+                         A_trans_upper, A_trans_unit_upper,
+                         A_trans_lower, A_trans_unit_lower,),
+                        (B_upper, B_unit_upper, B_lower, B_unit_lower,
+                         B_trans_upper, B_trans_unit_upper,
+                         B_trans_lower, B_trans_unit_lower,),
+                        (vcl_A_slice_upper, vcl_A_slice_unit_upper,
+                         vcl_A_slice_lower, vcl_A_slice_unit_lower,
+                         vcl_A_slice_trans_upper,vcl_A_slice_trans_unit_upper,
+                         vcl_A_slice_trans_lower,vcl_A_slice_trans_unit_lower,),
+                        (vcl_B_upper, vcl_B_unit_upper,
+                         vcl_B_lower, vcl_B_unit_lower,
+                         vcl_B_trans_upper, vcl_B_trans_unit_upper,
+                         vcl_B_trans_lower, vcl_B_trans_unit_lower,),
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Matrices do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+
+    # A=slice, B=range
+    print("Now using A=slice, B=range")
+    try:
+        ret = test_func(epsilon,
+                        (A_upper, A_unit_upper, A_lower, A_unit_lower,
+                         A_trans_upper, A_trans_unit_upper,
+                         A_trans_lower, A_trans_unit_lower,),
+                        (B_upper, B_unit_upper, B_lower, B_unit_lower,
+                         B_trans_upper, B_trans_unit_upper,
+                         B_trans_lower, B_trans_unit_lower,),
+                        (vcl_A_slice_upper, vcl_A_slice_unit_upper,
+                         vcl_A_slice_lower, vcl_A_slice_unit_lower,
+                         vcl_A_slice_trans_upper,vcl_A_slice_trans_unit_upper,
+                         vcl_A_slice_trans_lower,vcl_A_slice_trans_unit_lower,),
+                        (vcl_B_range_upper, vcl_B_range_unit_upper,
+                         vcl_B_range_lower, vcl_B_range_unit_lower,
+                         vcl_B_range_trans_upper,vcl_B_range_trans_unit_upper,
+                         vcl_B_range_trans_lower,vcl_B_range_trans_unit_lower,),
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Matrices do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+
+    # A=slice, B=slice
+    print("Now using A=slice, B=slice")
+    try:
+        ret = test_func(epsilon,
+                        (A_upper, A_unit_upper, A_lower, A_unit_lower,
+                         A_trans_upper, A_trans_unit_upper,
+                         A_trans_lower, A_trans_unit_lower,),
+                        (B_upper, B_unit_upper, B_lower, B_unit_lower,
+                         B_trans_upper, B_trans_unit_upper,
+                         B_trans_lower, B_trans_unit_lower,),
+                        (vcl_A_slice_upper, vcl_A_slice_unit_upper,
+                         vcl_A_slice_lower, vcl_A_slice_unit_lower,
+                         vcl_A_slice_trans_upper,vcl_A_slice_trans_unit_upper,
+                         vcl_A_slice_trans_lower,vcl_A_slice_trans_unit_lower,),
+                        (vcl_B_slice_upper, vcl_B_slice_unit_upper,
+                         vcl_B_slice_lower, vcl_B_slice_unit_lower,
+                         vcl_B_slice_trans_upper,vcl_B_slice_trans_unit_upper,
+                         vcl_B_slice_trans_lower,vcl_B_slice_trans_unit_lower,),
+                        dtype = dtype)
+    except TypeError as e:
+        if not "Matrices do not have the same layout" in e.args[0]:
+            raise
+        else:
+            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+
+    return os.EX_OK
+
+
+def test_matrix_layout(test_func, test_kernel, epsilon, dtype,
+                       size1 = 131, size2 = 131, size3 = 73):
     # A=row, B=row, C=row
     print("///////////////////////////////////////")
     print("/// Now testing A=row, B=row, C=row ///")
     print("///////////////////////////////////////")
-    test_matrix_slice(test_func, epsilon, dtype, p.ROW_MAJOR, p.ROW_MAJOR, p.ROW_MAJOR, size1, size2, size3)
+    test_func(test_kernel, epsilon, dtype, p.ROW_MAJOR, p.ROW_MAJOR, p.ROW_MAJOR, size1, size2, size3)
 
     # A=row, B=row, C=col
     print("///////////////////////////////////////")
     print("/// Now testing A=row, B=row, C=col ///")
     print("///////////////////////////////////////")
-    test_matrix_slice(test_func, epsilon, dtype, p.ROW_MAJOR, p.ROW_MAJOR, p.COL_MAJOR, size1, size2, size3)
+    test_func(test_kernel, epsilon, dtype, p.ROW_MAJOR, p.ROW_MAJOR, p.COL_MAJOR, size1, size2, size3)
 
     # A=row, B=col, C=row
     print("///////////////////////////////////////")
     print("/// Now testing A=row, B=col, C=row ///")
     print("///////////////////////////////////////")
-    test_matrix_slice(test_func, epsilon, dtype, p.ROW_MAJOR, p.COL_MAJOR, p.ROW_MAJOR, size1, size2, size3)
+    test_func(test_kernel, epsilon, dtype, p.ROW_MAJOR, p.COL_MAJOR, p.ROW_MAJOR, size1, size2, size3)
 
     # A=row, B=col, C=col
     print("///////////////////////////////////////")
     print("/// Now testing A=row, B=col, C=col ///")
     print("///////////////////////////////////////")
-    test_matrix_slice(test_func, epsilon, dtype, p.ROW_MAJOR, p.COL_MAJOR, p.COL_MAJOR, size1, size2, size3)
+    test_func(test_kernel, epsilon, dtype, p.ROW_MAJOR, p.COL_MAJOR, p.COL_MAJOR, size1, size2, size3)
 
     # A=col, B=row, C=row
     print("///////////////////////////////////////")
     print("/// Now testing A=col, B=row, C=row ///")
     print("///////////////////////////////////////")
-    test_matrix_slice(test_func, epsilon, dtype, p.COL_MAJOR, p.ROW_MAJOR, p.ROW_MAJOR, size1, size2, size3)
+    test_func(test_kernel, epsilon, dtype, p.COL_MAJOR, p.ROW_MAJOR, p.ROW_MAJOR, size1, size2, size3)
 
     # A=col, B=row, C=col
     print("///////////////////////////////////////")
     print("/// Now testing A=col, B=row, C=col ///")
     print("///////////////////////////////////////")
-    test_matrix_slice(test_func, epsilon, dtype, p.COL_MAJOR, p.ROW_MAJOR, p.COL_MAJOR, size1, size2, size3)
+    test_func(test_kernel, epsilon, dtype, p.COL_MAJOR, p.ROW_MAJOR, p.COL_MAJOR, size1, size2, size3)
 
     # A=col, B=col, C=row
     print("///////////////////////////////////////")
     print("/// Now testing A=col, B=col, C=row ///")
     print("///////////////////////////////////////")
-    test_matrix_slice(test_func, epsilon, dtype, p.COL_MAJOR, p.COL_MAJOR, p.ROW_MAJOR, size1, size2, size3)
+    test_func(test_kernel, epsilon, dtype, p.COL_MAJOR, p.COL_MAJOR, p.ROW_MAJOR, size1, size2, size3)
     
     # A=col, B=col, C=col
     print("///////////////////////////////////////")
     print("/// Now testing A=col, B=col, C=col ///")
     print("///////////////////////////////////////")
-    test_matrix_slice(test_func, epsilon, dtype, p.COL_MAJOR, p.COL_MAJOR, p.COL_MAJOR, size1, size2, size3)
+    test_func(test_kernel, epsilon, dtype, p.COL_MAJOR, p.COL_MAJOR, p.COL_MAJOR, size1, size2, size3)
 
     return os.EX_OK
