@@ -30,9 +30,9 @@ def test_kernel(*args, **kwargs):
 
     epsilon = args[0]
     A_upper, A_unit_upper, A_lower, A_unit_lower, A_trans_upper, A_trans_unit_upper, A_trans_lower, A_trans_unit_lower = args[1]
-    B, B_trans, B_upper, B_unit_upper, B_lower, B_unit_lower, B_trans_upper, B_trans_unit_upper, B_trans_lower, B_trans_unit_lower = args[2]
+    B, B_trans = args[2]
     vcl_A_upper, vcl_A_unit_upper, vcl_A_lower, vcl_A_unit_lower, vcl_A_trans_upper, vcl_A_trans_unit_upper, vcl_A_trans_lower, vcl_A_trans_unit_lower = args[3]
-    vcl_B, vcl_B_trans, vcl_B_upper, vcl_B_unit_upper, vcl_B_lower, vcl_B_unit_lower, vcl_B_trans_upper, vcl_B_trans_unit_upper, vcl_B_trans_lower, vcl_B_trans_unit_lower = args[4]
+    vcl_B, vcl_B_trans = args[4]
 
     # solve and in-place solve
     # transpositions: A \ B, A^T \ B, A \ B^T, A^T \ B^T
