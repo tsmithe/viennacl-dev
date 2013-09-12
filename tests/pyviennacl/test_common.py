@@ -989,13 +989,13 @@ def test_matrix_solvers(test_func,
     A_upper = A.copy()
     for i in range(A.shape[0]):
         for j in range(A.shape[1]):
-            if j > i:
+            if j < i:
                 A_upper[i, j] = 0
 
     A_lower = A.copy()
     for i in range(A.shape[0]):
         for j in range(A.shape[1]):
-            if j < i:
+            if j > i:
                 A_lower[i, j] = 0
 
     A_unit_upper = A_upper.copy()
@@ -1013,13 +1013,13 @@ def test_matrix_solvers(test_func,
     A_trans_upper = A_trans.copy()
     for i in range(A_trans.shape[0]):
         for j in range(A_trans.shape[1]):
-            if j > i:
+            if j < i:
                 A_trans_upper[i, j] = 0
 
     A_trans_lower = A_trans.copy()
     for i in range(A_trans.shape[0]):
         for j in range(A_trans.shape[1]):
-            if j < i:
+            if j > i:
                 A_trans_lower[i, j] = 0
 
     A_trans_unit_upper = A_trans_upper.copy()
@@ -1037,13 +1037,13 @@ def test_matrix_solvers(test_func,
     B_upper = B.copy()
     for i in range(B.shape[0]):
         for j in range(B.shape[1]):
-            if j > i:
+            if j < i:
                 B_upper[i, j] = 0
 
     B_lower = B.copy()
     for i in range(B.shape[0]):
         for j in range(B.shape[1]):
-            if j < i:
+            if j > i:
                 B_lower[i, j] = 0
 
     B_unit_upper = B_upper.copy()
@@ -1061,13 +1061,13 @@ def test_matrix_solvers(test_func,
     B_trans_upper = B_trans.copy()
     for i in range(B_trans.shape[0]):
         for j in range(B_trans.shape[1]):
-            if j > i:
+            if j < i:
                 B_trans_upper[i, j] = 0
 
     B_trans_lower = B_trans.copy()
     for i in range(B_trans.shape[0]):
         for j in range(B_trans.shape[1]):
-            if j < i:
+            if j > i:
                 B_trans_lower[i, j] = 0
 
     B_trans_unit_upper = B_trans_upper.copy()
@@ -1089,11 +1089,11 @@ def test_matrix_solvers(test_func,
 
     vcl_big_range_A_upper = p.Matrix(big_A, layout = A_layout)
     vcl_big_range_A_upper[size1:2*size1, size2:2*size2] = vcl_A_upper
-    vcl_A_range_upper = vcl_big_range_A_upper[size1:2*size1, size2:2*size2]
+    vcl_range_A_upper = vcl_big_range_A_upper[size1:2*size1, size2:2*size2]
 
     vcl_big_slice_A_upper = p.Matrix(big_A, layout = A_layout)
     vcl_big_slice_A_upper[size1:-size1:2, size2::3] = vcl_A_upper
-    vcl_A_slice_upper = vcl_big_slice_A_upper[size1:-size1:2, size2::3]
+    vcl_slice_A_upper = vcl_big_slice_A_upper[size1:-size1:2, size2::3]
 
     vcl_A_trans_upper = p.Matrix(A_trans, layout = A_layout)
 
@@ -1173,11 +1173,11 @@ def test_matrix_solvers(test_func,
 
     vcl_big_range_B_upper = p.Matrix(big_B, layout = B_layout)
     vcl_big_range_B_upper[size2:2*size2, size3:2*size3] = vcl_B_upper
-    vcl_B_range_upper = vcl_big_range_B_upper[size2:2*size2, size3:2*size3]
+    vcl_range_B_upper = vcl_big_range_B_upper[size2:2*size2, size3:2*size3]
 
     vcl_big_slice_B_upper = p.Matrix(big_B, layout = B_layout)
     vcl_big_slice_B_upper[size2:-size2:2, size3::3] = vcl_B_upper
-    vcl_B_slice_upper = vcl_big_slice_B_upper[size2:-size2:2, size3::3]
+    vcl_slice_B_upper = vcl_big_slice_B_upper[size2:-size2:2, size3::3]
 
     vcl_B_trans_upper = p.Matrix(B_trans, layout = B_layout)
 
@@ -1292,10 +1292,10 @@ def test_matrix_solvers(test_func,
                          vcl_A_lower, vcl_A_unit_lower,
                          vcl_A_trans_upper, vcl_A_trans_unit_upper,
                          vcl_A_trans_lower, vcl_A_trans_unit_lower,),
-                        (vcl_B_range_upper, vcl_B_range_unit_upper,
-                         vcl_B_range_lower, vcl_B_range_unit_lower,
-                         vcl_B_range_trans_upper,vcl_B_range_trans_unit_upper,
-                         vcl_B_range_trans_lower,vcl_B_range_trans_unit_lower,),
+                        (vcl_range_B_upper, vcl_range_B_unit_upper,
+                         vcl_range_B_lower, vcl_range_B_unit_lower,
+                         vcl_range_B_trans_upper,vcl_range_B_trans_unit_upper,
+                         vcl_range_B_trans_lower,vcl_range_B_trans_unit_lower,),
                         dtype = dtype)
     except TypeError as e:
         if not "Matrices do not have the same layout" in e.args[0]:
@@ -1317,10 +1317,10 @@ def test_matrix_solvers(test_func,
                          vcl_A_lower, vcl_A_unit_lower,
                          vcl_A_trans_upper, vcl_A_trans_unit_upper,
                          vcl_A_trans_lower, vcl_A_trans_unit_lower,),
-                        (vcl_B_slice_upper, vcl_B_slice_unit_upper,
-                         vcl_B_slice_lower, vcl_B_slice_unit_lower,
-                         vcl_B_slice_trans_upper,vcl_B_slice_trans_unit_upper,
-                         vcl_B_slice_trans_lower,vcl_B_slice_trans_unit_lower,),
+                        (vcl_slice_B_upper, vcl_slice_B_unit_upper,
+                         vcl_slice_B_lower, vcl_slice_B_unit_lower,
+                         vcl_slice_B_trans_upper,vcl_slice_B_trans_unit_upper,
+                         vcl_slice_B_trans_lower,vcl_slice_B_trans_unit_lower,),
                         dtype = dtype)
     except TypeError as e:
         if not "Matrices do not have the same layout" in e.args[0]:
@@ -1338,10 +1338,10 @@ def test_matrix_solvers(test_func,
                         (B_upper, B_unit_upper, B_lower, B_unit_lower,
                          B_trans_upper, B_trans_unit_upper,
                          B_trans_lower, B_trans_unit_lower,),
-                        (vcl_A_range_upper, vcl_A_range_unit_upper,
-                         vcl_A_range_lower, vcl_A_range_unit_lower,
-                         vcl_A_range_trans_upper,vcl_A_range_trans_unit_upper,
-                         vcl_A_range_trans_lower,vcl_A_range_trans_unit_lower,),
+                        (vcl_range_A_upper, vcl_range_A_unit_upper,
+                         vcl_range_A_lower, vcl_range_A_unit_lower,
+                         vcl_range_A_trans_upper,vcl_range_A_trans_unit_upper,
+                         vcl_range_A_trans_lower,vcl_range_A_trans_unit_lower,),
                         (vcl_B_upper, vcl_B_unit_upper,
                          vcl_B_lower, vcl_B_unit_lower,
                          vcl_B_trans_upper, vcl_B_trans_unit_upper,
@@ -1363,14 +1363,14 @@ def test_matrix_solvers(test_func,
                         (B_upper, B_unit_upper, B_lower, B_unit_lower,
                          B_trans_upper, B_trans_unit_upper,
                          B_trans_lower, B_trans_unit_lower,),
-                        (vcl_A_range_upper, vcl_A_range_unit_upper,
-                         vcl_A_range_lower, vcl_A_range_unit_lower,
-                         vcl_A_range_trans_upper,vcl_A_range_trans_unit_upper,
-                         vcl_A_range_trans_lower,vcl_A_range_trans_unit_lower,),
-                        (vcl_B_range_upper, vcl_B_range_unit_upper,
-                         vcl_B_range_lower, vcl_B_range_unit_lower,
-                         vcl_B_range_trans_upper,vcl_B_range_trans_unit_upper,
-                         vcl_B_range_trans_lower,vcl_B_range_trans_unit_lower,),
+                        (vcl_range_A_upper, vcl_range_A_unit_upper,
+                         vcl_range_A_lower, vcl_range_A_unit_lower,
+                         vcl_range_A_trans_upper,vcl_range_A_trans_unit_upper,
+                         vcl_range_A_trans_lower,vcl_range_A_trans_unit_lower,),
+                        (vcl_range_B_upper, vcl_range_B_unit_upper,
+                         vcl_range_B_lower, vcl_range_B_unit_lower,
+                         vcl_range_B_trans_upper,vcl_range_B_trans_unit_upper,
+                         vcl_range_B_trans_lower,vcl_range_B_trans_unit_lower,),
                         dtype = dtype)
     except TypeError as e:
         if not "Matrices do not have the same layout" in e.args[0]:
@@ -1388,14 +1388,14 @@ def test_matrix_solvers(test_func,
                         (B_upper, B_unit_upper, B_lower, B_unit_lower,
                          B_trans_upper, B_trans_unit_upper,
                          B_trans_lower, B_trans_unit_lower,),
-                        (vcl_A_range_upper, vcl_A_range_unit_upper,
-                         vcl_A_range_lower, vcl_A_range_unit_lower,
-                         vcl_A_range_trans_upper,vcl_A_range_trans_unit_upper,
-                         vcl_A_range_trans_lower,vcl_A_range_trans_unit_lower,),
-                        (vcl_B_slice_upper, vcl_B_slice_unit_upper,
-                         vcl_B_slice_lower, vcl_B_slice_unit_lower,
-                         vcl_B_slice_trans_upper,vcl_B_slice_trans_unit_upper,
-                         vcl_B_slice_trans_lower,vcl_B_slice_trans_unit_lower,),
+                        (vcl_range_A_upper, vcl_range_A_unit_upper,
+                         vcl_range_A_lower, vcl_range_A_unit_lower,
+                         vcl_range_A_trans_upper,vcl_range_A_trans_unit_upper,
+                         vcl_range_A_trans_lower,vcl_range_A_trans_unit_lower,),
+                        (vcl_slice_B_upper, vcl_slice_B_unit_upper,
+                         vcl_slice_B_lower, vcl_slice_B_unit_lower,
+                         vcl_slice_B_trans_upper,vcl_slice_B_trans_unit_upper,
+                         vcl_slice_B_trans_lower,vcl_slice_B_trans_unit_lower,),
                         dtype = dtype)
     except TypeError as e:
         if not "Matrices do not have the same layout" in e.args[0]:
@@ -1413,10 +1413,10 @@ def test_matrix_solvers(test_func,
                         (B_upper, B_unit_upper, B_lower, B_unit_lower,
                          B_trans_upper, B_trans_unit_upper,
                          B_trans_lower, B_trans_unit_lower,),
-                        (vcl_A_slice_upper, vcl_A_slice_unit_upper,
-                         vcl_A_slice_lower, vcl_A_slice_unit_lower,
-                         vcl_A_slice_trans_upper,vcl_A_slice_trans_unit_upper,
-                         vcl_A_slice_trans_lower,vcl_A_slice_trans_unit_lower,),
+                        (vcl_slice_A_upper, vcl_slice_A_unit_upper,
+                         vcl_slice_A_lower, vcl_slice_A_unit_lower,
+                         vcl_slice_A_trans_upper,vcl_slice_A_trans_unit_upper,
+                         vcl_slice_A_trans_lower,vcl_slice_A_trans_unit_lower,),
                         (vcl_B_upper, vcl_B_unit_upper,
                          vcl_B_lower, vcl_B_unit_lower,
                          vcl_B_trans_upper, vcl_B_trans_unit_upper,
@@ -1438,14 +1438,14 @@ def test_matrix_solvers(test_func,
                         (B_upper, B_unit_upper, B_lower, B_unit_lower,
                          B_trans_upper, B_trans_unit_upper,
                          B_trans_lower, B_trans_unit_lower,),
-                        (vcl_A_slice_upper, vcl_A_slice_unit_upper,
-                         vcl_A_slice_lower, vcl_A_slice_unit_lower,
-                         vcl_A_slice_trans_upper,vcl_A_slice_trans_unit_upper,
-                         vcl_A_slice_trans_lower,vcl_A_slice_trans_unit_lower,),
-                        (vcl_B_range_upper, vcl_B_range_unit_upper,
-                         vcl_B_range_lower, vcl_B_range_unit_lower,
-                         vcl_B_range_trans_upper,vcl_B_range_trans_unit_upper,
-                         vcl_B_range_trans_lower,vcl_B_range_trans_unit_lower,),
+                        (vcl_slice_A_upper, vcl_slice_A_unit_upper,
+                         vcl_slice_A_lower, vcl_slice_A_unit_lower,
+                         vcl_slice_A_trans_upper,vcl_slice_A_trans_unit_upper,
+                         vcl_slice_A_trans_lower,vcl_slice_A_trans_unit_lower,),
+                        (vcl_range_B_upper, vcl_range_B_unit_upper,
+                         vcl_range_B_lower, vcl_range_B_unit_lower,
+                         vcl_range_B_trans_upper,vcl_range_B_trans_unit_upper,
+                         vcl_range_B_trans_lower,vcl_range_B_trans_unit_lower,),
                         dtype = dtype)
     except TypeError as e:
         if not "Matrices do not have the same layout" in e.args[0]:
@@ -1463,14 +1463,14 @@ def test_matrix_solvers(test_func,
                         (B_upper, B_unit_upper, B_lower, B_unit_lower,
                          B_trans_upper, B_trans_unit_upper,
                          B_trans_lower, B_trans_unit_lower,),
-                        (vcl_A_slice_upper, vcl_A_slice_unit_upper,
-                         vcl_A_slice_lower, vcl_A_slice_unit_lower,
-                         vcl_A_slice_trans_upper,vcl_A_slice_trans_unit_upper,
-                         vcl_A_slice_trans_lower,vcl_A_slice_trans_unit_lower,),
-                        (vcl_B_slice_upper, vcl_B_slice_unit_upper,
-                         vcl_B_slice_lower, vcl_B_slice_unit_lower,
-                         vcl_B_slice_trans_upper,vcl_B_slice_trans_unit_upper,
-                         vcl_B_slice_trans_lower,vcl_B_slice_trans_unit_lower,),
+                        (vcl_slice_A_upper, vcl_slice_A_unit_upper,
+                         vcl_slice_A_lower, vcl_slice_A_unit_lower,
+                         vcl_slice_A_trans_upper,vcl_slice_A_trans_unit_upper,
+                         vcl_slice_A_trans_lower,vcl_slice_A_trans_unit_lower,),
+                        (vcl_slice_B_upper, vcl_slice_B_unit_upper,
+                         vcl_slice_B_lower, vcl_slice_B_unit_lower,
+                         vcl_slice_B_trans_upper,vcl_slice_B_trans_unit_upper,
+                         vcl_slice_B_trans_lower,vcl_slice_B_trans_unit_lower,),
                         dtype = dtype)
     except TypeError as e:
         if not "Matrices do not have the same layout" in e.args[0]:
@@ -1482,18 +1482,20 @@ def test_matrix_solvers(test_func,
 
 
 def test_matrix_layout(test_func, test_kernel, epsilon, dtype,
-                       size1 = 131, size2 = 131, size3 = 73):
+                       size1 = 131, size2 = 131, size3 = 73,
+                       num_matrices = 3):
     # A=row, B=row, C=row
     print("///////////////////////////////////////")
     print("/// Now testing A=row, B=row, C=row ///")
     print("///////////////////////////////////////")
     test_func(test_kernel, epsilon, dtype, p.ROW_MAJOR, p.ROW_MAJOR, p.ROW_MAJOR, size1, size2, size3)
 
-    # A=row, B=row, C=col
-    print("///////////////////////////////////////")
-    print("/// Now testing A=row, B=row, C=col ///")
-    print("///////////////////////////////////////")
-    test_func(test_kernel, epsilon, dtype, p.ROW_MAJOR, p.ROW_MAJOR, p.COL_MAJOR, size1, size2, size3)
+    if num_matrices == 3:
+        # A=row, B=row, C=col
+        print("///////////////////////////////////////")
+        print("/// Now testing A=row, B=row, C=col ///")
+        print("///////////////////////////////////////")
+        test_func(test_kernel, epsilon, dtype, p.ROW_MAJOR, p.ROW_MAJOR, p.COL_MAJOR, size1, size2, size3)
 
     # A=row, B=col, C=row
     print("///////////////////////////////////////")
@@ -1501,11 +1503,12 @@ def test_matrix_layout(test_func, test_kernel, epsilon, dtype,
     print("///////////////////////////////////////")
     test_func(test_kernel, epsilon, dtype, p.ROW_MAJOR, p.COL_MAJOR, p.ROW_MAJOR, size1, size2, size3)
 
-    # A=row, B=col, C=col
-    print("///////////////////////////////////////")
-    print("/// Now testing A=row, B=col, C=col ///")
-    print("///////////////////////////////////////")
-    test_func(test_kernel, epsilon, dtype, p.ROW_MAJOR, p.COL_MAJOR, p.COL_MAJOR, size1, size2, size3)
+    if num_matrices == 3:
+        # A=row, B=col, C=col
+        print("///////////////////////////////////////")
+        print("/// Now testing A=row, B=col, C=col ///")
+        print("///////////////////////////////////////")
+        test_func(test_kernel, epsilon, dtype, p.ROW_MAJOR, p.COL_MAJOR, p.COL_MAJOR, size1, size2, size3)
 
     # A=col, B=row, C=row
     print("///////////////////////////////////////")
@@ -1513,11 +1516,12 @@ def test_matrix_layout(test_func, test_kernel, epsilon, dtype,
     print("///////////////////////////////////////")
     test_func(test_kernel, epsilon, dtype, p.COL_MAJOR, p.ROW_MAJOR, p.ROW_MAJOR, size1, size2, size3)
 
-    # A=col, B=row, C=col
-    print("///////////////////////////////////////")
-    print("/// Now testing A=col, B=row, C=col ///")
-    print("///////////////////////////////////////")
-    test_func(test_kernel, epsilon, dtype, p.COL_MAJOR, p.ROW_MAJOR, p.COL_MAJOR, size1, size2, size3)
+    if num_matrices == 3:
+        # A=col, B=row, C=col
+        print("///////////////////////////////////////")
+        print("/// Now testing A=col, B=row, C=col ///")
+        print("///////////////////////////////////////")
+        test_func(test_kernel, epsilon, dtype, p.COL_MAJOR, p.ROW_MAJOR, p.COL_MAJOR, size1, size2, size3)
 
     # A=col, B=col, C=row
     print("///////////////////////////////////////")
@@ -1525,10 +1529,11 @@ def test_matrix_layout(test_func, test_kernel, epsilon, dtype,
     print("///////////////////////////////////////")
     test_func(test_kernel, epsilon, dtype, p.COL_MAJOR, p.COL_MAJOR, p.ROW_MAJOR, size1, size2, size3)
     
-    # A=col, B=col, C=col
-    print("///////////////////////////////////////")
-    print("/// Now testing A=col, B=col, C=col ///")
-    print("///////////////////////////////////////")
-    test_func(test_kernel, epsilon, dtype, p.COL_MAJOR, p.COL_MAJOR, p.COL_MAJOR, size1, size2, size3)
+    if num_matrices == 3:
+        # A=col, B=col, C=col
+        print("///////////////////////////////////////")
+        print("/// Now testing A=col, B=col, C=col ///")
+        print("///////////////////////////////////////")
+        test_func(test_kernel, epsilon, dtype, p.COL_MAJOR, p.COL_MAJOR, p.COL_MAJOR, size1, size2, size3)
 
     return os.EX_OK

@@ -8,7 +8,7 @@ import sys
 
 from test_common import diff, test_matrix_layout, test_matrix_solvers, noop
 
-def run_test(*args, **kwargs):
+def test_kernel(*args, **kwargs):
     """
     A, A_trans, B, B_trans must be numpy array or matrix instances
     """
@@ -29,35 +29,19 @@ def run_test(*args, **kwargs):
     #  ...???...
 
     epsilon = args[0]
-    A = args[1]
-    B = args[2]
-    vcl_A = args[3]
-    vcl_B = args[4]
-
-    act_diff = math.fabs(diff(A, vcl_A))
-    if act_diff > epsilon:
-        raise Exception("Error copying A")
-
-    act_diff = math.fabs(diff(B, vcl_B))
-    if act_diff > epsilon:
-        raise Exception("Error copying B")
-
-    act_diff = math.fabs(diff(A_trans, vcl_A_trans))
-    if act_diff > epsilon:
-        raise Exception("Error copying A_trans")
-
-    act_diff = math.fabs(diff(B_trans, vcl_B_trans))
-    if act_diff > epsilon:
-        raise Exception("Error copying B_trans")
+    A_upper, A_unit_upper, A_lower, A_unit_lower, A_trans_upper, A_trans_unit_upper, A_trans_lower, A_trans_unit_lower = args[1]
+    B_upper, B_unit_upper, B_lower, B_unit_lower, B_trans_upper, B_trans_unit_upper, B_trans_lower, B_trans_unit_lower = args[2]
+    vcl_A_upper, vcl_A_unit_upper, vcl_A_lower, vcl_A_unit_lower, vcl_A_trans_upper, vcl_A_trans_unit_upper, vcl_A_trans_lower, vcl_A_trans_unit_lower = args[3]
+    vcl_B_upper, vcl_B_unit_upper, vcl_B_lower, vcl_B_unit_lower, vcl_B_trans_upper, vcl_B_trans_unit_upper, vcl_B_trans_lower, vcl_B_trans_unit_lower = args[4]
 
     # solve and in-place solve
     # transpositions: A \ B, A^T \ B, A \ B^T, A^T \ B^T
     # tags: lower, unit_lower, upper, unit_upper, cg, bicgstab, gmres
 
     # A \ B
-    vcl_X = p.solve(vcl_A, vcl_B, p.upper_tag())
-    X = sp.solve(A, B)
-    print(X - vcl_X)
+    #vcl_X = p.solve(vcl_A, vcl_B, p.upper_tag())
+    #X = sp.solve(A, B)
+    #print(X - vcl_X)
 
     return os.EX_OK
 
@@ -65,12 +49,11 @@ def run_test(*args, **kwargs):
 def test():
     print("----------------------------------------------")
     print("----------------------------------------------")
-    print("## Test :: BLAS 3 routines")
+    print("## Test :: BLAS 3 routines :: solvers")
     print("----------------------------------------------")
     print("----------------------------------------------")
     print()
     print("----------------------------------------------")
-    print("--- Part 1: Testing matrix-matrix products ---")
 
     #print("*** Using float numeric type ***")
     #print("# Testing setup:")
@@ -83,7 +66,9 @@ def test():
     print("# Testing setup:")
     epsilon = 1.0E-11
     print("  eps:      %s" % epsilon)
-    test_matrix_layout(test_matrix_solvers, noop, epsilon, p.float64)
+    test_matrix_layout(test_matrix_solvers, test_kernel, epsilon, p.float64,
+                       5, 5, 5,
+                       num_matrices = 2)
     #test_matrix_layout(test_matrix_solvers, run_test, 
     #                   epsilon, p.float64, 5,5,5)
 
