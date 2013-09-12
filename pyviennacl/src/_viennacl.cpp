@@ -1425,15 +1425,15 @@ BOOST_PYTHON_MODULE(_viennacl)
 	 vcl::linalg::unit_upper_tag&,                                  \
 	 op_solve, 0>)                                                  \
     .def("solve", pyvcl_do_3ary_op<vcl::vector<TYPE>,                   \
-	 vcl::matrix<TYPE, F>&, vcl::vector<TYPE>&,                     \
+	 vcl::matrix_base<TYPE, F>&, vcl::vector<TYPE>&,                \
 	 vcl::linalg::cg_tag&,                                          \
 	 op_solve, 0>)                                                  \
     .def("solve", pyvcl_do_3ary_op<vcl::vector<TYPE>,                   \
-	 vcl::matrix<TYPE, F>&, vcl::vector<TYPE>&,                     \
+	 vcl::matrix_base<TYPE, F>&, vcl::vector<TYPE>&,                \
 	 vcl::linalg::bicgstab_tag&,                                    \
 	 op_solve, 0>)                                                  \
     .def("solve", pyvcl_do_3ary_op<vcl::vector<TYPE>,                   \
-	 vcl::matrix<TYPE, F>&, vcl::vector<TYPE>&,                     \
+	 vcl::matrix_base<TYPE, F>&, vcl::vector<TYPE>&,                \
 	 vcl::linalg::gmres_tag&,                                       \
 	 op_solve, 0>)                                                  \
     .def("solve", pyvcl_do_3ary_op<vcl::matrix<TYPE, vcl::row_major>,   \

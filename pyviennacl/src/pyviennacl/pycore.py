@@ -623,6 +623,8 @@ class Vector(Leaf):
             args = list(args)
             args.insert(0, kwargs['shape'][0])
 
+        # TODO: Create Vector from row or column matrix..
+
         if len(args) == 0:
             def get_leaf(vcl_t):
                 return vcl_t()
@@ -633,9 +635,16 @@ class Vector(Leaf):
                 def get_leaf(vcl_t):
                     return vcl_t(args[0].vcl_leaf)
             elif isinstance(args[0], ndarray):
+                if args[0].ndim > 1:
+                    one_d = [x for x in args[0].shape if x > 1]
+                    if len(one_d) != 1:
+                        raise TypeError("Vector can only be constructed from a one-dimensional array!")
+                    a = args[0].flatten()
+                else:
+                    a = args[0]
                 self.dtype = np_result_type(args[0])
                 def get_leaf(vcl_t):
-                    return vcl_t(args[0])
+                    return vcl_t(a)
             elif isinstance(args[0], _v.vector_base):
                 # This doesn't do any dtype checking, so beware...
                 def get_leaf(vcl_t):
@@ -1084,7 +1093,7 @@ class Matrix(Leaf):
                                           dtype=self.dtype)
                     elif isinstance(key[1], slice):
                         #  (int, slice) - range/slice from row -> row vector
-                        view1 = View(slice(0, key[0]), self.size1)
+                        view1 = View(slice(0, key[0]+1), self.size1)
                         view2 = View(key[1], self.size2)
                         return Matrix(_v.project(self.vcl_leaf,
                                                  view1.vcl_view,
@@ -1100,7 +1109,7 @@ class Matrix(Leaf):
                     if isinstance(key[1], int):
                         #  (slice, int) - range/slice from col -> col vector
                         view1 = View(key[0], self.size1)
-                        view2 = View(slice(0, key[1]), self.size2)
+                        view2 = View(slice(0, key[1]+1), self.size2)
                         return Matrix(_v.project(self.vcl_leaf,
                                                  view1.vcl_view,
                                                  view2.vcl_view),

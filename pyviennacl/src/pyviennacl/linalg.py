@@ -145,7 +145,7 @@ class gmres_tag:
         Construct a gmres_tag. Parameters are:
          tolerance: Relative tolerance for the residual
                     (solver quits if ||r|| < tolerance * ||r_initial|| obtains)
-         max_iterations: Maximum number o iterations, including restarts
+         max_iterations: Maximum number of iterations, including restarts
          krylov_dim: The maximum dimension of the Krylov space before restart
                      (number of restarts found then by
                          max_iterations / krylov_dim )
