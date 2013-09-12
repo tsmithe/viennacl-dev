@@ -45,6 +45,99 @@ def test_kernel(*args, **kwargs):
     if act_diff > epsilon:
         raise RuntimeError("Failed solving A \ B for upper triangular A")
 
+    vcl_X = p.solve(vcl_A_unit_upper, vcl_B, p.unit_upper_tag())
+    X = sp.solve(A_unit_upper, B)
+    act_diff = math.fabs(diff(X, vcl_X))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed solving A \ B for unit upper triangular A")
+
+    vcl_X = p.solve(vcl_A_lower, vcl_B, p.lower_tag())
+    X = sp.solve(A_lower, B, lower = True)
+    act_diff = math.fabs(diff(X, vcl_X))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed solving A \ B for lower triangular A")
+
+    vcl_X = p.solve(vcl_A_unit_lower, vcl_B, p.unit_lower_tag())
+    X = sp.solve(A_unit_lower, B, lower = True)
+    act_diff = math.fabs(diff(X, vcl_X))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed solving A \ B for unit lower triangular A")
+
+    # A^T \ B
+    vcl_X = p.solve(vcl_A_trans_upper, vcl_B, p.upper_tag())
+    X = sp.solve(A_trans_upper, B)
+    act_diff = math.fabs(diff(X, vcl_X))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed solving A^T \ B for upper triangular A")
+
+    vcl_X = p.solve(vcl_A_trans_unit_upper, vcl_B, p.unit_upper_tag())
+    X = sp.solve(A_trans_unit_upper, B)
+    act_diff = math.fabs(diff(X, vcl_X))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed solving A^T \ B for unit upper triangular A")
+
+    vcl_X = p.solve(vcl_A_trans_lower, vcl_B, p.lower_tag())
+    X = sp.solve(A_trans_lower, B, lower = True)
+    act_diff = math.fabs(diff(X, vcl_X))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed solving A^T \ B for lower triangular A")
+
+    vcl_X = p.solve(vcl_A_trans_unit_lower, vcl_B, p.unit_lower_tag())
+    X = sp.solve(A_trans_unit_lower, B, lower = True)
+    act_diff = math.fabs(diff(X, vcl_X))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed solving A^T \ B for unit lower triangular A")
+
+    # A \ B^T
+    vcl_X = p.solve(vcl_A_upper, vcl_B_trans, p.upper_tag())
+    X = sp.solve(A_upper, B_trans)
+    act_diff = math.fabs(diff(X, vcl_X))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed solving A \ B^T for upper triangular A")
+
+    vcl_X = p.solve(vcl_A_unit_upper, vcl_B_trans, p.unit_upper_tag())
+    X = sp.solve(A_unit_upper, B_trans)
+    act_diff = math.fabs(diff(X, vcl_X))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed solving A \ B^T for unit upper triangular A")
+
+    vcl_X = p.solve(vcl_A_lower, vcl_B_trans, p.lower_tag())
+    X = sp.solve(A_lower, B_trans, lower = True)
+    act_diff = math.fabs(diff(X, vcl_X))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed solving A \ B^T for lower triangular A")
+
+    vcl_X = p.solve(vcl_A_unit_lower, vcl_B_trans, p.unit_lower_tag())
+    X = sp.solve(A_unit_lower, B_trans, lower = True)
+    act_diff = math.fabs(diff(X, vcl_X))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed solving A \ B^T for unit lower triangular A")
+
+    # A^T \ B^T
+    vcl_X = p.solve(vcl_A_trans_upper, vcl_B_trans, p.upper_tag())
+    X = sp.solve(A_trans_upper, B_trans)
+    act_diff = math.fabs(diff(X, vcl_X))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed solving A^T \ B^T for upper triangular A")
+
+    vcl_X = p.solve(vcl_A_trans_unit_upper, vcl_B_trans, p.unit_upper_tag())
+    X = sp.solve(A_trans_unit_upper, B_trans)
+    act_diff = math.fabs(diff(X, vcl_X))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed solving A^T \ B^T for unit upper triangular A")
+
+    vcl_X = p.solve(vcl_A_trans_lower, vcl_B_trans, p.lower_tag())
+    X = sp.solve(A_trans_lower, B_trans, lower = True)
+    act_diff = math.fabs(diff(X, vcl_X))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed solving A^T \ B^T for lower triangular A")
+
+    vcl_X = p.solve(vcl_A_trans_unit_lower, vcl_B_trans, p.unit_lower_tag())
+    X = sp.solve(A_trans_unit_lower, B_trans, lower = True)
+    act_diff = math.fabs(diff(X, vcl_X))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed solving A^T \ B^T for unit lower triangular A")
+
     return os.EX_OK
 
 
@@ -69,7 +162,7 @@ def test():
     epsilon = 1.0E-11
     print("  eps:      %s" % epsilon)
     test_matrix_layout(test_matrix_solvers, test_kernel, epsilon, p.float64,
-                       5, 5, 5,
+                       9, 9, 9,
                        num_matrices = 2)
     #test_matrix_layout(test_matrix_solvers, run_test, 
     #                   epsilon, p.float64, 5,5,5)
