@@ -353,7 +353,8 @@ def solve(A, B, tag):
 
     try:
         return result_type(A.vcl_leaf.solve(B.vcl_leaf, tag.vcl_tag),
-                           dtype = A.dtype)
+                           dtype = B.dtype,
+                           layout = B.layout)
     except AttributeError:
         raise TypeError("tag must be a supported solver tag!")
 Matrix.solve = solve # for convenience..
