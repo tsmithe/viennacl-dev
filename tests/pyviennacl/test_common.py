@@ -1095,7 +1095,7 @@ def test_matrix_solvers(test_func,
     vcl_big_slice_A_upper[size1:-size1:2, size2::3] = vcl_A_upper
     vcl_slice_A_upper = vcl_big_slice_A_upper[size1:-size1:2, size2::3]
 
-    vcl_A_trans_upper = p.Matrix(A_trans, layout = A_layout)
+    vcl_A_trans_upper = p.Matrix(A_trans_upper, layout = A_layout)
 
     vcl_big_range_A_trans_upper = p.Matrix(big_A_trans, layout = A_layout)
     vcl_big_range_A_trans_upper[size2:2*size2, size1:2*size1] = vcl_A_trans_upper
@@ -1168,6 +1168,27 @@ def test_matrix_solvers(test_func,
     vcl_big_slice_A_trans_unit_lower[size2:-size2:2, size1::3] = vcl_A_trans_unit_lower
     vcl_slice_A_trans_unit_lower = vcl_big_slice_A_trans_unit_lower[size2:-size2:2, size1::3]
 
+    #  -- B
+    vcl_B = p.Matrix(B, layout = B_layout)
+
+    vcl_big_range_B = p.Matrix(big_B, layout = B_layout)
+    vcl_big_range_B[size2:2*size2, size3:2*size3] = vcl_B
+    vcl_range_B = vcl_big_range_B[size2:2*size2, size3:2*size3]
+
+    vcl_big_slice_B = p.Matrix(big_B, layout = B_layout)
+    vcl_big_slice_B[size2:-size2:2, size3::3] = vcl_B
+    vcl_slice_B = vcl_big_slice_B[size2:-size2:2, size3::3]
+
+    vcl_B_trans = p.Matrix(B_trans, layout = B_layout)
+
+    vcl_big_range_B_trans = p.Matrix(big_B_trans, layout = B_layout)
+    vcl_big_range_B_trans[size3:2*size3, size2:2*size2] = vcl_B_trans
+    vcl_range_B_trans = vcl_big_range_B_trans[size3:2*size3, size2:2*size2]
+
+    vcl_big_slice_B_trans = p.Matrix(big_B_trans, layout = B_layout)
+    vcl_big_slice_B_trans[size3:-size3:2, size2::3] = vcl_B_trans
+    vcl_slice_B_trans = vcl_big_slice_B_trans[size3:-size3:2, size2::3]
+
     #  -- B_upper
     vcl_B_upper = p.Matrix(B_upper, layout = B_layout)
 
@@ -1179,7 +1200,7 @@ def test_matrix_solvers(test_func,
     vcl_big_slice_B_upper[size2:-size2:2, size3::3] = vcl_B_upper
     vcl_slice_B_upper = vcl_big_slice_B_upper[size2:-size2:2, size3::3]
 
-    vcl_B_trans_upper = p.Matrix(B_trans, layout = B_layout)
+    vcl_B_trans_upper = p.Matrix(B_trans_upper, layout = B_layout)
 
     vcl_big_range_B_trans_upper = p.Matrix(big_B_trans, layout = B_layout)
     vcl_big_range_B_trans_upper[size3:2*size3, size2:2*size2] = vcl_B_trans_upper
@@ -1260,14 +1281,16 @@ def test_matrix_solvers(test_func,
                         (A_upper, A_unit_upper, A_lower, A_unit_lower,
                          A_trans_upper, A_trans_unit_upper,
                          A_trans_lower, A_trans_unit_lower,),
-                        (B_upper, B_unit_upper, B_lower, B_unit_lower,
+                        (B, B_trans,
+                         B_upper, B_unit_upper, B_lower, B_unit_lower,
                          B_trans_upper, B_trans_unit_upper,
                          B_trans_lower, B_trans_unit_lower,),
                         (vcl_A_upper, vcl_A_unit_upper,
                          vcl_A_lower, vcl_A_unit_lower,
                          vcl_A_trans_upper, vcl_A_trans_unit_upper,
                          vcl_A_trans_lower, vcl_A_trans_unit_lower,),
-                        (vcl_B_upper, vcl_B_unit_upper,
+                        (vcl_B, vcl_B_trans,
+                         vcl_B_upper, vcl_B_unit_upper,
                          vcl_B_lower, vcl_B_unit_lower,
                          vcl_B_trans_upper, vcl_B_trans_unit_upper,
                          vcl_B_trans_lower, vcl_B_trans_unit_lower,),
@@ -1285,14 +1308,16 @@ def test_matrix_solvers(test_func,
                         (A_upper, A_unit_upper, A_lower, A_unit_lower,
                          A_trans_upper, A_trans_unit_upper,
                          A_trans_lower, A_trans_unit_lower,),
-                        (B_upper, B_unit_upper, B_lower, B_unit_lower,
+                        (B, B_trans,
+                         B_upper, B_unit_upper, B_lower, B_unit_lower,
                          B_trans_upper, B_trans_unit_upper,
                          B_trans_lower, B_trans_unit_lower,),
                         (vcl_A_upper, vcl_A_unit_upper,
                          vcl_A_lower, vcl_A_unit_lower,
                          vcl_A_trans_upper, vcl_A_trans_unit_upper,
                          vcl_A_trans_lower, vcl_A_trans_unit_lower,),
-                        (vcl_range_B_upper, vcl_range_B_unit_upper,
+                        (vcl_range_B, vcl_range_B_trans,
+                         vcl_range_B_upper, vcl_range_B_unit_upper,
                          vcl_range_B_lower, vcl_range_B_unit_lower,
                          vcl_range_B_trans_upper,vcl_range_B_trans_unit_upper,
                          vcl_range_B_trans_lower,vcl_range_B_trans_unit_lower,),
@@ -1310,14 +1335,16 @@ def test_matrix_solvers(test_func,
                         (A_upper, A_unit_upper, A_lower, A_unit_lower,
                          A_trans_upper, A_trans_unit_upper,
                          A_trans_lower, A_trans_unit_lower,),
-                        (B_upper, B_unit_upper, B_lower, B_unit_lower,
+                        (B, B_trans,
+                         B_upper, B_unit_upper, B_lower, B_unit_lower,
                          B_trans_upper, B_trans_unit_upper,
                          B_trans_lower, B_trans_unit_lower,),
                         (vcl_A_upper, vcl_A_unit_upper,
                          vcl_A_lower, vcl_A_unit_lower,
                          vcl_A_trans_upper, vcl_A_trans_unit_upper,
                          vcl_A_trans_lower, vcl_A_trans_unit_lower,),
-                        (vcl_slice_B_upper, vcl_slice_B_unit_upper,
+                        (vcl_slice_B, vcl_slice_B_trans,
+                         vcl_slice_B_upper, vcl_slice_B_unit_upper,
                          vcl_slice_B_lower, vcl_slice_B_unit_lower,
                          vcl_slice_B_trans_upper,vcl_slice_B_trans_unit_upper,
                          vcl_slice_B_trans_lower,vcl_slice_B_trans_unit_lower,),
@@ -1335,14 +1362,16 @@ def test_matrix_solvers(test_func,
                         (A_upper, A_unit_upper, A_lower, A_unit_lower,
                          A_trans_upper, A_trans_unit_upper,
                          A_trans_lower, A_trans_unit_lower,),
-                        (B_upper, B_unit_upper, B_lower, B_unit_lower,
+                        (B, B_trans,
+                         B_upper, B_unit_upper, B_lower, B_unit_lower,
                          B_trans_upper, B_trans_unit_upper,
                          B_trans_lower, B_trans_unit_lower,),
                         (vcl_range_A_upper, vcl_range_A_unit_upper,
                          vcl_range_A_lower, vcl_range_A_unit_lower,
                          vcl_range_A_trans_upper,vcl_range_A_trans_unit_upper,
                          vcl_range_A_trans_lower,vcl_range_A_trans_unit_lower,),
-                        (vcl_B_upper, vcl_B_unit_upper,
+                        (vcl_B, vcl_B_trans,
+                         vcl_B_upper, vcl_B_unit_upper,
                          vcl_B_lower, vcl_B_unit_lower,
                          vcl_B_trans_upper, vcl_B_trans_unit_upper,
                          vcl_B_trans_lower, vcl_B_trans_unit_lower,),
@@ -1360,14 +1389,16 @@ def test_matrix_solvers(test_func,
                         (A_upper, A_unit_upper, A_lower, A_unit_lower,
                          A_trans_upper, A_trans_unit_upper,
                          A_trans_lower, A_trans_unit_lower,),
-                        (B_upper, B_unit_upper, B_lower, B_unit_lower,
+                        (B, B_trans,
+                         B_upper, B_unit_upper, B_lower, B_unit_lower,
                          B_trans_upper, B_trans_unit_upper,
                          B_trans_lower, B_trans_unit_lower,),
                         (vcl_range_A_upper, vcl_range_A_unit_upper,
                          vcl_range_A_lower, vcl_range_A_unit_lower,
                          vcl_range_A_trans_upper,vcl_range_A_trans_unit_upper,
                          vcl_range_A_trans_lower,vcl_range_A_trans_unit_lower,),
-                        (vcl_range_B_upper, vcl_range_B_unit_upper,
+                        (vcl_range_B, vcl_range_B_trans,
+                         vcl_range_B_upper, vcl_range_B_unit_upper,
                          vcl_range_B_lower, vcl_range_B_unit_lower,
                          vcl_range_B_trans_upper,vcl_range_B_trans_unit_upper,
                          vcl_range_B_trans_lower,vcl_range_B_trans_unit_lower,),
@@ -1385,14 +1416,16 @@ def test_matrix_solvers(test_func,
                         (A_upper, A_unit_upper, A_lower, A_unit_lower,
                          A_trans_upper, A_trans_unit_upper,
                          A_trans_lower, A_trans_unit_lower,),
-                        (B_upper, B_unit_upper, B_lower, B_unit_lower,
+                        (B, B_trans,
+                         B_upper, B_unit_upper, B_lower, B_unit_lower,
                          B_trans_upper, B_trans_unit_upper,
                          B_trans_lower, B_trans_unit_lower,),
                         (vcl_range_A_upper, vcl_range_A_unit_upper,
                          vcl_range_A_lower, vcl_range_A_unit_lower,
                          vcl_range_A_trans_upper,vcl_range_A_trans_unit_upper,
                          vcl_range_A_trans_lower,vcl_range_A_trans_unit_lower,),
-                        (vcl_slice_B_upper, vcl_slice_B_unit_upper,
+                        (vcl_slice_B, vcl_slice_B_trans,
+                         vcl_slice_B_upper, vcl_slice_B_unit_upper,
                          vcl_slice_B_lower, vcl_slice_B_unit_lower,
                          vcl_slice_B_trans_upper,vcl_slice_B_trans_unit_upper,
                          vcl_slice_B_trans_lower,vcl_slice_B_trans_unit_lower,),
@@ -1410,14 +1443,16 @@ def test_matrix_solvers(test_func,
                         (A_upper, A_unit_upper, A_lower, A_unit_lower,
                          A_trans_upper, A_trans_unit_upper,
                          A_trans_lower, A_trans_unit_lower,),
-                        (B_upper, B_unit_upper, B_lower, B_unit_lower,
+                        (B, B_trans,
+                         B_upper, B_unit_upper, B_lower, B_unit_lower,
                          B_trans_upper, B_trans_unit_upper,
                          B_trans_lower, B_trans_unit_lower,),
                         (vcl_slice_A_upper, vcl_slice_A_unit_upper,
                          vcl_slice_A_lower, vcl_slice_A_unit_lower,
                          vcl_slice_A_trans_upper,vcl_slice_A_trans_unit_upper,
                          vcl_slice_A_trans_lower,vcl_slice_A_trans_unit_lower,),
-                        (vcl_B_upper, vcl_B_unit_upper,
+                        (vcl_B, vcl_B_trans,
+                         vcl_B_upper, vcl_B_unit_upper,
                          vcl_B_lower, vcl_B_unit_lower,
                          vcl_B_trans_upper, vcl_B_trans_unit_upper,
                          vcl_B_trans_lower, vcl_B_trans_unit_lower,),
@@ -1435,14 +1470,16 @@ def test_matrix_solvers(test_func,
                         (A_upper, A_unit_upper, A_lower, A_unit_lower,
                          A_trans_upper, A_trans_unit_upper,
                          A_trans_lower, A_trans_unit_lower,),
-                        (B_upper, B_unit_upper, B_lower, B_unit_lower,
+                        (B, B_trans,
+                         B_upper, B_unit_upper, B_lower, B_unit_lower,
                          B_trans_upper, B_trans_unit_upper,
                          B_trans_lower, B_trans_unit_lower,),
                         (vcl_slice_A_upper, vcl_slice_A_unit_upper,
                          vcl_slice_A_lower, vcl_slice_A_unit_lower,
                          vcl_slice_A_trans_upper,vcl_slice_A_trans_unit_upper,
                          vcl_slice_A_trans_lower,vcl_slice_A_trans_unit_lower,),
-                        (vcl_range_B_upper, vcl_range_B_unit_upper,
+                        (vcl_range_B, vcl_range_B_trans,
+                         vcl_range_B_upper, vcl_range_B_unit_upper,
                          vcl_range_B_lower, vcl_range_B_unit_lower,
                          vcl_range_B_trans_upper,vcl_range_B_trans_unit_upper,
                          vcl_range_B_trans_lower,vcl_range_B_trans_unit_lower,),
@@ -1460,14 +1497,16 @@ def test_matrix_solvers(test_func,
                         (A_upper, A_unit_upper, A_lower, A_unit_lower,
                          A_trans_upper, A_trans_unit_upper,
                          A_trans_lower, A_trans_unit_lower,),
-                        (B_upper, B_unit_upper, B_lower, B_unit_lower,
+                        (B, B_trans,
+                         B_upper, B_unit_upper, B_lower, B_unit_lower,
                          B_trans_upper, B_trans_unit_upper,
                          B_trans_lower, B_trans_unit_lower,),
                         (vcl_slice_A_upper, vcl_slice_A_unit_upper,
                          vcl_slice_A_lower, vcl_slice_A_unit_lower,
                          vcl_slice_A_trans_upper,vcl_slice_A_trans_unit_upper,
                          vcl_slice_A_trans_lower,vcl_slice_A_trans_unit_lower,),
-                        (vcl_slice_B_upper, vcl_slice_B_unit_upper,
+                        (vcl_slice_B, vcl_slice_B_trans,
+                         vcl_slice_B_upper, vcl_slice_B_unit_upper,
                          vcl_slice_B_lower, vcl_slice_B_unit_lower,
                          vcl_slice_B_trans_upper,vcl_slice_B_trans_unit_upper,
                          vcl_slice_B_trans_lower,vcl_slice_B_trans_unit_lower,),

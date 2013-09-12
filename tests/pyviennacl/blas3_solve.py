@@ -30,18 +30,20 @@ def test_kernel(*args, **kwargs):
 
     epsilon = args[0]
     A_upper, A_unit_upper, A_lower, A_unit_lower, A_trans_upper, A_trans_unit_upper, A_trans_lower, A_trans_unit_lower = args[1]
-    B_upper, B_unit_upper, B_lower, B_unit_lower, B_trans_upper, B_trans_unit_upper, B_trans_lower, B_trans_unit_lower = args[2]
+    B, B_trans, B_upper, B_unit_upper, B_lower, B_unit_lower, B_trans_upper, B_trans_unit_upper, B_trans_lower, B_trans_unit_lower = args[2]
     vcl_A_upper, vcl_A_unit_upper, vcl_A_lower, vcl_A_unit_lower, vcl_A_trans_upper, vcl_A_trans_unit_upper, vcl_A_trans_lower, vcl_A_trans_unit_lower = args[3]
-    vcl_B_upper, vcl_B_unit_upper, vcl_B_lower, vcl_B_unit_lower, vcl_B_trans_upper, vcl_B_trans_unit_upper, vcl_B_trans_lower, vcl_B_trans_unit_lower = args[4]
+    vcl_B, vcl_B_trans, vcl_B_upper, vcl_B_unit_upper, vcl_B_lower, vcl_B_unit_lower, vcl_B_trans_upper, vcl_B_trans_unit_upper, vcl_B_trans_lower, vcl_B_trans_unit_lower = args[4]
 
     # solve and in-place solve
     # transpositions: A \ B, A^T \ B, A \ B^T, A^T \ B^T
     # tags: lower, unit_lower, upper, unit_upper, cg, bicgstab, gmres
 
     # A \ B
-    #vcl_X = p.solve(vcl_A, vcl_B, p.upper_tag())
-    #X = sp.solve(A, B)
-    #print(X - vcl_X)
+    vcl_X = p.solve(vcl_A_upper, vcl_B, p.upper_tag())
+    X = sp.solve(A_upper, B)
+    act_diff = math.fabs(diff(X, vcl_X))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed solving A \ B for upper triangular A")
 
     return os.EX_OK
 
