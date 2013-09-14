@@ -151,7 +151,7 @@ def test_kernel(*args, **kwargs):
         raise RuntimeError("Failed solving A \ b using GMRES: %s" % act_diff)
     print("Test passed: solving A \ b using GMRES: %s" % act_diff)
 
-    # CG -- TODO
+    # CG -- TODO: need a symmetric positive definite matrix for test
     #vcl_X = p.solve(vcl_A_upper, vcl_Bvec, p.cg_tag())
     #X, info = spsp.cg(A_upper, Bvec)
     #act_diff = math.fabs(diff(X, vcl_X))
@@ -159,7 +159,7 @@ def test_kernel(*args, **kwargs):
     #    raise RuntimeError("Failed solving A \ b using CG: %s" % act_diff)
     #print("Test passed: solving A \ b using CG: %s" % act_diff)
 
-    # BiCGStab -- TODO
+    # BiCGStab -- TODO: need a non-symmetric matrix for test
     #vcl_X = p.solve(vcl_A_upper, vcl_Bvec, p.cg_tag())
     #X, info = spsp.cg(A_upper, Bvec)
     #act_diff = math.fabs(diff(X, vcl_X))

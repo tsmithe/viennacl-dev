@@ -1,3 +1,158 @@
+"""
+This submodule contains PyViennaCL's core functionality, including types for
+representing and manipulating scalars, vectors and matrices on the host and
+compute device, with a variety of numerical data types (equivalent to the
+NumPy concept of ``dtype``).
+
+Also provided are routines for type conversion, arithmetic and linear
+algebra, to BLAS level 3. Vector and matrix types can be sensibly converted
+to and from NumPy arrays, and support for SciPy sparse matrix types is forth-
+coming.
+
+Background information
+----------------------
+Because in heterogeneous computing systems copying data across the bus from
+host memory to device memory (or vice versa) commonly incurs a proportionally
+substantial wait, PyViennaCL adopts a policy of delayed execution.
+Arithmetical expressions are represented as a binary tree, and are only
+dispatched to be computed when the result of the computation is necessary.
+
+Thus, the result of adding two Matrix objects is not another Matrix object,
+but an Add object, which is converted to a Matrix when the result is accessed.
+Consequently, this submodule provides a number of classes for elementary
+arithmetical operations, such as Add, for representation in an expression
+tree. Each of these expression tree classes is a subclass of Node type, with
+Node providing basic functionality for the construction of the expression tree.
+
+In the language of ViennaCL, 'data' classes such as Scalar, Vector and
+Matrix constitute leaves on the expression tree, and as such, each of these
+data classes inherits from the Leaf type, which provides general functionality
+for leaf construction.
+
+Node and Leaf instances are flattened into a Statement object when the
+expression is executed. The Statement class recursively constructs the C++
+object equivalent to the expression tree as represented in Python, and this is
+then dispatched to the compute device. The result is cached so that multiple
+identical computations are not made.
+
+On object construction and access
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+For the same reasons of bus and compute latency, PyViennaCL does not support
+the elementwise construction of Matrix or Vector objects, or the accessing of
+individual scalar elements from any such type; the waits incurred make such
+access painfully slow.
+
+Instead, you must construct dense matrices and vectors using preconstructed
+types: NumPy ``array``s can be supplied to construct both matrices an
+vectors -- as long as the arrays are of the correct dimensionality -- and
+Python lists can be supplied to construct vectors, as long as the ``dtype``
+of the list is comprehensible. Construction from lists, but not arrays, is
+supported if the element type is a PyViennaCL scalar type. In both the list
+case and the array case, you can use Python or NumPy numeric data types:
+NumPy ``dtype``s are recommended, since these are more explicit.
+
+The exception to this rule is the set of PyViennaCL sparse matrix types, which
+do support elementwise construction and access, because they are backed by a
+transparent host-memory cache which is only flushed to and from the device
+when necessary, in the manner of the delayed execution described above.
+
+To force the execution of an expression or the flushing of a matrix, access
+the ``result`` attribute. To retrieve a NumPy ``array`` containing the data
+of the PyViennaCL Leaf or Node, use the ``as_ndarray()`` method. If you are
+not particularly concerned about the type of object you retrieve, access the
+``value`` attribute: for PyViennaCL scalars, this provides a NumPy / Python
+scalar object; for vectors and matrices, it provides an appropriate NumPy
+``array``.
+
+Ranges and slices of matrices and vectors are well supported, including
+the assignment of one matrix to a sub-matrix of another, as long as the matrix
+dimensions are commensurable. For instance::
+
+  >>> a[5:10, 5:10] = b                                  # doctest: +SKIP 
+
+Submodule contents
+------------------
+
+Leaf types
+^^^^^^^^^^
+================ ================
+HostScalar       Represents a scalar in host memory
+Scalar           Represents a scalar in compute device memory
+Vector           Represents a vector in compute device memory
+CompressedMatrix Represents a sparse matrix with compressed-row storage
+                 in compute device memory
+CoordinateMatrix Represents a sparse matrix with a coordinate storage format
+                 in compute device memory
+ELLMatrix        Represents a sparse matrix with an ELL storage format in
+                 compute device memory
+HybridMatrix     Represents a sparse matrix with a hybrid storage format,
+                 combining ELL and compressed-row storage, in compute device
+                 memory
+Matrix           Represents a dense matrix, with either row-major (default) or
+                 column-major storage.
+================ ================
+
+Supported numeric data types:
+  int8, int16, int32, int64,
+  uint8, uint16, uint32, uint64,
+  float16, float32, float64.
+
+Many operations are only currently supported using a floating poit numeric
+data type, but wider numeric support is forthcoming in later versions.
+
+Node types
+^^^^^^^^^^
+=========== 
+Norm_1
+Norm_2
+Norm_Inf
+ElementAbs
+ElementAcos
+ElementAsin
+ElementAtan
+ElementCeil
+ElementCos
+ElementCosh
+ElementExp
+ElementFabs
+ElementFloor
+ElementLog
+ElementLog10
+ElementSin
+ElementSinh
+ElementSqrt
+ElementTan
+ElementTanh
+Trans
+Assign
+InplaceAdd
+InplaceSub
+Add
+Sub
+Mul
+Div
+ElementProd
+ElementDiv
+Dot
+=========== 
+
+Most of these expression classes are implicitly constructed by arithmetical
+convenience functions, including the standard Python arithmetic operators.
+For instance, for two commensurate objects ``a`` and ``b``::
+
+  >>> ((a + b) == p.Add(a, b)).all()                     # doctest: +SKIP
+  True
+
+TODO:
+  1. equivalence operators
+  2. convenience functions
+  3. short descriptions for node types
+  4. docstrings for classes and functions below
+  5. __all__
+  6. ...
+
+"""
+
 from __future__ import division
 from pyviennacl import (_viennacl as _v,
                         util)
@@ -17,14 +172,6 @@ except:
     WITH_SCIPY = False
 
 log = logging.getLogger(__name__)
-
-# This dict maps ViennaCL container type families onto the strings used for them
-#vcl_statement_node_type_family_strings = {
-#    _v.statement_node_type_family.COMPOSITE_OPERATION_FAMILY: 'node',
-#    _v.statement_node_type_family.SCALAR_TYPE_FAMILY: None,
-#    _v.statement_node_type_family.VECTOR_TYPE_FAMILY: None,
-#    _v.statement_node_type_family.MATRIX_TYPE_FAMILY: None
-#}
 
 # This dict maps ViennaCL container subtypes onto the strings used for them
 vcl_statement_node_subtype_strings = {
@@ -2083,3 +2230,6 @@ class Statement:
             log.error("EXCEPTION EXECUTING: %s" %(self.statement[0].express()))
             raise
         return self.result
+
+
+# TODO: __all__
