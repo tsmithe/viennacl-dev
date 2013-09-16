@@ -36,7 +36,6 @@ PyViennaCL's high-level linear algebra functions, run::
 or::
 
    >>> help(p.linalg)                                    # doctest: +SKIP
-
 """
 
 from .pycore import *
