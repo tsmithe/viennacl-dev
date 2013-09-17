@@ -13,13 +13,13 @@ PyViennaCL is divided into four submodules, of which three are designed
 for direct use by users:
 
   * _viennacl: a raw C++ interface to ViennaCL, with no stable API;
-  * pycore: user-friendly classes for representing the main ViennaCL
+  * :doc:`pycore`: user-friendly classes for representing the main ViennaCL
     objects, such as Matrix or Vector;
-  * linalg: an explicit interface to a number of ViennaCL's linear algebra 
-    routines, such as matrix solvers and eigenvalue computation;
-  * util: utility functions, such as to construct an appropriate ViennaCL
-    object from an ndarray (Matrix or Vector), or to provide basic debug
-    logging.
+  * :doc:`linalg`: an explicit interface to a number of ViennaCL's linear
+    algebra routines, such as matrix solvers and eigenvalue computation;
+  * :doc:`util`: utility functions, such as to construct an appropriate
+    ViennaCL object from an ndarray (Matrix or Vector), or to provide basic
+    debug logging.
 
 Nonetheless, all of PyViennaCL's functionality is available from the top-
 level pyviennacl namespace. So, if you want help on the Matrix class, you

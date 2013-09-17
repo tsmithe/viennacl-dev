@@ -1,0 +1,2 @@
+.. automodule:: pyviennacl.pycore
+   :members: 
