@@ -9,90 +9,103 @@ log = logging.getLogger(__name__)
 
 class lower_tag:
     """
-    TODO: docstring
+    Instruct the solver to solve for a lower triangular system matrix
     """
     vcl_tag = _v.lower_tag()
 
 class unit_lower_tag:
     """
-    TODO: docstring
+    Instruct the solver to solve for a unit lower triangular system matrix
     """
     vcl_tag = _v.unit_lower_tag()
 
 class upper_tag:
     """
-    TODO: docstring
+    Instruct the solver to solve for an upper triangular system matrix
     """
     vcl_tag = _v.upper_tag()
 
 class unit_upper_tag:
     """
-    TODO: docstring
+    Instruct the solver to solve for a unit upper triangular system matrix
     """
     vcl_tag = _v.unit_upper_tag()
 
 class cg_tag:
     """
-    A tag for the conjugate gradient solver.
+    Instruct the solver to solve using the conjugate gradient solver.
 
-    Used for supplying solver parameters and for dispatching the solve()
-    function.
+    Assumes that the system matrix is symmetric positive definite.
+
+    Used for supplying solver parameters.
     """
     def __init__(self, tolerance = 1e-8, max_iterations = 300):
         """
-        Construct a cg_tag. Parameters are:
-         tolerance: Relative tolerance for the residual
-                    (solver quits if ||r|| < tolerance * ||r_initial|| obtains)
-         max_iterations: The maximum number of iterations
+        Construct a cg_tag.
+
+        Parameters
+        ----------
+        tolerance : float, optional
+            Relative tolerance for the residual
+            (solver quits if ||r|| < tolerance * ||r_initial|| obtains)
+        max_iterations : int, optional
+            The maximum number of iterations
         """
         self.vcl_tag = _v.cg_tag(tolerance, max_iterations)
 
     @property
     def tolerance(self):
         """
-        Returns the relative tolerance
+        The relative tolerance
         """
         return self.vcl_tag.tolerance
 
     @property
     def max_iterations(self):
         """
-        Returns the maximum number of iterations
+        The maximum number of iterations
         """
         return self.vcl_tag.max_iterations
 
     @property
     def iters(self):
         """
-        Returns the number of solver iterations
+        The number of solver iterations
         """
         return self.vcl_tag.iters
 
     @property
     def error(self):
         """
-        Returns the estimated relative error at the end of the solver run
+        The estimated relative error at the end of the solver run
         """
         return self.vcl_tag.error
 
 
 class bicgstab_tag:
     """
-    A tag for the stabilised bi-conjugate gradient (BiCGStab) solver.
+    Instruct the solver to solve using the stabilised bi-conjugate gradient
+    (BiCGStab) solver.
 
-    Used for supplying solver parameters and for dispatching the solve()
-    function.
+    Assumes that the system matrix is non-symmetric.
+
+    Used for supplying solver parameters.
     """
     def __init__(self, tolerance = 1e-8, 
                  max_iterations = 400, max_iterations_before_restart = 200):
         """
-        Construct a bicgstab_tag. Parameters are:
-         tolerance: Relative tolerance for the residual
-                    (solver quits if ||r|| < tolerance * ||r_initial|| obtains)
-         max_iterations: Maximum number of iterations
-         max_iterations_before restart: Maximum number of iterations before
-                                        BiCGStab is reinitialised, to avoid
-                                        accumulation of round-off errors.
+        Construct a bicgstab_tag.
+
+        Parameters
+        ----------
+        tolerance : float, optional
+            Relative tolerance for the residual
+            (solver quits if ||r|| < tolerance * ||r_initial|| obtains)
+        max_iterations : int, optional
+            Maximum number of iterations
+        max_iterations_before restart : int, optional
+            Maximum number of iterations before BiCGStab is reinitialised,
+            to avoid accumulation of round-off errors.
         """
         self.vcl_tag = _v.bicgstab_tag(tolerance, max_iterations,
                                        max_iterations_before_restart)
@@ -100,119 +113,128 @@ class bicgstab_tag:
     @property
     def tolerance(self):
         """
-        Returns the relative tolerance
+        The relative tolerance
         """
         return self.vcl_tag.tolerance
 
     @property
     def max_iterations(self):
         """
-        Returns the maximum number of iterations
+        The maximum number of iterations
         """
         return self.vcl_tag.max_iterations
 
     @property
     def max_iterations(self):
         """
-        Returns the maximum number of iterations before a restart
+        The maximum number of iterations before a restart
         """
         return self.vcl_tag.max_iterations_before_restart
 
     @property
     def iters(self):
         """
-        Returns the number of solver iterations
+        The number of solver iterations
         """
         return self.vcl_tag.iters
 
     @property
     def error(self):
         """
-        Returns the estimated relative error at the end of the solver run
+        The estimated relative error at the end of the solver run
         """
         return self.vcl_tag.error
 
 
 class gmres_tag:
     """
-    A tag for the GMRES solver.
+    Instruct the solver to solve using the GMRES solver.
 
-    Used for supplying solver parameters and for dispatching the solve()
-    function.
+    Used for supplying solver parameters.
     """
     def __init__(self,tolerance = 1e-8, max_iterations = 300, krylov_dim = 20):
         """
-        Construct a gmres_tag. Parameters are:
-         tolerance: Relative tolerance for the residual
-                    (solver quits if ||r|| < tolerance * ||r_initial|| obtains)
-         max_iterations: Maximum number of iterations, including restarts
-         krylov_dim: The maximum dimension of the Krylov space before restart
-                     (number of restarts found then by
-                         max_iterations / krylov_dim )
+        Construct a gmres_tag
+        
+        Parameters
+        ----------
+        tolerance : float, optional
+            Relative tolerance for the residual
+            (solver quits if ||r|| < tolerance * ||r_initial|| obtains)
+        max_iterations : int, optional
+            Maximum number of iterations, including restarts
+        krylov_dim : int, optional
+            The maximum dimension of the Krylov space before restart
+            (number of restarts can be computed as max_iterations / krylov_dim)
         """
         self.vcl_tag = _v.gmres_tag(tolerance, max_iterations, krylov_dim)
 
     @property
     def tolerance(self):
         """
-        Returns the relative tolerance
+        The relative tolerance
         """
         return self.vcl_tag.tolerance
 
     @property
     def max_iterations(self):
         """
-        Returns the maximum number of iterations
+        The maximum number of iterations
         """
         return self.vcl_tag.max_iterations
 
     @property
     def krylov_dim(self):
         """
-        Returns the maximum dimension of the Krylov space before restart
+        The maximum dimension of the Krylov space before restart
         """
         return self.vcl_tag.krylov_dim
 
     @property
     def max_restarts(self):
         """
-        Returns the maximum number of GMRES restarts
+        The maximum number of GMRES restarts
         """
         return self.vcl_tag.max_restarts
 
     @property
     def iters(self):
         """
-        Returns the number of solver iterations
+        The number of solver iterations
         """
         return self.vcl_tag.iters
 
     @property
     def error(self):
         """
-        Returns the estimated relative error at the end of the solver run
+        The estimated relative error at the end of the solver run
         """
         return self.vcl_tag.error
 
 
 class power_iter_tag:
     """
-    A tag for the power iteration eigenvalue algorithm.
+    Instruct the eigenvalue computation to use the power iteration algorithm.
 
-    Used for supplying parameters and for dispatching the eig() function.
+    Used for supplying eigenvalue computation parameters.
     """
     def __init__(self, factor = 1e-8, max_iterations = 50000):
         """
-        Construct a power_iter_tag. Parameters are:
-         factor: Halt when the eigenvalue does not change more than this value.
-         max_iterations: Maximum number of iterations to compute.
+        Construct a power_iter_tag.
+        
+        Parameters
+        ----------
+        factor : float, optional
+            Halt when the eigenvalue does not change more than this value.
+        max_iterations : int, optional
+            Maximum number of iterations to compute.
         """
         self.vcl_tag = _v.power_iter_tag(factor, max_iterations)
 
     @property
     def factor(self):
         """
-        Returns the termination factor.
+        The termination factor.
 
         If the eigenvalue does not change more than this value, the algorithm
         stops.
@@ -222,62 +244,86 @@ class power_iter_tag:
     @property
     def max_iterations(self):
         """
-        Returns the maximum number of iterations
+        The maximum number of iterations
         """
         return self.vcl_tag.max_iterations
 
 
 class lanczos_tag:
     """
-    A tag for the Lanczos eigenvalue algorithm.
+    Instruct the eigenvalue computation to use the Lanczos algorithm.
 
-    Used for supplying parameters and for dispatching the eig() function.
+    Used for supplying eigenvalue computation parameters.
     """
     def __init__(self, factor = 0.75, num_eig = 10, method = 0, krylov = 100):
         """
-        Construct a lanczos_tag. Parameters are:
-         factor: Exponent of epsilon (reorthogonalisation batch tolerance)
-         num_eig: Number of eigenvalues to return
-         method: 0 for partial reorthogonalisation
-                 1 for full reorthogonalisation
-                 2 for Lanczos without reorthogonalisation
-         krylov: Maximum Krylov-space size.
+        Construct a lanczos_tag.
+
+        Parameters
+        ----------
+        factor : float 
+            Exponent of epsilon (reorthogonalisation batch tolerance)
+        num_eig : int 
+            Number of eigenvalues to return
+        method : {0, 1, 2}
+            0 for partial reorthogonalisation
+            1 for full reorthogonalisation
+            2 for Lanczos without reorthogonalisation
+        krylov : int
+            Maximum Krylov-space size
         """
         self.vcl_tag = _v.lanczos_tag(factor, num_eig, method, krylov)
 
     @property
     def factor(self):
         """
-        Returns the tolerance factor for reorthogonalisation batches,
-        expressed as the exponent of epsilon.
+        The tolerance factor for reorthogonalisation batches, expressed as
+        the exponent of epsilon.
         """
         return self.vcl_tag.factor
 
     @property
     def num_eigenvalues(self):
         """
-        Returns the number of eigenvalues to return.
+        The number of eigenvalues to return.
         """
         return self.vcl_tag.num_eigenvalues
 
     @property
     def krylov_size(self):
         """
-        Returns the size of the Kylov space.
+        The size of the Kylov space.
         """
         return self.vcl_tag.krylov_size
 
     @property
     def method(self):
         """
-        Returns the reorthogonalisation method choice.
+        The reorthogonalisation method choice.
         """
         return self.vcl_tag.method
 
 
 def plane_rotation(vec1, vec2, alpha, beta):
     """
-    TODO
+    Computes (vec1, vec2) <- (alpha*vec1+beta*vec2, -beta*vec1+alpha*vec2)
+    
+    Parameters
+    ----------
+    vec1 : Vector
+    vec2 : Vector
+    alpha : any Python, NumPy or PyViennaCL scalar (real or integer)
+    beta : any Python, NumPy or PyViennaCL scalar (real or integer)
+
+    Returns
+    -------
+    None
+
+    Notes
+    -----
+    The dtypes of the parameters must match.
+
+    Operates in-place on vec1 and vec2.
     """
     # Do an assortment of type and dtype checks...
     if isinstance(vec1, Node):
@@ -323,10 +369,24 @@ def plane_rotation(vec1, vec2, alpha, beta):
 
 
 def norm(x, ord=None):
+    """
+    Returns the vector norm of ``x``, if that is defined.
+
+    The norm returned depends on the ``ord`` parameter, as in SciPy.
+
+    Parameters
+    ----------
+    ord : {1, 2, inf}
+        Order of the norm. inf means NumPy's ``inf`` object.
+    """
     return x.norm(ord)
 
 
 def prod(A, B):
+    """
+    Returns ``Mul(A, B)`` where that is defined (see the help for ``Mul``),
+    otherwise returns ``(A * B)``.
+    """
     if not isinstance(A, MagicMethods):
         return Mul(A, B)
     return (A * B)
@@ -334,12 +394,36 @@ def prod(A, B):
 
 def solve(A, B, tag):
     """
-    TODO: docstring
+    Solve the linear system expressed by ``A x = B`` for ``x``.
 
-    A must be a Matrix
-    B can be Matrix or Vector
-    tag can be upper_tag, lower_tag, unit_upper_tag, unit_lower_tag,
-     cg_tag, bicgstab_tag or gmres_tag -- configured if necessary.
+    Parameters
+    ----------
+    A : (M, M) Matrix
+        A square matrix
+    B : {Vector, Matrix}
+        Right-hand side in ``A x = B``
+    tag : solver tag instance
+        Describes the system matrix and solver algorithm.
+        Must be one of:
+        * upper_tag
+        * unit_upper_tag
+        * lower_tag
+        * unit_lower_tag
+        * cg_tag
+        * bicgstab_tag
+        * gmres_tag
+        See the help for each tag class for more information.
+
+    Returns
+    -------
+    x : {Vector, Matrix}
+        Shape and class of ``x`` matches shape and class of ``B``.
+
+    Raises
+    ------
+    TypeError
+        If ``A`` is not a ``Matrix`` instance, or ``B`` is neither a ``Matrix``
+        nor a ``Vector`` instance, or if ``tag`` is unsupported.
     """
     if not isinstance(A, Matrix):
         raise TypeError("A must be Matrix type")
@@ -362,15 +446,29 @@ Matrix.solve = solve # for convenience..
 
 def eig(A, tag):
     """
-    TODO: docstring
+    Solve an eigenvalue problem for matrix ``A``, with results depending
+    on ``tag``.
 
-    A must be a Matrix
-    tag can be either power_iter_tag(), or lanczos_tag(),
-     configured if necessary.
+    Parameters
+    ----------
+    A : Matrix
+    tag : eigenvalue computation tag instance
+        Must be one of
+        * power_iter_tag
+        * lanczos_tag
+        See the help for each tag class for more information.
 
-    Return type depends on tag.
-     - if power_iter, then a scalar of type dtype(A)
-     - if lanczos, then an ndarray vector with same dtype as A
+    Returns
+    -------
+    x : {scalar, array-like}
+        Return type depends on ``tag``
+        * if power_iter_tag, then a scalar of type ``dtype(A).type``
+        * if lanczos_tag, then an ``ndarray`` vector with same dtype as ``A``
+
+    Raises
+    ------
+    TypeError
+        If ``A`` is not a ``Matrix`` instance, or if ``tag`` is not understood
     """
     if not isinstance(A, Matrix):
         raise TypeError("A must be a Matrix type")
@@ -388,3 +486,4 @@ def ilu(A, config):
 
 
 ## And QR decomposition..?
+
