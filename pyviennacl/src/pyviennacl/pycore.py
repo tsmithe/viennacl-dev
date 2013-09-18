@@ -80,7 +80,7 @@ Submodule contents
 
 Leaf types
 ^^^^^^^^^^
-================ ================
+================ ==================================
 HostScalar       Represents a scalar in host memory
 Scalar           Represents a scalar in compute device memory
 Vector           Represents a vector in compute device memory
@@ -95,7 +95,7 @@ HybridMatrix     Represents a sparse matrix with a hybrid storage format,
                  memory
 Matrix           Represents a dense matrix, with either row-major (default) or
                  column-major storage.
-================ ================
+================ ==================================
 
 Supported numeric data types:
   int8, int16, int32, int64,
@@ -107,7 +107,7 @@ data type, but wider numeric support is forthcoming in later versions.
 
 Node types
 ^^^^^^^^^^
-============ ============
+============ =============================================================
 Norm_1       Order-1 norm
 Norm_2       Order-2 norm
 Norm_Inf     Norm in the limit
@@ -136,13 +136,13 @@ InplaceSub   In-place subtraction
 Add          Addition (allocates returns a new object)
 Sub          Subtraction (allocates returns a new object)
 Mul          Multiplication:
-               * Scalar by scalar -> scalar;
-               * scalar by vector -> scaled vector;
-               * scalar by matrix -> scaled matrix;
-               * vector by vector -> undefined;
-               * vector by matrix -> undefined;
-               * matrix by vector -> matrix-vector product;
-               * matrix by matrix -> matrix-matrix product.
+             * Scalar by scalar -> scalar;
+             * scalar by vector -> scaled vector;
+             * scalar by matrix -> scaled matrix;
+             * vector by vector -> undefined;
+             * vector by matrix -> undefined;
+             * matrix by vector -> matrix-vector product;
+             * matrix by matrix -> matrix-matrix product.
              The concern in defining these semantics has been to preserve
              the dimensionality of the operands in the result.
              The Mul class does not map directly onto the * operator for
@@ -151,7 +151,7 @@ Div          Scalar division
 ElementProd  Elementwise scalar multiplication
 ElementDiv   Elementwise scalar division
 Dot          Inner (dot) product of two vectors
-============ ============
+============ =============================================================
 
 Most of these expression classes are implicitly constructed by arithmetical
 convenience functions, including the standard Python arithmetic operators.
