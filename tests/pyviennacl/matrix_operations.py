@@ -186,6 +186,13 @@ def run_test(*args, **kwargs):
         raise RuntimeError("Failed: elementwise matrix-matrix multiplication")
     print("Test: elementwise matrix-matrix multiplication passed")
 
+    X = vcl_A.value ** vcl_B.value
+    Y = vcl_A ** vcl_B
+    act_diff = math.fabs(diff(X, Y))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed: elementwise matrix-matrix exponentiation")
+    print("Test: elementwise matrix-matrix exponentiation passed")
+
     X = vcl_A.value / vcl_B.value
     Y = p.ElementDiv(vcl_A, vcl_B)
     act_diff = math.fabs(diff(X, Y))

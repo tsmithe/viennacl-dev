@@ -348,6 +348,43 @@ class MagicMethods(object):
         """
         return ElementDiv(self, rhs)
 
+    def __pow__(self, rhs):
+        """
+        x.__pow__(y) <==> x**y
+
+        Notes
+        -----
+        For array-like types, this is computed elementwise. But ViennaCL does
+        not currently support elementwise exponentiation in the scheduler, so
+        this incurs the computation of the expression represented by ``y`` at
+        this point. Nonetheless, the result is the appropriate PyViennaCL type.
+        """
+        if isinstance(rhs, MagicMethods):
+            if not self.shape == rhs.shape:
+                raise TypeError("Operands must have the same shape!")
+            return self.result_container_type(_v.element_pow(self.vcl_leaf,
+                                                             rhs.vcl_leaf),
+                                              dtype = self.dtype,
+                                              layout = self.layout)
+        else:
+            return self.result_container_type(self.value ** rhs,
+                                              dtype = self.dtype,
+                                              layout = self.layout)
+
+    def __rpow__(self, rhs):
+        """
+        x.__rpow__(y) <==> y**x
+        """
+        if isinstance(rhs, MagicMethods):
+            if not self.shape == rhs.shape:
+                raise TypeError("Operands must have the same shape!")
+            return self.result_container_type(_v.element_pow(rhs.vcl_leaf,
+                                                             self.vcl_leaf),
+                                              dtype = self.dtype)
+        else:
+            return self.result_container_type(rhs ** self.value,
+                                              dtype = self.dtype)
+        
     def __eq__(self, rhs):
         """
         The equality operator.
@@ -959,9 +996,9 @@ class ScalarBase(Leaf):
         Notes
         -----
         For array-like types, this is computed elementwise. But ViennaCL does
-        not currently support elementwise exponentiation, so this incurs the
-        computation of the expression represented by ``y`` at this point.
-        Nonetheless, the result is the appropriate PyViennaCL type.
+        not currently support elementwise exponentiation in the scheduler, so
+        this incurs the computation of the expression represented by ``y`` at
+        this point. Nonetheless the result is the appropriate PyViennaCL type.
         """
         if isinstance(rhs, ScalarBase):
             return self.result_container_type(rhs ** self,
@@ -1144,7 +1181,7 @@ class Vector(Leaf):
         """
         if isinstance(rhs, MagicMethods):
             if issubclass(rhs.result_container_type, Vector):
-                return Matrix(self.vcl_leaf.outer(rhs.result.vcl_leaf),
+                return Matrix(_v.outer(self.vcl_leaf, rhs.vcl_leaf),
                               dtype=self.dtype,
                               layout=COL_MAJOR) # I don't know why COL_MAJOR..
         raise TypeError("Cannot calculate the outer-product of non-vector type: %s" % type(rhs))
@@ -1724,11 +1761,11 @@ class Matrix(Leaf):
         else:
             raise IndexError("Did not understand key")
 
-    def clear(self):
-        """
-        Set every element of the matrix to 0.
-        """
-        return self.vcl_leaf.clear()
+    #def clear(self):
+    #    """
+    #    Set every element of the matrix to 0.
+    #    """
+    #    return self.vcl_leaf.clear()
 
     @property
     def T(self):
