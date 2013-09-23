@@ -39,7 +39,7 @@ add_custom_command(
                                              "${CMAKE_CURRENT_BINARY_DIR}/doc"
   COMMAND ${PYTHON_EXECUTABLE} doc/build-doc.py
   COMMAND ${CMAKE_COMMAND} -E touch ${OUTPUT}/doc-stamp
-  DEPENDS ${DEPS}
+  DEPENDS ${DEPS} build-stamp
 )
 
 add_custom_target(target ALL DEPENDS ${OUTPUT}/build-stamp ${OUTPUT}/doc-stamp)

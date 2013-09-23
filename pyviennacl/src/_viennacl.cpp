@@ -1291,15 +1291,14 @@ BOOST_PYTHON_MODULE(_viennacl)
 
   
   //EXPORT_VECTOR_CLASS(char)
-  /*EXPORT_VECTOR_CLASS(short)
+  //EXPORT_VECTOR_CLASS(short)
   EXPORT_VECTOR_CLASS(int)
   EXPORT_VECTOR_CLASS(long)
 
-  EXPORT_VECTOR_CLASS(uchar)
-  EXPORT_VECTOR_CLASS(ushort)
+  //EXPORT_VECTOR_CLASS(uchar)
+  //EXPORT_VECTOR_CLASS(ushort)
   EXPORT_VECTOR_CLASS(uint)
   EXPORT_VECTOR_CLASS(ulong)
-  */
 
   EXPORT_VECTOR_CLASS(float)
   EXPORT_VECTOR_CLASS(double)
@@ -1541,20 +1540,24 @@ BOOST_PYTHON_MODULE(_viennacl)
   EXPORT_DENSE_MATRIX_CLASS(char, col, vcl::column_major, ublas::column_major)
   EXPORT_DENSE_MATRIX_CLASS(short, row, vcl::row_major, ublas::row_major)
   EXPORT_DENSE_MATRIX_CLASS(short, col, vcl::column_major, ublas::column_major)
+  */
+
   EXPORT_DENSE_MATRIX_CLASS(int, row, vcl::row_major, ublas::row_major)
   EXPORT_DENSE_MATRIX_CLASS(int, col, vcl::column_major, ublas::column_major)
   EXPORT_DENSE_MATRIX_CLASS(long, row, vcl::row_major, ublas::row_major)
   EXPORT_DENSE_MATRIX_CLASS(long, col, vcl::column_major, ublas::column_major)
 
+  /*
   EXPORT_DENSE_MATRIX_CLASS(uchar, row, vcl::row_major, ublas::row_major)
   EXPORT_DENSE_MATRIX_CLASS(uchar, col, vcl::column_major, ublas::column_major)
   EXPORT_DENSE_MATRIX_CLASS(ushort, row, vcl::row_major, ublas::row_major)
   EXPORT_DENSE_MATRIX_CLASS(ushort, col, vcl::column_major, ublas::column_major)
+  */
+
   EXPORT_DENSE_MATRIX_CLASS(uint, row, vcl::row_major, ublas::row_major)
   EXPORT_DENSE_MATRIX_CLASS(uint, col, vcl::column_major, ublas::column_major)
   EXPORT_DENSE_MATRIX_CLASS(ulong, row, vcl::row_major, ublas::row_major)
   EXPORT_DENSE_MATRIX_CLASS(ulong, col, vcl::column_major, ublas::column_major)
-  */
 
   EXPORT_DENSE_MATRIX_CLASS(float, row, vcl::row_major, ublas::row_major)
   EXPORT_DENSE_MATRIX_CLASS(float, col, vcl::column_major, ublas::column_major)
@@ -1610,11 +1613,9 @@ BOOST_PYTHON_MODULE(_viennacl)
     .add_property("size1",
 		  make_function(&vcl::coordinate_matrix<double>::size1,
 			      bp::return_value_policy<bp::return_by_value>()))
-
     .add_property("size2",
 		  make_function(&vcl::coordinate_matrix<double>::size2,
 			      bp::return_value_policy<bp::return_by_value>()))
-
     .add_property("nnz",
 		  make_function(&vcl::coordinate_matrix<double>::nnz,
 			      bp::return_value_policy<bp::return_by_value>()))
@@ -1642,7 +1643,6 @@ BOOST_PYTHON_MODULE(_viennacl)
 	 vcl::linalg::upper_tag,
 	 op_inplace_solve, 0>)*/
     ;
-
   bp::class_<vcl::ell_matrix<double>, 
              boost::shared_ptr<vcl::ell_matrix<double> >,
              boost::noncopyable >
@@ -1663,7 +1663,6 @@ BOOST_PYTHON_MODULE(_viennacl)
 	 vcl::ell_matrix<double>&, vcl::vector<double>&,
 	 op_prod, 0>)
     ;
-
   bp::class_<vcl::hyb_matrix<double>, 
              boost::shared_ptr<vcl::hyb_matrix<double> >,
              boost::noncopyable >
@@ -1680,7 +1679,6 @@ BOOST_PYTHON_MODULE(_viennacl)
 	 vcl::hyb_matrix<double>&, vcl::vector<double>&,
 	 op_prod, 0>)
     ;
-
   bp::class_<cpu_compressed_matrix_wrapper<double> >
     ("cpu_compressed_matrix_double")
     .def(bp::init<>())
@@ -1797,7 +1795,7 @@ BOOST_PYTHON_MODULE(_viennacl)
 
   // --------------------------------------------------
   
-  // Float-only functions
+  // More functions (eg, if not supported across all dtypes)
   // vector: outer, element_pow, plane_rotation
   // matrix: element_pow
 
@@ -1816,6 +1814,15 @@ BOOST_PYTHON_MODULE(_viennacl)
           TYPE, TYPE,                                                   \
           op_plane_rotation, 0>);                                  
 
+  // TODO missing: char, short, uchar, ushort
+  EXPORT_FUNCTIONS(int, vcl::row_major)
+  EXPORT_FUNCTIONS(int, vcl::column_major)
+  EXPORT_FUNCTIONS(long, vcl::row_major)
+  EXPORT_FUNCTIONS(long, vcl::column_major)
+  EXPORT_FUNCTIONS(uint, vcl::row_major)
+  EXPORT_FUNCTIONS(uint, vcl::column_major)
+  EXPORT_FUNCTIONS(ulong, vcl::row_major)
+  EXPORT_FUNCTIONS(ulong, vcl::column_major)
   EXPORT_FUNCTIONS(double, vcl::row_major)
   EXPORT_FUNCTIONS(double, vcl::column_major)
   EXPORT_FUNCTIONS(float, vcl::row_major)
@@ -1968,8 +1975,6 @@ DISAMBIGUATE_CLASS_FUNCTION_PTR(statement_node_wrapper,         // class
     SET_OPERAND(host_ulong)
     SET_OPERAND(host_float)
     SET_OPERAND(host_double)
-
-  // TODO: DIFFERENT DTYPES
 
     SET_OPERAND(scalar_float)
     SET_OPERAND(scalar_double)

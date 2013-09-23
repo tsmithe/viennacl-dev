@@ -10,9 +10,9 @@ endif(COMMAND cmake_policy)
 project(ViennaCL)
 
 set(VERSION_MAJOR 1)
-set(VERSION_MINOR 5)
-set(VERSION_PATCH 0)
-set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
+set(VERSION_MINOR 4)
+set(VERSION_PATCH 998)
+set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}-py)
 
 SET(CMAKE_VERBOSE_MAKEFILE ON)   #uncomment this line to increase CMake verbosity
 
@@ -50,7 +50,7 @@ option(BUILD_MANUAL "Build the PDF manual" OFF)
 
 option(BUILD_PYVIENNACL "Build the PyViennaCL Python bindings" ON)
 
-cmake_dependent_option(ENABLE_DIST "Enable the the distribution tarball target" ON "BUILD_DOXYGEN_DOCS;BUILD_MANUAL" OFF)
+cmake_dependent_option(ENABLE_DIST "Enable the the distribution tarball target" ON "BUILD_DOXYGEN_DOCS;BUILD_MANUAL" ON)
 
 mark_as_advanced(BUILD_DOXYGEN_DOCS BUILD_MANUAL ENABLE_DIST)
 
@@ -120,7 +120,6 @@ install(DIRECTORY viennacl ${CMAKE_CURRENT_BINARY_DIR}/viennacl
 if(ENABLE_DIST)
    file(MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/dist")
 
-
    set(DISTDIR "${PROJECT_BINARY_DIR}/dist/ViennaCL-${VERSION}-all-arch")
    configure_file(cmake/CMakeLists.txt.in "${DISTDIR}/CMakeLists.txt" @ONLY)
 
@@ -132,6 +131,10 @@ if(ENABLE_DIST)
    #
    add_custom_target(dist
       COMMAND "${CMAKE_COMMAND}" -E make_directory "${DISTDIR}"
+
+      # PyViennaCL
+      COMMAND "${CMAKE_COMMAND}" -E copy_directory
+         "${PROJECT_SOURCE_DIR}/pyviennacl" "${DISTDIR}/pyviennacl"
 
       COMMAND "${CMAKE_COMMAND}" -E copy_if_different
          "${PROJECT_SOURCE_DIR}/LICENSE" "${DISTDIR}/LICENSE"
@@ -150,6 +153,11 @@ if(ENABLE_DIST)
          "${PROJECT_SOURCE_DIR}/CL" "${DISTDIR}/CL"
 
       COMMAND "${CMAKE_COMMAND}" -E make_directory "${DISTDIR}/cmake"
+
+      # NumPy for PyViennaCL
+      COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+         "${PROJECT_SOURCE_DIR}/cmake/FindNumpy.cmake" "${DISTDIR}/cmake/FindNumpy.cmake"
+
       COMMAND "${CMAKE_COMMAND}" -E copy_if_different
          "${PROJECT_SOURCE_DIR}/cmake/copymanual.cmake" "${DISTDIR}/cmake/copymanual.cmake"
       COMMAND "${CMAKE_COMMAND}" -E copy_if_different
@@ -211,6 +219,7 @@ if(ENABLE_DIST)
              README
              changelog
              cmake/copymanual.cmake
+             cmake/FindNumpy.cmake # NumPy for PyViennaCL
              cmake/FindMTL.cmake
              cmake/FindOpenCL.cmake
              cmake/FindViennaProfiler.cmake
@@ -233,6 +242,10 @@ if(ENABLE_DIST)
       # Set up directory layout:
       COMMAND "${CMAKE_COMMAND}" -E make_directory "${DIST_SOURCES_DIR}"
 
+      # PyViennaCL
+      COMMAND "${CMAKE_COMMAND}" -E copy_directory
+         "${PROJECT_SOURCE_DIR}/pyviennacl" "${DIST_SOURCES_DIR}/pyviennacl"
+
       COMMAND "${CMAKE_COMMAND}" -E copy_directory
          "${PROJECT_SOURCE_DIR}/CL" "${DIST_SOURCES_DIR}/CL"
 
@@ -246,6 +259,12 @@ if(ENABLE_DIST)
       COMMAND "${CMAKE_COMMAND}" -E make_directory "${DIST_SOURCES_DIR}/tests/src"
       COMMAND "${CMAKE_COMMAND}" -E copy_directory
          "${PROJECT_SOURCE_DIR}/tests/src" "${DIST_SOURCES_DIR}/tests/src"
+
+      # PyViennaCL
+      COMMAND "${CMAKE_COMMAND}" -E copy_directory
+         "${PROJECT_SOURCE_DIR}/tests/pyviennacl"
+         "${DIST_SOURCES_DIR}/tests/pyviennacl"
+
       COMMAND "${CMAKE_COMMAND}" -E copy_if_different
          "${PROJECT_SOURCE_DIR}/tests/CMakeLists.txt" "${DIST_SOURCES_DIR}/tests/CMakeLists.txt"
 

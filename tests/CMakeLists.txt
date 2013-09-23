@@ -1,6 +1,10 @@
 
 include_directories(${Boost_INCLUDE_DIRS})
 
+if (BUILD_PYVIENNACL)
+  add_subdirectory(pyviennacl)
+endif (BUILD_PYVIENNACL)
+
 # tests with CPU backend
 #foreach(PROG blas3_prod_float blas3_prod_double blas3_solve_float blas3_solve_double iterators
 #             global_variables

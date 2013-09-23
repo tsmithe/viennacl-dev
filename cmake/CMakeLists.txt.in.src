@@ -48,9 +48,11 @@ ENDIF()
 # User options
 ##############
 
-option(BUILD_DOXYGEN_DOCS "Build the Doxygen-generated API docs" ON)
+option(BUILD_PYVIENNACL "Build PyViennaCL" ON)
 
-option(BUILD_MANUAL "Build the PDF manual" ON)
+option(BUILD_DOXYGEN_DOCS "Build the Doxygen-generated ViennaCL API docs" OFF)
+
+option(BUILD_MANUAL "Build the ViennaCL PDF manual" OFF)
 
 mark_as_advanced(BUILD_DOXYGEN_DOCS BUILD_MANUAL)
 
@@ -65,6 +67,16 @@ if(BUILD_MANUAL)
    find_package(LATEX REQUIRED)
 endif()
 
+if(BUILD_PYVIENNACL)
+  #set(PythonLibs_FIND_VERSION 2)
+  #set(PythonInterp_FIND_VERSION 2)
+  find_package(PythonInterp 3.3.2 EXACT)
+  message(${PYTHON_VERSION_STRING})
+  find_package(PythonLibs ${PYTHON_VERSION_STRING} EXACT)
+  find_package(Numpy REQUIRED)
+  set(BOOST_COMPONENTS python-py33)
+endif()
+
 # Compile options
 #################
 
@@ -73,11 +85,16 @@ include_directories(BEFORE ${PROJECT_SOURCE_DIR})
 # Subdirectories
 ################
 
-add_subdirectory(auxiliary)
+#if(BUILD_EXAMPLES)
+#   add_subdirectory(examples)
+#endif()
 
-if(BUILD_EXAMPLES)
-   add_subdirectory(examples)
+if(BUILD_PYVIENNACL)
+   add_subdirectory(external/boost_numpy)
+   add_subdirectory(pyviennacl)
 endif()
+
+#add_subdirectory(libviennacl)
 
 if(BUILD_TESTING)
    add_subdirectory(tests)
@@ -88,6 +105,6 @@ add_subdirectory(doc)
 # Install
 #########
 
-install(DIRECTORY viennacl ${CMAKE_CURRENT_BINARY_DIR}/viennacl
-   DESTINATION ${INSTALL_INCLUDE_DIR} COMPONENT dev
-   FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
+#install(DIRECTORY viennacl ${CMAKE_CURRENT_BINARY_DIR}/viennacl
+#   DESTINATION ${INSTALL_INCLUDE_DIR} COMPONENT dev
+#   FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
