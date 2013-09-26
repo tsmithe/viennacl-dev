@@ -68,13 +68,25 @@ if(BUILD_MANUAL)
 endif()
 
 if(BUILD_PYVIENNACL)
-  #set(PythonLibs_FIND_VERSION 2)
-  #set(PythonInterp_FIND_VERSION 2)
-  find_package(PythonInterp 3.3.2 EXACT)
+  set(
+    PYTHON_INTERPRETER "python"
+    CACHE STRING
+    "Change this to the path for your interpreter; for instance 'python3'")
+  execute_process(
+    COMMAND "${PYTHON_INTERPRETER}" ${CMAKE_SOURCE_DIR}/pyviennacl/pyversions.py python
+    OUTPUT_VARIABLE PYVERSION
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+  execute_process(
+    COMMAND "${PYTHON_INTERPRETER}" ${CMAKE_SOURCE_DIR}/pyviennacl/pyversions.py boost
+    OUTPUT_VARIABLE BOOST_COMPONENTS
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+  set(Python_ADDITIONAL_VERSIONS ${PYVERSION})
+  find_package(PythonInterp ${PYVERSION} EXACT)
   message(${PYTHON_VERSION_STRING})
   find_package(PythonLibs ${PYTHON_VERSION_STRING} EXACT)
   find_package(Numpy REQUIRED)
-  set(BOOST_COMPONENTS python-py33)
 endif()
 
 # Compile options

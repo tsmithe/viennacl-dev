@@ -38,6 +38,9 @@ or::
    >>> help(p.linalg)                                    # doctest: +SKIP
 """
 
+__version__ = "1.0.0"
+from ._viennacl import __version__ as __viennacl_version__
+
 from .pycore import *
 from .linalg import *
 from .util import *

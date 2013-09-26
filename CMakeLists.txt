@@ -10,8 +10,8 @@ endif(COMMAND cmake_policy)
 project(ViennaCL)
 
 set(VERSION_MAJOR 1)
-set(VERSION_MINOR 4)
-set(VERSION_PATCH 998)
+set(VERSION_MINOR 0)
+set(VERSION_PATCH 0)
 set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}-py)
 
 SET(CMAKE_VERBOSE_MAKEFILE ON)   #uncomment this line to increase CMake verbosity
@@ -66,13 +66,25 @@ if(BUILD_MANUAL)
 endif()
 
 if(BUILD_PYVIENNACL)
-  #set(PythonLibs_FIND_VERSION 2)
-  #set(PythonInterp_FIND_VERSION 2)
-  find_package(PythonInterp 3.3.2 EXACT)
+  set(
+    PYTHON_INTERPRETER "python"
+    CACHE STRING
+    "Change this to the path for your interpreter; for instance 'python3'")
+  execute_process(
+    COMMAND "${PYTHON_INTERPRETER}" ${CMAKE_SOURCE_DIR}/pyviennacl/pyversions.py python
+    OUTPUT_VARIABLE PYVERSION
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+  execute_process(
+    COMMAND "${PYTHON_INTERPRETER}" ${CMAKE_SOURCE_DIR}/pyviennacl/pyversions.py boost
+    OUTPUT_VARIABLE BOOST_COMPONENTS
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+  set(Python_ADDITIONAL_VERSIONS ${PYVERSION})
+  find_package(PythonInterp ${PYVERSION} EXACT)
   message(${PYTHON_VERSION_STRING})
   find_package(PythonLibs ${PYTHON_VERSION_STRING} EXACT)
   find_package(Numpy REQUIRED)
-  set(BOOST_COMPONENTS python-py33)
 endif()
 
 # Compile options
@@ -120,10 +132,10 @@ install(DIRECTORY viennacl ${CMAKE_CURRENT_BINARY_DIR}/viennacl
 if(ENABLE_DIST)
    file(MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/dist")
 
-   set(DISTDIR "${PROJECT_BINARY_DIR}/dist/ViennaCL-${VERSION}-all-arch")
+   set(DISTDIR "${PROJECT_BINARY_DIR}/dist/PyViennaCL-${VERSION}-all-arch")
    configure_file(cmake/CMakeLists.txt.in "${DISTDIR}/CMakeLists.txt" @ONLY)
 
-   set(DIST_SOURCES_DIR "${PROJECT_BINARY_DIR}/dist/ViennaCL-${VERSION}-src")
+   set(DIST_SOURCES_DIR "${PROJECT_BINARY_DIR}/dist/PyViennaCL-${VERSION}-src")
    configure_file(cmake/CMakeLists.txt.in.src "${DIST_SOURCES_DIR}/CMakeLists.txt" @ONLY)
 
    #
@@ -205,10 +217,10 @@ if(ENABLE_DIST)
          "${CMAKE_CURRENT_BINARY_DIR}/viennacl/linalg/kernels"
          "${DISTDIR}/viennacl/linalg/kernels"
 
-      COMMAND "${CMAKE_COMMAND}" -E tar czf ViennaCL-${VERSION}-all-arch.tar.gz
-           ViennaCL-${VERSION}-all-arch
+      COMMAND "${CMAKE_COMMAND}" -E tar czf PyViennaCL-${VERSION}-all-arch.tar.gz
+           PyViennaCL-${VERSION}-all-arch
       WORKING_DIRECTORY "${PROJECT_BINARY_DIR}/dist"
-      COMMENT "Generating dist/ViennaCL-${VERSION}-all-arch.tar.gz"
+      COMMENT "Generating dist/PyViennaCL-${VERSION}-all-arch.tar.gz"
       VERBATIM)
    add_dependencies(dist kernels apidoc manual)
 
@@ -284,10 +296,10 @@ if(ENABLE_DIST)
          "${PROJECT_SOURCE_DIR}/viennacl" "${DIST_SOURCES_DIR}/viennacl"
 
       # Create archive:
-      COMMAND "${CMAKE_COMMAND}" -E tar czf ViennaCL-${VERSION}-src.tar.gz
-           ViennaCL-${VERSION}-src
+      COMMAND "${CMAKE_COMMAND}" -E tar czf PyViennaCL-${VERSION}-src.tar.gz
+           PyViennaCL-${VERSION}-src
       WORKING_DIRECTORY "${PROJECT_BINARY_DIR}/dist"
-      COMMENT "Generating dist/ViennaCL-${VERSION}-src.tar.gz"
+      COMMENT "Generating dist/PyViennaCL-${VERSION}-src.tar.gz"
       VERBATIM)
    add_dependencies(dist-src copymanual-src)
 

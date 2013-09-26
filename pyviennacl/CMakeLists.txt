@@ -4,7 +4,7 @@ SET(Boost_USE_STATIC_LIBS OFF)
 if (BOOST_COMPONENTS)
   find_package(Boost REQUIRED COMPONENTS ${BOOST_COMPONENTS})
 else ()
-  find_package(Boost REQUIRED COMPONENTS python-py27)
+  find_package(Boost REQUIRED COMPONENTS python)
 endif ()
 
 include_directories(

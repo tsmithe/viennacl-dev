@@ -1128,6 +1128,9 @@ BOOST_PYTHON_MODULE(_viennacl)
 
   np::initialize();
 
+  // TODO: integrate version into build process
+  bp::scope().attr("__version__") = bp::object("1.5.0");
+
   // --------------------------------------------------
 
   // *** Utility functions ***

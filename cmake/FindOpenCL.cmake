@@ -40,19 +40,17 @@ if(ENV_OPENCLROOT)
     if(CMAKE_SIZEOF_VOID_P EQUAL 4)
       set(OPENCL_LIB_SEARCH_PATH
           ${OPENCL_LIB_SEARCH_PATH}
-          ${ENV_OPENCLROOT}/lib/x86
-	  /usr/lib/nvidia-319)
+          ${ENV_OPENCLROOT}/lib/x86)
     else(CMAKE_SIZEOF_VOID_P EQUAL 4)
       set(OPENCL_LIB_SEARCH_PATH
           ${OPENCL_LIB_SEARCH_PATH}
-          ${ENV_OPENCLROOT}/lib/x86_64
-	  /usr/lib/nvidia-319)
+          ${ENV_OPENCLROOT}/lib/x86_64)
     endif(CMAKE_SIZEOF_VOID_P EQUAL 4)
   endif(("${CMAKE_SYSTEM_NAME}" MATCHES "Linux") OR (${CMAKE_SYSTEM_NAME} MATCHES "Windows"))
   find_library(
     OPENCL_LIBRARY
     NAMES OpenCL
-    PATHS ${OPENCL_LIB_SEARCH_PATH} /usr/lib/nvidia-319
+    PATHS ${OPENCL_LIB_SEARCH_PATH}
     #NO_DEFAULT_PATH  #uncomment this is you wish to surpress the use of default paths for OpenCL
     )
 else(ENV_OPENCLROOT)
@@ -65,7 +63,7 @@ else(ENV_OPENCLROOT)
   find_library(
     OPENCL_LIBRARY
     NAMES OpenCL
-    PATHS /usr/lib/nvidia-319
+    PATHS ${ENV_OPENCLROOT}
     )
 endif(ENV_OPENCLROOT)
 
