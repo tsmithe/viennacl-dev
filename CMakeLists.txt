@@ -12,7 +12,7 @@ project(ViennaCL)
 set(VERSION_MAJOR 1)
 set(VERSION_MINOR 0)
 set(VERSION_PATCH 0)
-set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}-py)
+set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
 
 SET(CMAKE_VERBOSE_MAKEFILE ON)   #uncomment this line to increase CMake verbosity
 
@@ -67,22 +67,22 @@ endif()
 
 if(BUILD_PYVIENNACL)
   set(
-    PYTHON_INTERPRETER "python"
+    PYTHON_EXECUTABLE "python"
     CACHE STRING
     "Change this to the path for your interpreter; for instance 'python3'")
   execute_process(
-    COMMAND "${PYTHON_INTERPRETER}" ${CMAKE_SOURCE_DIR}/pyviennacl/pyversions.py python
+    COMMAND "${PYTHON_EXECUTABLE}" ${CMAKE_SOURCE_DIR}/pyviennacl/pyversions.py python
     OUTPUT_VARIABLE PYVERSION
     OUTPUT_STRIP_TRAILING_WHITESPACE
     )
   execute_process(
-    COMMAND "${PYTHON_INTERPRETER}" ${CMAKE_SOURCE_DIR}/pyviennacl/pyversions.py boost
+    COMMAND "${PYTHON_EXECUTABLE}" ${CMAKE_SOURCE_DIR}/pyviennacl/pyversions.py boost
     OUTPUT_VARIABLE BOOST_COMPONENTS
     OUTPUT_STRIP_TRAILING_WHITESPACE
     )
-  set(Python_ADDITIONAL_VERSIONS ${PYVERSION})
+  #set(Python_ADDITIONAL_VERSIONS ${PYVERSION})
   find_package(PythonInterp ${PYVERSION} EXACT)
-  message(${PYTHON_VERSION_STRING})
+  #message(${PYTHON_VERSION_STRING})
   find_package(PythonLibs ${PYTHON_VERSION_STRING} EXACT)
   find_package(Numpy REQUIRED)
 endif()
