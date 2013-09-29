@@ -69,16 +69,16 @@ endif()
 
 if(BUILD_PYVIENNACL)
   set(
-    PYTHON_INTERPRETER "python"
+    PYTHON_EXECUTABLE "python"
     CACHE STRING
     "Change this to the path for your interpreter; for instance 'python3'")
   execute_process(
-    COMMAND "${PYTHON_INTERPRETER}" ${CMAKE_SOURCE_DIR}/pyviennacl/pyversions.py python
+    COMMAND "${PYTHON_EXECUTABLE}" ${CMAKE_SOURCE_DIR}/pyviennacl/pyversions.py python
     OUTPUT_VARIABLE PYVERSION
     OUTPUT_STRIP_TRAILING_WHITESPACE
     )
   execute_process(
-    COMMAND "${PYTHON_INTERPRETER}" ${CMAKE_SOURCE_DIR}/pyviennacl/pyversions.py boost
+    COMMAND "${PYTHON_EXECUTABLE}" ${CMAKE_SOURCE_DIR}/pyviennacl/pyversions.py boost
     OUTPUT_VARIABLE BOOST_COMPONENTS
     OUTPUT_STRIP_TRAILING_WHITESPACE
     )
