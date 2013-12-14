@@ -155,7 +155,10 @@ if(ENABLE_DIST)
          "${PROJECT_SOURCE_DIR}/changelog" "${DISTDIR}/changelog"
 
       COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-         "${PROJECT_SOURCE_DIR}/README" "${DISTDIR}/README"
+         "${PROJECT_SOURCE_DIR}/README-PyViennaCL" "${DISTDIR}/README"
+
+      COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+         "${PROJECT_SOURCE_DIR}/README-ViennaCL" "${DISTDIR}/README"
 
       COMMAND "${CMAKE_COMMAND}" -E make_directory "${DISTDIR}/build"
       COMMAND "${CMAKE_COMMAND}" -E copy_if_different
@@ -228,7 +231,8 @@ if(ENABLE_DIST)
    # Sources only (no generated files):
    #
    foreach(f LICENSE
-             README
+             README-ViennaCL
+             README-PyViennaCL
              changelog
              cmake/copymanual.cmake
              cmake/FindNumpy.cmake # NumPy for PyViennaCL

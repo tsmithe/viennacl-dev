@@ -15,6 +15,11 @@ for boost_lib in boost_libraries:
     #libraries.append(basename(boost_lib)[3:-3]) # TODO: ONLY WORKS ON LINUX
     libraries.append("boost_" + boost_lib)
 
+#print(library_dirs)
+#print(libraries)
+#import sys
+#sys.exit(127)
+
 # boost_numpy -- TODO: portability
 static_libs.append("${PROJECT_BINARY_DIR}/lib/libboost_numpy.a")
 
