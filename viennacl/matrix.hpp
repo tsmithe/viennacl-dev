@@ -168,8 +168,8 @@ namespace viennacl
       RHS & rhs() const { return rhs_; }
 
       /** @brief Returns the size of the result vector */
-      std::size_t size1() const { return viennacl::tools::MATRIX_SIZE_DEDUCER<LHS, RHS, OP>::size1(lhs_, rhs_); }
-      std::size_t size2() const { return viennacl::tools::MATRIX_SIZE_DEDUCER<LHS, RHS, OP>::size2(lhs_, rhs_); }
+      vcl_size_t size1() const { return viennacl::tools::MATRIX_SIZE_DEDUCER<LHS, RHS, OP>::size1(lhs_, rhs_); }
+      vcl_size_t size2() const { return viennacl::tools::MATRIX_SIZE_DEDUCER<LHS, RHS, OP>::size2(lhs_, rhs_); }
 
     private:
       /** @brief The left hand side operand */
@@ -194,8 +194,8 @@ namespace viennacl
       typedef typename MATRIXTYPE::value_type       value_type;
 
       matrix_iterator(MATRIXTYPE & mat,
-                      std::size_t start_row,
-                      std::size_t start_col) : mat_(mat), row_(start_row), col_(start_col) {};
+                      vcl_size_t start_row,
+                      vcl_size_t start_col) : mat_(mat), row_(start_row), col_(start_col) {}
 
       value_type operator*(void) { return mat_(row_, col_); }
       self_type & operator++(void) { viennacl::tools::MATRIX_ITERATOR_INCREMENTER<ROWCOL, MATRIXTYPE>::apply(mat_, row_, col_); return *this; }
@@ -746,7 +746,7 @@ namespace viennacl
       typedef typename base_type::size_type             size_type;
 
       /** @brief The default constructor. Does not allocate any memory. */
-      explicit matrix() : base_type() {};
+      explicit matrix() : base_type() {}
 
       /** @brief Creates the matrix with the given dimensions
       *
@@ -1034,8 +1034,8 @@ namespace viennacl
     }
     else
     {
-      assert( (gpu_matrix.size1() == static_cast<std::size_t>(cpu_matrix.rows()))
-              && (gpu_matrix.size2() == static_cast<std::size_t>(cpu_matrix.cols()))
+      assert( (gpu_matrix.size1() == static_cast<vcl_size_t>(cpu_matrix.rows()))
+              && (gpu_matrix.size2() == static_cast<vcl_size_t>(cpu_matrix.cols()))
               && bool("matrix size mismatch")
             );
     }
@@ -1070,8 +1070,8 @@ namespace viennacl
     }
     else
     {
-      assert( (gpu_matrix.size1() == static_cast<std::size_t>(cpu_matrix.rows()))
-              && (gpu_matrix.size2() == static_cast<std::size_t>(cpu_matrix.cols()))
+      assert( (gpu_matrix.size1() == static_cast<vcl_size_t>(cpu_matrix.rows()))
+              && (gpu_matrix.size2() == static_cast<vcl_size_t>(cpu_matrix.cols()))
               && bool("matrix size mismatch")
             );
     }
@@ -1802,21 +1802,21 @@ namespace viennacl
         }
       };
 
-      template <typename T, typename F, typename LHS, typename RHS>
-      struct op_executor<matrix_base<T, F>, op_assign, matrix_expression<const LHS, const RHS, op_prod> >
+      template <typename T, typename F1, typename LHS, typename RHS>
+      struct op_executor<matrix_base<T, F1>, op_assign, matrix_expression<const LHS, const RHS, op_prod> >
       {
-        template < typename SparseMatrixType >
-        static void apply(matrix_base<T, F> & lhs, matrix_expression<const SparseMatrixType,
-                                                                     const viennacl::matrix_base<T, F>,
+        template < typename SparseMatrixType, typename F2 >
+        static void apply(matrix_base<T, F1> & lhs, matrix_expression<const SparseMatrixType,
+                                                                     const viennacl::matrix_base<T, F2>,
                                                                      viennacl::op_prod> const & proxy)
         {
           viennacl::linalg::prod_impl(proxy.lhs(), proxy.rhs(), lhs);
         }
 
-        template < typename SparseMatrixType >
-        static void apply(matrix_base<T, F> & lhs, matrix_expression<const SparseMatrixType,
-                                                                     const viennacl::matrix_expression< const viennacl::matrix_base<T, F>,
-                                                                                                        const viennacl::matrix_base<T, F>,
+        template < typename SparseMatrixType, typename F2 >
+        static void apply(matrix_base<T, F1> & lhs, matrix_expression<const SparseMatrixType,
+                                                                     const viennacl::matrix_expression< const viennacl::matrix_base<T, F2>,
+                                                                                                        const viennacl::matrix_base<T, F2>,
                                                                                                         viennacl::op_trans >,
                                                                      viennacl::op_prod> const & proxy)
         {

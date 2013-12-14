@@ -29,7 +29,6 @@
 #endif
 
 #include "viennacl/ocl/forwards.h"
-#include "viennacl/ocl/backend.hpp"
 #include "viennacl/ocl/handle.hpp"
 #include "viennacl/ocl/program.hpp"
 #include "viennacl/ocl/device.hpp"
@@ -62,7 +61,7 @@ namespace viennacl
 
 
     public:
-      typedef std::size_t            size_type;
+      typedef vcl_size_t            size_type;
 
       kernel() : handle_(), p_program_(NULL), p_context_(NULL), name_()
       {
@@ -113,12 +112,52 @@ namespace viennacl
         return *this;
       }
 
+      /** @brief Sets a char argument at the provided position */
+      void arg(unsigned int pos, cl_char val)
+      {
+        #if defined(VIENNACL_DEBUG_ALL) || defined(VIENNACL_DEBUG_KERNEL)
+        std::cout << "ViennaCL: Setting char kernel argument " << val << " at pos " << pos << " for kernel " << name_ << std::endl;
+        #endif
+        cl_int err = clSetKernelArg(handle_.get(), pos, sizeof(cl_char), (void*)&val);
+        VIENNACL_ERR_CHECK(err);
+      }
+
+      /** @brief Sets a char argument at the provided position */
+      void arg(unsigned int pos, cl_uchar val)
+      {
+        #if defined(VIENNACL_DEBUG_ALL) || defined(VIENNACL_DEBUG_KERNEL)
+        std::cout << "ViennaCL: Setting unsigned char kernel argument " << val << " at pos " << pos << " for kernel " << name_ << std::endl;
+        #endif
+        cl_int err = clSetKernelArg(handle_.get(), pos, sizeof(cl_uchar), (void*)&val);
+        VIENNACL_ERR_CHECK(err);
+      }
+
+      /** @brief Sets a argument of type short at the provided position */
+      void arg(unsigned int pos, cl_short val)
+      {
+        #if defined(VIENNACL_DEBUG_ALL) || defined(VIENNACL_DEBUG_KERNEL)
+        std::cout << "ViennaCL: Setting short kernel argument " << val << " at pos " << pos << " for kernel " << name_ << std::endl;
+        #endif
+        cl_int err = clSetKernelArg(handle_.get(), pos, sizeof(cl_short), (void*)&val);
+        VIENNACL_ERR_CHECK(err);
+      }
+
+      /** @brief Sets a argument of type unsigned short at the provided position */
+      void arg(unsigned int pos, cl_ushort val)
+      {
+        #if defined(VIENNACL_DEBUG_ALL) || defined(VIENNACL_DEBUG_KERNEL)
+        std::cout << "ViennaCL: Setting unsigned short kernel argument " << val << " at pos " << pos << " for kernel " << name_ << std::endl;
+        #endif
+        cl_int err = clSetKernelArg(handle_.get(), pos, sizeof(cl_ushort), (void*)&val);
+        VIENNACL_ERR_CHECK(err);
+      }
+
 
       /** @brief Sets an unsigned integer argument at the provided position */
       void arg(unsigned int pos, cl_uint val)
       {
         #if defined(VIENNACL_DEBUG_ALL) || defined(VIENNACL_DEBUG_KERNEL)
-        std::cout << "ViennaCL: Setting unsigned long kernel argument " << val << " at pos " << pos << " for kernel " << name_ << std::endl;
+        std::cout << "ViennaCL: Setting unsigned int kernel argument " << val << " at pos " << pos << " for kernel " << name_ << std::endl;
         #endif
         cl_int err = clSetKernelArg(handle_.get(), pos, sizeof(cl_uint), (void*)&val);
         VIENNACL_ERR_CHECK(err);

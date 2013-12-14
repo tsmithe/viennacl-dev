@@ -25,7 +25,11 @@
 
 #include <set>
 
+#ifdef __APPLE__
+#include <OpenCL/cl.h>
+#else
 #include "CL/cl.h"
+#endif
 
 #include "viennacl/forwards.h"
 #include "viennacl/scheduler/forwards.h"
@@ -187,7 +191,7 @@ namespace viennacl{
                                 , scheduler::statement const & statement
                                 , scheduler::statement_node const & root_node
                                 , std::pair<std::string, std::string> const & index
-                                , std::size_t const & vectorization
+                                , vcl_size_t const & vectorization
                                 , utils::kernel_generation_stream & stream
                                 , detail::mapping_type const & mapping){
         if(root_node.lhs.type_family==scheduler::COMPOSITE_OPERATION_FAMILY)
@@ -205,7 +209,7 @@ namespace viennacl{
                                 , scheduler::statement const & statement
                                 , scheduler::statement_node const & root_node
                                 , std::pair<std::string, std::string> const & index
-                                , std::size_t const & vectorization
+                                , vcl_size_t const & vectorization
                                 , utils::kernel_generation_stream & stream
                                 , detail::mapping_type const & mapping){
         if(root_node.rhs.type_family==scheduler::COMPOSITE_OPERATION_FAMILY)

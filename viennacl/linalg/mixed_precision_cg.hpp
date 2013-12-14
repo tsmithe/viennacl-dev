@@ -55,7 +55,7 @@ namespace viennacl
         * @param max_iterations   The maximum number of iterations
         * @param inner_tol        Inner tolerance for the low-precision iterations
         */
-        mixed_precision_cg_tag(double tol = 1e-8, unsigned int max_iterations = 300, float inner_tol = 1e-2f) : tol_(tol), iterations_(max_iterations), inner_tol_(inner_tol) {};
+        mixed_precision_cg_tag(double tol = 1e-8, unsigned int max_iterations = 300, float inner_tol = 1e-2f) : tol_(tol), iterations_(max_iterations), inner_tol_(inner_tol) {}
 
         /** @brief Returns the relative tolerance */
         double tolerance() const { return tol_; }
@@ -124,7 +124,7 @@ namespace viennacl
       //TODO: Assert CPU_ScalarType == double
 
       //std::cout << "Starting CG" << std::endl;
-      std::size_t problem_size = viennacl::traits::size(rhs);
+      vcl_size_t problem_size = viennacl::traits::size(rhs);
       VectorType result(rhs);
       viennacl::traits::clear(result);
 

@@ -24,14 +24,14 @@
 
 #include <boost/numeric/ublas/vector.hpp>
 #include <cmath>
-#include "viennacl/linalg/amg.hpp"
+#include "viennacl/linalg/detail/amg/amg_base.hpp"
 
 #include <map>
 #ifdef VIENNACL_WITH_OPENMP
 #include <omp.h>
 #endif
 
-#include "amg_debug.hpp"
+#include "viennacl/linalg/detail/amg/amg_debug.hpp"
 
 namespace viennacl
 {
@@ -71,7 +71,7 @@ namespace viennacl
     void amg_interpol_direct(unsigned int level, InternalType1 & A, InternalType1 & P, InternalType2 & Pointvector, amg_tag & tag)
     {
       typedef typename InternalType1::value_type SparseMatrixType;
-      typedef typename InternalType2::value_type PointVectorType;
+      //typedef typename InternalType2::value_type PointVectorType;
       typedef typename SparseMatrixType::value_type ScalarType;
       typedef typename SparseMatrixType::iterator1 InternalRowIterator;
       typedef typename SparseMatrixType::iterator2 InternalColIterator;
@@ -79,7 +79,7 @@ namespace viennacl
       ScalarType temp_res;
       ScalarType row_sum, c_sum, diag;
       //int diag_sign;
-      unsigned int x, y;
+      long x, y;
       amg_point *pointx, *pointy;
       unsigned int c_points = Pointvector[level].get_cpoints();
 
@@ -94,7 +94,7 @@ namespace viennacl
 #ifdef VIENNACL_WITH_OPENMP
       #pragma omp parallel for private (pointx,pointy,row_sum,c_sum,temp_res,y,x,diag) shared (P,A,Pointvector,tag)
 #endif
-      for (x=0; x < Pointvector[level].size(); ++x)
+      for (x=0; x < static_cast<long>(Pointvector[level].size()); ++x)
       {
         pointx = Pointvector[level][x];
         /*if (A[level](x,x) > 0)
@@ -173,7 +173,7 @@ namespace viennacl
     void amg_interpol_classic(unsigned int level, InternalType1 & A, InternalType1 & P, InternalType2 & Pointvector, amg_tag & tag)
     {
       typedef typename InternalType1::value_type SparseMatrixType;
-      typedef typename InternalType2::value_type PointVectorType;
+      //typedef typename InternalType2::value_type PointVectorType;
       typedef typename SparseMatrixType::value_type ScalarType;
       typedef typename SparseMatrixType::iterator1 InternalRowIterator;
       typedef typename SparseMatrixType::iterator2 InternalColIterator;
@@ -183,7 +183,7 @@ namespace viennacl
       int diag_sign;
       amg_sparsevector<ScalarType> c_sum_row;
       amg_point *pointx, *pointy, *pointk, *pointm;
-      unsigned int x, y, k, m;
+      long x, y, k, m;
 
       unsigned int c_points = Pointvector[level].get_cpoints();
 
@@ -198,7 +198,7 @@ namespace viennacl
 #ifdef VIENNACL_WITH_OPENMP
       #pragma omp parallel for private (pointx,pointy,pointk,pointm,weak_sum,strong_sum,c_sum_row,temp_res,x,y,k,m,diag_sign) shared (A,P,Pointvector)
 #endif
-      for (x=0; x < Pointvector[level].size(); ++x)
+      for (x=0; x < static_cast<long>(Pointvector[level].size()); ++x)
       {
         pointx = Pointvector[level][x];
         if (A[level](x,x) > 0)
@@ -362,10 +362,10 @@ namespace viennacl
     void amg_interpol_ag(unsigned int level, InternalType1 & A, InternalType1 & P, InternalType2 & Pointvector, amg_tag)
     {
       typedef typename InternalType1::value_type SparseMatrixType;
-      typedef typename InternalType2::value_type PointVectorType;
-      typedef typename SparseMatrixType::value_type ScalarType;
-      typedef typename SparseMatrixType::iterator1 InternalRowIterator;
-      typedef typename SparseMatrixType::iterator2 InternalColIterator;
+      //typedef typename InternalType2::value_type PointVectorType;
+      //typedef typename SparseMatrixType::value_type ScalarType;
+      //typedef typename SparseMatrixType::iterator1 InternalRowIterator;
+      //typedef typename SparseMatrixType::iterator2 InternalColIterator;
 
       unsigned int x;
       amg_point *pointx, *pointy;
@@ -381,7 +381,7 @@ namespace viennacl
 #ifdef VIENNACL_WITH_OPENMP
       #pragma omp parallel for private (x,pointx) shared (P)
 #endif
-      for (x=0; x<Pointvector[level].size(); ++x)
+      for (x=0; x<static_cast<long>(Pointvector[level].size()); ++x)
       {
         pointx = Pointvector[level][x];
         pointy = Pointvector[level][pointx->get_aggregate()];
@@ -406,12 +406,12 @@ namespace viennacl
     void amg_interpol_sa(unsigned int level, InternalType1 & A, InternalType1 & P, InternalType2 & Pointvector, amg_tag & tag)
     {
       typedef typename InternalType1::value_type SparseMatrixType;
-      typedef typename InternalType2::value_type PointVectorType;
+      //typedef typename InternalType2::value_type PointVectorType;
       typedef typename SparseMatrixType::value_type ScalarType;
       typedef typename SparseMatrixType::iterator1 InternalRowIterator;
       typedef typename SparseMatrixType::iterator2 InternalColIterator;
 
-      unsigned int x,y;
+      long x,y;
       ScalarType diag = 0;
       unsigned int c_points = Pointvector[level].get_cpoints();
 
@@ -425,7 +425,7 @@ namespace viennacl
 #ifdef VIENNACL_WITH_OPENMP
       #pragma omp parallel for private (x,y,diag) shared (A,Pointvector)
 #endif
-      for (x=0; x<A[level].size1(); ++x)
+      for (x=0; x<static_cast<long>(A[level].size1()); ++x)
       {
         diag = 0;
         InternalRowIterator row_iter = A[level].begin1();

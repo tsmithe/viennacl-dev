@@ -32,7 +32,11 @@
 
 #include "viennacl/tools/shared_ptr.hpp"
 
+#include "viennacl/ocl/backend.hpp"
 #include "viennacl/ocl/kernel.hpp"
+
+#include "viennacl/traits/start.hpp"
+#include "viennacl/traits/stride.hpp"
 
 #include "viennacl/generator/helpers.hpp"
 #include "viennacl/generator/utils.hpp"
@@ -65,7 +69,7 @@ namespace viennacl{
             else
               while(val>0)
               {
-                  *ptr++='0' + (val % 10);
+                  *ptr++=static_cast<char>('0') + static_cast<char>(val % 10);
                   val /= 10;
               }
           }
@@ -148,7 +152,7 @@ namespace viennacl{
               utils::call_on_element(root_node->rhs, *this);
             else if(node_type==PARENT_NODE_TYPE){
               const char * op_expr = detail::generate(root_node->op.type);
-              std::size_t n = std::strlen(op_expr);
+              vcl_size_t n = std::strlen(op_expr);
               std::memcpy(ptr_, op_expr, n);
               ptr_+=n;
             }

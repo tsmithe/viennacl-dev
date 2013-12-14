@@ -1,11 +1,4 @@
 
-# do not build tests by default, since they require Boost
-if (VIENNACL_SRC_DIST)
- option(BUILD_TESTING "Build the tests " ON)
-else (VIENNACL_SRC_DIST)
- option(BUILD_TESTING "Build the tests " OFF)
-endif(VIENNACL_SRC_DIST)
-
 include(CTest)
 include(CMakeDependentOption)
 
@@ -81,13 +74,13 @@ IF (BOOSTPATH)
 ENDIF (BOOSTPATH)
 
 
-if(ENABLE_UBLAS OR BUILD_TESTING OR VIENNACL_SRC_DIST)
+if(ENABLE_UBLAS OR BUILD_TESTING)
    set(Boost_USE_MULTITHREADED TRUE)
-   if (VIENNACL_SRC_DIST)
-     find_package(Boost REQUIRED COMPONENTS filesystem system thread)
-   else(VIENNACL_SRC_DIST)
-     find_package(Boost REQUIRED)
-   endif(VIENNACL_SRC_DIST)
+   if (Boost_MINOR_VERSION GREATER 34)
+     find_package(Boost REQUIRED COMPONENTS system thread)
+   else()
+     find_package(Boost REQUIRED COMPONENTS thread)
+   endif()
 endif()
 
 if (ENABLE_CUDA)
@@ -151,7 +144,9 @@ configure_file(cmake/ViennaCLConfig.cmake.in
 configure_file(cmake/ViennaCLConfigVersion.cmake.in
    ${PROJECT_BINARY_DIR}/ViennaCLConfigVersion.cmake @ONLY)
 
-export(PACKAGE ViennaCL)
+if (CMAKE_MINOR_VERSION GREATER 6)  # export(PACKAGE ...) introduced with CMake 2.8.0
+  export(PACKAGE ViennaCL)
+endif()
 
 # Install
 #########

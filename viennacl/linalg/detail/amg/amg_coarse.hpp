@@ -23,14 +23,14 @@
 */
 
 #include <cmath>
-#include "viennacl/linalg/amg.hpp"
+#include "viennacl/linalg/detail/amg/amg_base.hpp"
 
 #include <map>
 #ifdef VIENNACL_WITH_OPENMP
 #include <omp.h>
 #endif
 
-#include "amg_debug.hpp"
+#include "viennacl/linalg/detail/amg/amg_debug.hpp"
 
 namespace viennacl
 {
@@ -84,7 +84,7 @@ namespace viennacl
 #ifdef VIENNACL_WITH_OPENMP
       #pragma omp parallel for private (max,diag_sign) shared (A,Pointvector)
 #endif
-      for (unsigned int i=0; i<A[level].size1(); ++i)
+      for (long i=0; i<static_cast<long>(A[level].size1()); ++i)
       {
         diag_sign = 1;
         if (A[level](i,i) < 0)
@@ -156,24 +156,17 @@ namespace viennacl
     template <typename InternalType1, typename InternalType2>
     void amg_coarse_classic_onepass(unsigned int level, InternalType1 & A, InternalType2 & Pointvector, amg_tag & tag)
     {
-      typedef typename InternalType1::value_type SparseMatrixType;
-      typedef typename InternalType2::value_type PointVectorType;
-      typedef typename SparseMatrixType::value_type ScalarType;
-
-      typedef typename SparseMatrixType::iterator1 InternalRowIterator;
-      typedef typename SparseMatrixType::iterator2 InternalColIterator;
-
       amg_point* c_point, *point1, *point2;
-      unsigned int i;
 
       // Check and save all strong influences
       amg_influence (level, A, Pointvector, tag);
 
       // Traverse through points and calculate initial influence measure
+      long i;
 #ifdef VIENNACL_WITH_OPENMP
       #pragma omp parallel for private (i) shared (Pointvector)
 #endif
-      for (i=0; i<Pointvector[level].size(); ++i)
+      for (i=0; i<static_cast<long>(Pointvector[level].size()); ++i)
   Pointvector[level][i]->calc_influence();
 
        // Do initial sorting
@@ -208,7 +201,7 @@ namespace viennacl
       // If a point is neither C nor F point but is nevertheless influenced by other points make it F point
       // (this situation can happen when this point does not influence other points and the points that influence this point became F points already)
       /*#pragma omp parallel for private (i,point1)
-      for (i=0; i<Pointvector[level].size(); ++i)
+      for (long i=0; i<static_cast<long>(Pointvector[level].size()); ++i)
       {
         point1 = Pointvector[level][i];
         if (point1->is_undecided())
@@ -251,12 +244,7 @@ namespace viennacl
     template <typename InternalType1, typename InternalType2>
     void amg_coarse_classic(unsigned int level, InternalType1 & A, InternalType2 & Pointvector, amg_tag & tag)
     {
-      typedef typename InternalType1::value_type SparseMatrixType;
       typedef typename InternalType2::value_type PointVectorType;
-      typedef typename SparseMatrixType::value_type ScalarType;
-
-      typedef typename SparseMatrixType::iterator1 InternalRowIterator;
-      typedef typename SparseMatrixType::iterator2 InternalColIterator;
 
       bool add_C;
       amg_point *c_point, *point1, *point2;
@@ -379,13 +367,6 @@ namespace viennacl
     template <typename InternalType1, typename InternalType2, typename InternalType3>
     void amg_coarse_rs0(unsigned int level, InternalType1 & A, InternalType2 & Pointvector, InternalType3 & Slicing, amg_tag & tag)
     {
-      typedef typename InternalType1::value_type SparseMatrixType;
-      typedef typename InternalType2::value_type PointVectorType;
-      typedef typename SparseMatrixType::value_type ScalarType;
-
-      typedef typename SparseMatrixType::iterator1 InternalRowIterator;
-      typedef typename SparseMatrixType::iterator2 InternalColIterator;
-
       unsigned int total_points;
 
       // Slice matrix into parts such that points are distributed among threads
@@ -396,7 +377,7 @@ namespace viennacl
 #ifdef VIENNACL_WITH_OPENMP
       #pragma omp parallel for shared (total_points,Slicing,level)
 #endif
-      for (unsigned int i=0; i<Slicing.threads_; ++i)
+      for (long i=0; i<static_cast<long>(Slicing.threads_); ++i)
       {
         amg_coarse_classic(level,Slicing.A_slice[i],Slicing.Pointvector_slice[i],tag);
 
@@ -415,7 +396,7 @@ namespace viennacl
       #ifdef VIENNACL_WITH_OPENMP
         #pragma omp parallel for shared (Slicing)
       #endif
-        for (unsigned int i=0; i<Slicing.threads_; ++i)
+        for (long i=0; i<static_cast<long>(Slicing.threads_); ++i)
         {
           // If no higher coarse level can be found on slice i (saved in Slicing.Offset[i+1][level+1]) then pull C point(s) to the next level
           if (Slicing.Offset[i+1][level+1] == 0)
@@ -460,13 +441,6 @@ namespace viennacl
     template <typename InternalType1, typename InternalType2, typename InternalType3>
     void amg_coarse_rs3(unsigned int level, InternalType1 & A, InternalType2 & Pointvector, InternalType3 & Slicing, amg_tag & tag)
     {
-      typedef typename InternalType1::value_type SparseMatrixType;
-      typedef typename InternalType2::value_type PointVectorType;
-      typedef typename SparseMatrixType::value_type ScalarType;
-
-      typedef typename SparseMatrixType::iterator1 InternalRowIterator;
-      typedef typename SparseMatrixType::iterator2 InternalColIterator;
-
       amg_point *c_point, *point1, *point2;
       bool add_C;
       unsigned int i, j;
@@ -617,7 +591,7 @@ namespace viennacl
           typedef typename SparseMatrixType::iterator1 InternalRowIterator;
           typedef typename SparseMatrixType::iterator2 InternalColIterator;
 
-          unsigned int x,y;
+          long x,y;
           ScalarType diag;
           amg_point *pointx, *pointy;
 
@@ -629,7 +603,7 @@ namespace viennacl
     #ifdef VIENNACL_WITH_OPENMP
           #pragma omp parallel for private (x,y,diag) shared (A)
     #endif
-          for (x=0; x<A[level].size1(); ++x)
+          for (x=0; x<static_cast<long>(A[level].size1()); ++x)
           {
             InternalRowIterator row_iter = A[level].begin1();
             row_iter += x;

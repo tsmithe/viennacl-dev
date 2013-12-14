@@ -44,7 +44,7 @@ namespace viennacl
                                      viennacl::backend::mem_handle const & row_buffer,
                                      viennacl::backend::mem_handle const & col_buffer,
                                      viennacl::backend::mem_handle const & element_buffer,
-                                     std::size_t num_rows
+                                     vcl_size_t num_rows
                                     )
         {
           ScalarType * vec_buf = viennacl::linalg::host_based::detail::extract_raw_pointer<ScalarType>(vec.handle());
@@ -57,13 +57,13 @@ namespace viennacl
 #ifdef VIENNACL_WITH_OPENMP
           #pragma omp parallel for
 #endif
-          for (std::size_t row=0; row < num_rows; ++row)
+          for (long row=0; row < static_cast<long>(num_rows); ++row)
           {
             unsigned int eq_row = elim_row_index[row];
             ScalarType vec_entry = vec_buf[eq_row];
             unsigned int row_end = elim_row_buffer[row+1];
 
-            for (std::size_t j = elim_row_buffer[row]; j < row_end; ++j)
+            for (vcl_size_t j = elim_row_buffer[row]; j < row_end; ++j)
               vec_entry -= vec_buf[elim_col_buffer[j]] * elim_elements[j];
 
             vec_buf[eq_row] = vec_entry;

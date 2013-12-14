@@ -51,7 +51,7 @@ namespace viennacl
         * @param krylov_dim     The maximum dimension of the Krylov space before restart (number of restarts is found by max_iterations / krylov_dim)
         */
         gmres_tag(double tol = 1e-10, unsigned int max_iterations = 300, unsigned int krylov_dim = 20)
-         : tol_(tol), iterations_(max_iterations), krylov_dim_(krylov_dim), iters_taken_(0) {};
+         : tol_(tol), iterations_(max_iterations), krylov_dim_(krylov_dim), iters_taken_(0) {}
 
         /** @brief Returns the relative tolerance */
         double tolerance() const { return tol_; }
@@ -113,7 +113,7 @@ namespace viennacl
         * @param j               Index of the last nonzero index in 'input_vec' after applying the reflection
       */
       template <typename VectorType, typename ScalarType>
-      void gmres_setup_householder_vector(VectorType const & input_vec, VectorType & hh_vec, ScalarType & beta, ScalarType & mu, std::size_t j)
+      void gmres_setup_householder_vector(VectorType const & input_vec, VectorType & hh_vec, ScalarType & beta, ScalarType & mu, vcl_size_t j)
       {
         ScalarType input_j = input_vec(j);
 

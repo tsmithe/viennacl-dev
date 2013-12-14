@@ -53,7 +53,7 @@ namespace viennacl
         */
         ilut_tag(unsigned int entries_per_row = 20,
                  double drop_tolerance = 1e-4,
-                 bool with_level_scheduling = false) : entries_per_row_(entries_per_row), drop_tolerance_(drop_tolerance), use_level_scheduling_(with_level_scheduling) {};
+                 bool with_level_scheduling = false) : entries_per_row_(entries_per_row), drop_tolerance_(drop_tolerance), use_level_scheduling_(with_level_scheduling) {}
 
         void set_drop_tolerance(double tol)
         {
@@ -464,14 +464,14 @@ namespace viennacl
         std::list< viennacl::backend::mem_handle > multifrontal_L_row_buffers_;
         std::list< viennacl::backend::mem_handle > multifrontal_L_col_buffers_;
         std::list< viennacl::backend::mem_handle > multifrontal_L_element_buffers_;
-        std::list< std::size_t > multifrontal_L_row_elimination_num_list_;
+        std::list< vcl_size_t > multifrontal_L_row_elimination_num_list_;
 
         viennacl::vector<ScalarType> multifrontal_U_diagonal_;
         std::list< viennacl::backend::mem_handle > multifrontal_U_row_index_arrays_;
         std::list< viennacl::backend::mem_handle > multifrontal_U_row_buffers_;
         std::list< viennacl::backend::mem_handle > multifrontal_U_col_buffers_;
         std::list< viennacl::backend::mem_handle > multifrontal_U_element_buffers_;
-        std::list< std::size_t > multifrontal_U_row_elimination_num_list_;
+        std::list< vcl_size_t > multifrontal_U_row_elimination_num_list_;
     };
 
   }

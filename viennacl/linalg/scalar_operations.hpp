@@ -23,7 +23,6 @@
 */
 
 #include "viennacl/forwards.h"
-#include "viennacl/scalar.hpp"
 #include "viennacl/tools/tools.hpp"
 #include "viennacl/meta/predicate.hpp"
 #include "viennacl/meta/enable_if.hpp"
@@ -64,7 +63,7 @@ namespace viennacl
                                   && viennacl::is_any_scalar<ScalarType1>::value
                                 >::type
     as(S1 & s1,
-       S2 const & s2, ScalarType1 const & alpha, std::size_t len_alpha, bool reciprocal_alpha, bool flip_sign_alpha)
+       S2 const & s2, ScalarType1 const & alpha, vcl_size_t len_alpha, bool reciprocal_alpha, bool flip_sign_alpha)
     {
       switch (viennacl::traits::handle(s1).get_active_handle_id())
       {
@@ -113,8 +112,8 @@ namespace viennacl
                                   && viennacl::is_any_scalar<ScalarType2>::value
                                 >::type
     asbs(S1 & s1,
-         S2 const & s2, ScalarType1 const & alpha, std::size_t len_alpha, bool reciprocal_alpha, bool flip_sign_alpha,
-         S3 const & s3, ScalarType2 const & beta,  std::size_t len_beta,  bool reciprocal_beta,  bool flip_sign_beta)
+         S2 const & s2, ScalarType1 const & alpha, vcl_size_t len_alpha, bool reciprocal_alpha, bool flip_sign_alpha,
+         S3 const & s3, ScalarType2 const & beta,  vcl_size_t len_beta,  bool reciprocal_beta,  bool flip_sign_beta)
     {
       switch (viennacl::traits::handle(s1).get_active_handle_id())
       {
@@ -169,8 +168,8 @@ namespace viennacl
                                   && viennacl::is_any_scalar<ScalarType2>::value
                                 >::type
     asbs_s(S1 & s1,
-           S2 const & s2, ScalarType1 const & alpha, std::size_t len_alpha, bool reciprocal_alpha, bool flip_sign_alpha,
-           S3 const & s3, ScalarType2 const & beta,  std::size_t len_beta,  bool reciprocal_beta,  bool flip_sign_beta)
+           S2 const & s2, ScalarType1 const & alpha, vcl_size_t len_alpha, bool reciprocal_alpha, bool flip_sign_alpha,
+           S3 const & s3, ScalarType2 const & beta,  vcl_size_t len_beta,  bool reciprocal_beta,  bool flip_sign_beta)
     {
       switch (viennacl::traits::handle(s1).get_active_handle_id())
       {

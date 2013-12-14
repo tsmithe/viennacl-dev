@@ -143,11 +143,10 @@ namespace viennacl
         void initProjectSubMatrix(const SparseMatrixType& A_in, const std::vector<unsigned int>& J, std::vector<unsigned int>& I,
                                   DenseMatrixType& A_out)
         {
-          typedef typename DenseMatrixType::value_type ScalarType;
           A_out.resize(I.size(), J.size(), false);
-          for(std::size_t j = 0; j < J.size(); ++j)
+          for(vcl_size_t j = 0; j < J.size(); ++j)
           {
-            for(std::size_t i = 0; i < I.size(); ++i)
+            for(vcl_size_t i = 0; i < I.size(); ++i)
               A_out(i,j) = A_in(I[i],J[j]);
           }
         }
@@ -174,7 +173,7 @@ namespace viennacl
 #ifdef VIENNACL_WITH_OPENMP
             #pragma omp parallel for
 #endif
-            for(std::size_t i = 0; i < M_v.size(); ++i){
+            for (long i = 0; i < static_cast<long>(M_v.size()); ++i){
                 build_index_set(A_v_c, M_v[i], g_J[i], g_I[i]);
                 initProjectSubMatrix(A, g_J[i], g_I[i], g_A_I_J[i]);
                 //print_matrix(g_A_I_J[i]);
@@ -198,7 +197,7 @@ namespace viennacl
 #ifdef VIENNACL_WITH_OPENMP
             #pragma omp parallel for
 #endif
-            for(std::size_t i = 0; i < M_v.size(); ++i){
+            for (long i = 0; i < static_cast<long>(M_v.size()); ++i){
                 build_index_set(A_v_c, M_v[i], g_J[i], g_I[i]);
             }
         }
@@ -250,7 +249,7 @@ namespace viennacl
                             SparseVectorType & m)
         {
             unsigned int  cnt = 0;
-            for (std::size_t i = 0; i < J.size(); ++i) {
+            for (vcl_size_t i = 0; i < J.size(); ++i) {
                 m[J[i]] = m_in[start_m_ind + cnt++];
             }
         }
@@ -291,9 +290,9 @@ namespace viennacl
           init_start_inds(g_J, m_inds);
           //create y_v
           std::vector<ScalarType> y_v(y_sz, static_cast<ScalarType>(0));
-          for(std::size_t i = 0; i < M_v.size(); ++i)
+          for(vcl_size_t i = 0; i < M_v.size(); ++i)
           {
-            for(std::size_t j = 0; j < g_I[i].size(); ++j)
+            for(vcl_size_t j = 0; j < g_I[i].size(); ++j)
             {
               if(g_I[i][j] == i)
                 y_v[y_inds[i] + j] = static_cast<ScalarType>(1.0);
@@ -335,7 +334,7 @@ namespace viennacl
           VIENNACL_ERR_CHECK(vcl_err);
           //fan out vector in parallel
           //#pragma omp parallel for
-          for(std::size_t i = 0; i < M_v.size(); ++i)
+          for(long i = 0; i < static_cast<long>(M_v.size()); ++i)
           {
             if(g_is_update[i])
             {
@@ -381,7 +380,7 @@ namespace viennacl
 #ifdef VIENNACL_WITH_OPENMP
             #pragma omp parallel for
 #endif
-            for(std::size_t i = 0; i < M_v.size(); ++i){
+            for (long i = 0; i < static_cast<long>(M_v.size()); ++i){
                 if(g_is_update[i]){
                     VectorType y = boost::numeric::ublas::zero_vector<ScalarType>(g_I[i].size());
                     //std::cout<<y<<std::endl;
@@ -445,10 +444,10 @@ namespace viennacl
 
         template <typename SizeType>
         void write_set_to_array(const std::vector<std::vector<SizeType> >& ind_set, std::vector<cl_uint>& a){
-            std::size_t cnt = 0;
+            vcl_size_t cnt = 0;
             //unsigned int tmp;
-            for(std::size_t i = 0; i < ind_set.size(); ++i){
-                for(std::size_t j = 0; j < ind_set[i].size(); ++j){
+            for(vcl_size_t i = 0; i < ind_set.size(); ++i){
+                for(vcl_size_t j = 0; j < ind_set[i].size(); ++j){
                     a[cnt++] = static_cast<cl_uint>(ind_set[i][j]);
                 }
             }
@@ -599,7 +598,7 @@ namespace viennacl
         template<typename MatrixType>
         void sparse_transpose(const MatrixType& A_in, MatrixType& A){
             typedef typename MatrixType::value_type ScalarType;
-            std::vector<std::map<std::size_t, ScalarType> >   temp_A(A_in.size2());
+            std::vector<std::map<vcl_size_t, ScalarType> >   temp_A(A_in.size2());
             A.resize(A_in.size2(), A_in.size1(), false);
 
             for (typename MatrixType::const_iterator1 row_it = A_in.begin1();
@@ -614,9 +613,9 @@ namespace viennacl
                 }
             }
 
-            for (std::size_t i=0; i<temp_A.size(); ++i)
+            for (vcl_size_t i=0; i<temp_A.size(); ++i)
             {
-                for (typename std::map<std::size_t, ScalarType>::const_iterator it = temp_A[i].begin();
+                for (typename std::map<vcl_size_t, ScalarType>::const_iterator it = temp_A[i].begin();
                      it != temp_A[i].end();
                      ++it)
                     A(i, it->first) = it->second;
@@ -726,10 +725,7 @@ namespace viennacl
                          boost::numeric::ublas::compressed_matrix<ScalarType>& cpu_M, //output
                          viennacl::compressed_matrix<ScalarType, MAT_ALIGNMENT>& M,
                          const spai_tag& tag){
-            typedef typename boost::numeric::ublas::vector<ScalarType> VectorType;
             typedef typename viennacl::linalg::detail::spai::sparse_vector<ScalarType> SparseVectorType;
-            typedef typename boost::numeric::ublas::matrix<ScalarType> DenseMatrixType;
-            typedef typename boost::numeric::ublas::compressed_matrix<ScalarType> CPUMatrixType;
             //typedef typename viennacl::compressed_matrix<ScalarType> GPUSparseMatrixType;
             //sparse matrix transpose...
             unsigned int cur_iter = 0;

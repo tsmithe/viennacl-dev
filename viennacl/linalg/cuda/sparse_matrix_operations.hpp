@@ -172,7 +172,32 @@ namespace viennacl
         VIENNACL_CUDA_LAST_ERROR_CHECK("compressed_matrix_vec_mul_kernel");
       }
 
-      template <typename T>
+      template <typename LayoutT>
+      struct mat_mult_matrix_index
+      {
+        static __device__ unsigned int apply(unsigned int i, unsigned int j,
+                                      unsigned int row_start, unsigned int row_inc,
+                                      unsigned int col_start, unsigned int col_inc,
+                                      unsigned int internal_rows, unsigned int internal_cols)
+        {
+          return (row_start + i * row_inc) * internal_cols + col_start + j * col_inc;
+        }
+      };
+
+      template <>
+      struct mat_mult_matrix_index<viennacl::column_major>
+      {
+        static __device__ unsigned int apply(unsigned int i, unsigned int j,
+                                      unsigned int row_start, unsigned int row_inc,
+                                      unsigned int col_start, unsigned int col_inc,
+                                      unsigned int internal_rows, unsigned int internal_cols)
+        {
+          return (row_start + i * row_inc) + (col_start + j * col_inc) * internal_rows;
+        }
+      };
+
+
+      template <typename DMatIndexT, typename ResultIndexT, typename T>
       __global__ void compressed_matrix_d_mat_mul_kernel(
                 const unsigned int * sp_mat_row_indices,
                 const unsigned int * sp_mat_col_indices,
@@ -203,21 +228,24 @@ namespace viennacl
 
           for ( unsigned int col = threadIdx.x; col < result_col_size; col += blockDim.x) {
 
-            float r = 0;
+            T r = 0;
 
             for (unsigned int k = row_start; k < row_end; k++) {
 
               unsigned int j = sp_mat_col_indices[k];
-              float x = sp_mat_elements[k];
-
-              float y = d_mat[ (d_mat_row_start + j * d_mat_row_inc) * d_mat_internal_cols +
-                                d_mat_col_start + col * d_mat_col_inc ];
+              T x = sp_mat_elements[k];
+              T y = d_mat[ DMatIndexT::apply(j, col,
+                                             d_mat_row_start, d_mat_row_inc,
+                                             d_mat_col_start, d_mat_col_inc,
+                                             d_mat_internal_rows, d_mat_internal_cols) ];
 
               r += x * y;
             }
 
-            result [ (result_row_start + row * result_row_inc) * result_internal_cols +
-                      result_col_start + col * result_col_inc ] = r;
+            result [ ResultIndexT::apply(row, col,
+                                        result_row_start, result_row_inc,
+                                        result_col_start, result_col_inc,
+                                        result_internal_rows, result_internal_cols) ] = r;
           }
 
         }
@@ -233,11 +261,11 @@ namespace viennacl
       * @param d_mat    The dense matrix
       * @param result   The result matrix
       */
-      template< typename TYPE, unsigned int ALIGNMENT, typename F>
+      template< typename TYPE, unsigned int ALIGNMENT, typename F1, typename F2>
       void prod_impl(const viennacl::compressed_matrix<TYPE, ALIGNMENT> & sp_mat,
-                     const viennacl::matrix_base<TYPE, F> & d_mat,
-                           viennacl::matrix_base<TYPE, F> & result) {
-        compressed_matrix_d_mat_mul_kernel<<<128, 128>>>
+                     const viennacl::matrix_base<TYPE, F1> & d_mat,
+                           viennacl::matrix_base<TYPE, F2> & result) {
+        compressed_matrix_d_mat_mul_kernel<mat_mult_matrix_index<F1>, mat_mult_matrix_index<F2> ><<<128, 128>>>
                                                       (detail::cuda_arg<unsigned int>(sp_mat.handle1().cuda_handle()),
                                                        detail::cuda_arg<unsigned int>(sp_mat.handle2().cuda_handle()),
                                                        detail::cuda_arg<TYPE>(sp_mat.handle().cuda_handle()),
@@ -258,7 +286,7 @@ namespace viennacl
       }
 
 
-      template <typename T>
+      template <typename DMatIndexT, typename ResultIndexT, typename T>
       __global__ void compressed_matrix_d_tr_mat_mul_kernel(
                 const unsigned int * sp_mat_row_indices,
                 const unsigned int * sp_mat_col_indices,
@@ -289,21 +317,24 @@ namespace viennacl
 
           for ( unsigned int col = threadIdx.x; col < result_col_size; col += blockDim.x) {
 
-            float r = 0;
+            T r = 0;
 
             for (unsigned int k = row_start; k < row_end; k++) {
 
               unsigned int j = sp_mat_col_indices[k];
-              float x = sp_mat_elements[k];
-
-              float y = d_mat[ (d_mat_row_start + col * d_mat_row_inc) * d_mat_internal_cols +
-                                d_mat_col_start + j * d_mat_col_inc ];
+              T x = sp_mat_elements[k];
+              T y = d_mat[ DMatIndexT::apply(col, j,
+                                             d_mat_row_start, d_mat_row_inc,
+                                             d_mat_col_start, d_mat_col_inc,
+                                             d_mat_internal_rows, d_mat_internal_cols) ];
 
               r += x * y;
             }
 
-            result [ (result_row_start + row * result_row_inc) * result_internal_cols +
-                      result_col_start + col * result_col_inc ] = r;
+            result [ ResultIndexT::apply(row, col,
+                                         result_row_start, result_row_inc,
+                                         result_col_start, result_col_inc,
+                                         result_internal_rows, result_internal_cols) ] = r;
           }
         }
 
@@ -318,14 +349,14 @@ namespace viennacl
       * @param d_mat              The transposed dense matrix proxy
       * @param result             The result matrix
       */
-      template< typename TYPE, unsigned int ALIGNMENT, typename F>
+      template< typename TYPE, unsigned int ALIGNMENT, typename F1, typename F2>
       void prod_impl(const viennacl::compressed_matrix<TYPE, ALIGNMENT> & sp_mat,
-                     const viennacl::matrix_expression< const viennacl::matrix_base<TYPE, F>,
-                                                        const viennacl::matrix_base<TYPE, F>,
+                     const viennacl::matrix_expression< const viennacl::matrix_base<TYPE, F1>,
+                                                        const viennacl::matrix_base<TYPE, F1>,
                                                         viennacl::op_trans > & d_mat,
-                      viennacl::matrix_base<TYPE, F> & result) {
+                      viennacl::matrix_base<TYPE, F2> & result) {
 
-        compressed_matrix_d_tr_mat_mul_kernel<<<128, 128>>>
+        compressed_matrix_d_tr_mat_mul_kernel<mat_mult_matrix_index<F1>, mat_mult_matrix_index<F2> ><<<128, 128>>>
                                                       (detail::cuda_arg<unsigned int>(sp_mat.handle1().cuda_handle()),
                                                        detail::cuda_arg<unsigned int>(sp_mat.handle2().cuda_handle()),
                                                        detail::cuda_arg<TYPE>(sp_mat.handle().cuda_handle()),
@@ -578,7 +609,7 @@ namespace viennacl
         void block_inplace_solve(const matrix_expression<const compressed_matrix<ScalarType, MAT_ALIGNMENT>,
                                                          const compressed_matrix<ScalarType, MAT_ALIGNMENT>,
                                                          op_trans> & L,
-                                 viennacl::backend::mem_handle const & block_indices, std::size_t num_blocks,
+                                 viennacl::backend::mem_handle const & block_indices, vcl_size_t num_blocks,
                                  vector_base<ScalarType> const & /* L_diagonal */,  //ignored
                                  vector_base<ScalarType> & vec,
                                  viennacl::linalg::unit_lower_tag)
@@ -597,7 +628,7 @@ namespace viennacl
         void block_inplace_solve(const matrix_expression<const compressed_matrix<ScalarType, MAT_ALIGNMENT>,
                                                          const compressed_matrix<ScalarType, MAT_ALIGNMENT>,
                                                          op_trans> & U,
-                                 viennacl::backend::mem_handle const & block_indices, std::size_t num_blocks,
+                                 viennacl::backend::mem_handle const & block_indices, vcl_size_t num_blocks,
                                  vector_base<ScalarType> const & U_diagonal,
                                  vector_base<ScalarType> & vec,
                                  viennacl::linalg::upper_tag)
@@ -854,7 +885,6 @@ namespace viennacl
 
         uint2 tmp;
         T val;
-        uint last_index  = blockDim.x - 1;
         uint group_start = group_boundaries[blockIdx.x];
         uint group_end   = group_boundaries[blockIdx.x + 1];
         uint k_end = (group_end > group_start) ? 1 + (group_end - group_start - 1) / blockDim.x : 0;   // -1 in order to have correct behavior if group_end - group_start == j * blockDim.x
@@ -871,10 +901,10 @@ namespace viennacl
           //check for carry from previous loop run:
           if (threadIdx.x == 0 && k > 0)
           {
-            if (tmp.x == shared_rows[last_index])
-              val += inter_results[last_index];
+            if (tmp.x == shared_rows[blockDim.x-1])
+              val += inter_results[blockDim.x-1];
             else
-              result[shared_rows[last_index] * inc_result + start_result] += inter_results[last_index];
+              result[shared_rows[blockDim.x-1] * inc_result + start_result] = inter_results[blockDim.x-1];
           }
 
           //segmented parallel reduction begin
@@ -893,18 +923,17 @@ namespace viennacl
           }
           //segmented parallel reduction end
 
-          if (threadIdx.x != last_index &&
-              shared_rows[threadIdx.x] != shared_rows[threadIdx.x + 1] &&
-              inter_results[threadIdx.x] != 0)
+          if (local_index < group_end && threadIdx.x < blockDim.x-1 &&
+              shared_rows[threadIdx.x] != shared_rows[threadIdx.x + 1])
           {
-            result[tmp.x * inc_result + start_result] += inter_results[threadIdx.x];
+            result[tmp.x * inc_result + start_result] = inter_results[threadIdx.x];
           }
 
           __syncthreads();
         } //for k
 
-        if (threadIdx.x == last_index && inter_results[last_index] != 0)
-          result[tmp.x * inc_result + start_result] += inter_results[last_index];
+        if (local_index + 1 == group_end)
+          result[tmp.x * inc_result + start_result] = inter_results[threadIdx.x];
       }
 
 
@@ -923,8 +952,6 @@ namespace viennacl
       {
         result.clear();
 
-        assert(vec.start() == 0 && vec.stride() == 1 && result.start() == 0 && result.stride() == 1 && bool("Vector strides unsupported for COO using CUDA"));
-
         coordinate_matrix_vec_mul_kernel<<<64, 128>>>(detail::cuda_arg<unsigned int>(mat.handle12().cuda_handle()),
                                                       detail::cuda_arg<ScalarType>(mat.handle().cuda_handle()),
                                                       detail::cuda_arg<unsigned int>(mat.handle3().cuda_handle()),
@@ -938,7 +965,10 @@ namespace viennacl
         VIENNACL_CUDA_LAST_ERROR_CHECK("coordinate_matrix_vec_mul_kernel");
       }
 
-      template <typename ScalarType, typename NumericT>
+
+
+
+      template <typename DMatIndexT, typename ResultIndexT, typename ScalarType, typename NumericT>
       __global__ void coordinate_matrix_d_mat_mul_kernel(const unsigned int * coords, //(row_index, column_index)
                                                          const ScalarType * elements,
                                                          const unsigned int * group_boundaries,
@@ -959,8 +989,77 @@ namespace viennacl
                                                          unsigned int result_row_size,
                                                          unsigned int result_col_size,
                                                          unsigned int result_internal_rows,
-                                                         unsigned int result_internal_cols) {
+                                                         unsigned int result_internal_cols)
+      {
+        __shared__ unsigned int shared_rows[128];
+        __shared__ NumericT inter_results[128];
 
+        uint2 tmp;
+        NumericT val;
+        uint group_start = group_boundaries[blockIdx.x];
+        uint group_end   = group_boundaries[blockIdx.x + 1];
+        uint k_end = (group_end > group_start) ? 1 + (group_end - group_start - 1) / blockDim.x : 0;   // -1 in order to have correct behavior if group_end - group_start == j * blockDim.x
+
+        uint local_index = 0;
+
+        for (uint result_col = 0; result_col < result_col_size; ++result_col)
+        {
+          for (uint k = 0; k < k_end; ++k)
+          {
+            local_index = group_start + k * blockDim.x + threadIdx.x;
+
+            tmp = (local_index < group_end) ? ((const uint2 *)coords)[local_index] : ::make_uint2(0, 0);
+            val = (local_index < group_end) ? elements[local_index] * d_mat[DMatIndexT::apply(tmp.y, result_col,
+                                                                                              d_mat_row_start, d_mat_row_inc,
+                                                                                              d_mat_col_start, d_mat_col_inc,
+                                                                                              d_mat_internal_rows, d_mat_internal_cols) ] : 0;
+
+            //check for carry from previous loop run:
+            if (threadIdx.x == 0 && k > 0)
+            {
+              if (tmp.x == shared_rows[blockDim.x-1])
+                val += inter_results[blockDim.x-1];
+              else
+                result[ResultIndexT::apply(shared_rows[blockDim.x-1], result_col,
+                                           result_row_start, result_row_inc,
+                                           result_col_start, result_col_inc,
+                                           result_internal_rows, result_internal_cols)] = inter_results[blockDim.x-1];
+            }
+
+            //segmented parallel reduction begin
+            __syncthreads();
+            shared_rows[threadIdx.x] = tmp.x;
+            inter_results[threadIdx.x] = val;
+            NumericT left = 0;
+            __syncthreads();
+
+            for (unsigned int stride = 1; stride < blockDim.x; stride *= 2)
+            {
+              left = (threadIdx.x >= stride && tmp.x == shared_rows[threadIdx.x - stride]) ? inter_results[threadIdx.x - stride] : 0;
+              __syncthreads();
+              inter_results[threadIdx.x] += left;
+              __syncthreads();
+            }
+            //segmented parallel reduction end
+
+            if (local_index < group_end && threadIdx.x < blockDim.x-1 &&
+                shared_rows[threadIdx.x] != shared_rows[threadIdx.x + 1])
+            {
+              result[ResultIndexT::apply(tmp.x, result_col,
+                                         result_row_start, result_row_inc,
+                                         result_col_start, result_col_inc,
+                                         result_internal_rows, result_internal_cols)] = inter_results[threadIdx.x];
+            }
+
+            __syncthreads();
+          } //for k
+
+          if (local_index + 1 == group_end)
+            result[ResultIndexT::apply(tmp.x, result_col,
+                                       result_row_start, result_row_inc,
+                                       result_col_start, result_col_inc,
+                                       result_internal_rows, result_internal_cols)] = inter_results[threadIdx.x];
+        }
       }
 
 
@@ -972,13 +1071,14 @@ namespace viennacl
       * @param d_mat      The Dense Matrix
       * @param result     The Result Matrix
       */
-      template<class ScalarType, unsigned int ALIGNMENT, class NumericT, typename F>
-      void prod_impl(const viennacl::coordinate_matrix<ScalarType, ALIGNMENT> & sp_mat,
-                     const viennacl::matrix_base<NumericT, F> & d_mat,
-                           viennacl::matrix_base<NumericT, F> & result) {
+      template<typename NumericT, unsigned int ALIGNMENT, typename F1, typename F2>
+      void prod_impl(const viennacl::coordinate_matrix<NumericT, ALIGNMENT> & sp_mat,
+                     const viennacl::matrix_base<NumericT, F1> & d_mat,
+                           viennacl::matrix_base<NumericT, F2> & result) {
 
-        coordinate_matrix_d_mat_mul_kernel<<<128, 128>>>(detail::cuda_arg<unsigned int>(sp_mat.handle12().cuda_handle()),
-                                                         detail::cuda_arg<ScalarType>(sp_mat.handle().cuda_handle()),
+        coordinate_matrix_d_mat_mul_kernel<mat_mult_matrix_index<F1>, mat_mult_matrix_index<F2> ><<<64, 128>>>
+                                                        (detail::cuda_arg<unsigned int>(sp_mat.handle12().cuda_handle()),
+                                                         detail::cuda_arg<NumericT>(sp_mat.handle().cuda_handle()),
                                                          detail::cuda_arg<unsigned int>(sp_mat.handle3().cuda_handle()),
 
                                                          detail::cuda_arg<NumericT>(d_mat),
@@ -996,7 +1096,7 @@ namespace viennacl
 
       }
 
-      template <typename ScalarType, typename NumericT>
+      template <typename DMatIndexT, typename ResultIndexT, typename ScalarType, typename NumericT>
       __global__ void coordinate_matrix_d_tr_mat_mul_kernel(const unsigned int * coords, //(row_index, column_index)
                                                            const ScalarType * elements,
                                                            const unsigned int * group_boundaries,
@@ -1017,9 +1117,77 @@ namespace viennacl
                                                            unsigned int result_row_size,
                                                            unsigned int result_col_size,
                                                            unsigned int result_internal_rows,
-                                                           unsigned int result_internal_cols) {
+                                                           unsigned int result_internal_cols)
+      {
+        __shared__ unsigned int shared_rows[128];
+        __shared__ NumericT inter_results[128];
 
-        VIENNACL_CUDA_LAST_ERROR_CHECK("coordinate_matrix_d_mat_mul_kernel");
+        uint2 tmp;
+        NumericT val;
+        uint group_start = group_boundaries[blockIdx.x];
+        uint group_end   = group_boundaries[blockIdx.x + 1];
+        uint k_end = (group_end > group_start) ? 1 + (group_end - group_start - 1) / blockDim.x : 0;   // -1 in order to have correct behavior if group_end - group_start == j * blockDim.x
+
+        uint local_index = 0;
+
+        for (uint result_col = 0; result_col < result_col_size; ++result_col)
+        {
+          for (uint k = 0; k < k_end; ++k)
+          {
+            local_index = group_start + k * blockDim.x + threadIdx.x;
+
+            tmp = (local_index < group_end) ? ((const uint2 *)coords)[local_index] : ::make_uint2(0, 0);
+            val = (local_index < group_end) ? elements[local_index] * d_mat[DMatIndexT::apply(result_col, tmp.y,
+                                                                                              d_mat_row_start, d_mat_row_inc,
+                                                                                              d_mat_col_start, d_mat_col_inc,
+                                                                                              d_mat_internal_rows, d_mat_internal_cols)] : 0;
+
+            //check for carry from previous loop run:
+            if (threadIdx.x == 0 && k > 0)
+            {
+              if (tmp.x == shared_rows[blockDim.x-1])
+                val += inter_results[blockDim.x-1];
+              else
+                result[ResultIndexT::apply(shared_rows[blockDim.x-1], result_col,
+                                           result_row_start, result_row_inc,
+                                           result_col_start, result_col_inc,
+                                           result_internal_rows, result_internal_cols) ] = inter_results[blockDim.x-1];
+            }
+
+            //segmented parallel reduction begin
+            __syncthreads();
+            shared_rows[threadIdx.x] = tmp.x;
+            inter_results[threadIdx.x] = val;
+            NumericT left = 0;
+            __syncthreads();
+
+            for (unsigned int stride = 1; stride < blockDim.x; stride *= 2)
+            {
+              left = (threadIdx.x >= stride && tmp.x == shared_rows[threadIdx.x - stride]) ? inter_results[threadIdx.x - stride] : 0;
+              __syncthreads();
+              inter_results[threadIdx.x] += left;
+              __syncthreads();
+            }
+            //segmented parallel reduction end
+
+            if (local_index < group_end && threadIdx.x < blockDim.x-1 &&
+                shared_rows[threadIdx.x] != shared_rows[threadIdx.x + 1])
+            {
+              result[ ResultIndexT::apply(tmp.x, result_col,
+                                          result_row_start, result_row_inc,
+                                          result_col_start, result_col_inc,
+                                          result_internal_rows, result_internal_cols) ] = inter_results[threadIdx.x];
+            }
+
+            __syncthreads();
+          } //for k
+
+          if (local_index + 1 == group_end)
+            result[ ResultIndexT::apply(tmp.x, result_col,
+                                        result_row_start, result_row_inc,
+                                        result_col_start, result_col_inc,
+                                        result_internal_rows, result_internal_cols) ] = inter_results[threadIdx.x];
+        }
       }
 
       /** @brief Carries out Compressed Matrix(COO)-Dense Transposed Matrix multiplication
@@ -1030,29 +1198,30 @@ namespace viennacl
       * @param d_mat      The Dense Transposed Matrix
       * @param result     The Result Matrix
       */
-      template<class ScalarType, unsigned int ALIGNMENT, class NumericT, typename F>
+      template<class ScalarType, unsigned int ALIGNMENT, class NumericT, typename F1, typename F2>
       void prod_impl(const viennacl::coordinate_matrix<ScalarType, ALIGNMENT> & sp_mat,
-                     const viennacl::matrix_expression< const viennacl::matrix_base<NumericT, F>,
-                                                        const viennacl::matrix_base<NumericT, F>,
+                     const viennacl::matrix_expression< const viennacl::matrix_base<NumericT, F1>,
+                                                        const viennacl::matrix_base<NumericT, F1>,
                                                         viennacl::op_trans > & d_mat,
-                           viennacl::matrix_base<NumericT, F> & result) {
+                           viennacl::matrix_base<NumericT, F2> & result) {
 
-        coordinate_matrix_d_mat_mul_kernel<<<128, 128>>>(detail::cuda_arg<unsigned int>(sp_mat.handle12().cuda_handle()),
-                                                         detail::cuda_arg<ScalarType>(sp_mat.handle().cuda_handle()),
-                                                         detail::cuda_arg<unsigned int>(sp_mat.handle3().cuda_handle()),
+        coordinate_matrix_d_tr_mat_mul_kernel<mat_mult_matrix_index<F1>, mat_mult_matrix_index<F2> ><<<64, 128>>>
+                                                          (detail::cuda_arg<unsigned int>(sp_mat.handle12().cuda_handle()),
+                                                           detail::cuda_arg<ScalarType>(sp_mat.handle().cuda_handle()),
+                                                           detail::cuda_arg<unsigned int>(sp_mat.handle3().cuda_handle()),
 
-                                                         detail::cuda_arg<NumericT>(d_mat.lhs()),
-                                                         static_cast<unsigned int>(viennacl::traits::start1(d_mat.lhs())),         static_cast<unsigned int>(viennacl::traits::start2(d_mat.lhs())),
-                                                         static_cast<unsigned int>(viennacl::traits::stride1(d_mat.lhs())),        static_cast<unsigned int>(viennacl::traits::stride2(d_mat.lhs())),
-                                                         static_cast<unsigned int>(viennacl::traits::size1(d_mat.lhs())),          static_cast<unsigned int>(viennacl::traits::size2(d_mat.lhs())),
-                                                         static_cast<unsigned int>(viennacl::traits::internal_size1(d_mat.lhs())), static_cast<unsigned int>(viennacl::traits::internal_size2(d_mat.lhs())),
+                                                           detail::cuda_arg<NumericT>(d_mat.lhs()),
+                                                           static_cast<unsigned int>(viennacl::traits::start1(d_mat.lhs())),         static_cast<unsigned int>(viennacl::traits::start2(d_mat.lhs())),
+                                                           static_cast<unsigned int>(viennacl::traits::stride1(d_mat.lhs())),        static_cast<unsigned int>(viennacl::traits::stride2(d_mat.lhs())),
+                                                           static_cast<unsigned int>(viennacl::traits::size1(d_mat.lhs())),          static_cast<unsigned int>(viennacl::traits::size2(d_mat.lhs())),
+                                                           static_cast<unsigned int>(viennacl::traits::internal_size1(d_mat.lhs())), static_cast<unsigned int>(viennacl::traits::internal_size2(d_mat.lhs())),
 
-                                                         detail::cuda_arg<NumericT>(result),
-                                                         static_cast<unsigned int>(viennacl::traits::start1(result)),         static_cast<unsigned int>(viennacl::traits::start2(result)),
-                                                         static_cast<unsigned int>(viennacl::traits::stride1(result)),        static_cast<unsigned int>(viennacl::traits::stride2(result)),
-                                                         static_cast<unsigned int>(viennacl::traits::size1(result)),          static_cast<unsigned int>(viennacl::traits::size2(result)),
-                                                         static_cast<unsigned int>(viennacl::traits::internal_size1(result)), static_cast<unsigned int>(viennacl::traits::internal_size2(result))
-                                                        );
+                                                           detail::cuda_arg<NumericT>(result),
+                                                           static_cast<unsigned int>(viennacl::traits::start1(result)),         static_cast<unsigned int>(viennacl::traits::start2(result)),
+                                                           static_cast<unsigned int>(viennacl::traits::stride1(result)),        static_cast<unsigned int>(viennacl::traits::stride2(result)),
+                                                           static_cast<unsigned int>(viennacl::traits::size1(result)),          static_cast<unsigned int>(viennacl::traits::size2(result)),
+                                                           static_cast<unsigned int>(viennacl::traits::internal_size1(result)), static_cast<unsigned int>(viennacl::traits::internal_size2(result))
+                                                          );
 
         VIENNACL_CUDA_LAST_ERROR_CHECK("coordinate_matrix_d_tr_mat_mul_kernel");
       }
@@ -1132,7 +1301,7 @@ namespace viennacl
         VIENNACL_CUDA_LAST_ERROR_CHECK("ell_matrix_vec_mul_kernel");
       }
 
-      template <typename ScalarType, typename NumericT >
+      template <typename DMatIndexT, typename ResultIndexT, typename ScalarType, typename NumericT >
       __global__ void ell_matrix_d_mat_mul_kernel(const unsigned int * sp_mat_coords,
                                                   const ScalarType * sp_mat_elements,
                                                   unsigned int sp_mat_row_num,
@@ -1176,14 +1345,18 @@ namespace viennacl
 
             if(x != (NumericT)0) {
 
-                NumericT y = d_mat[ (d_mat_row_start + j * d_mat_row_inc) * d_mat_internal_cols +
-                                     d_mat_col_start + col * d_mat_col_inc ];
+                NumericT y = d_mat[ DMatIndexT::apply(j, col,
+                                                      d_mat_row_start, d_mat_row_inc,
+                                                      d_mat_col_start, d_mat_col_inc,
+                                                      d_mat_internal_rows, d_mat_internal_cols) ];
 
                 r += x*y;
               }
             }
-          result [ (result_row_start + row * result_row_inc) * result_internal_cols +
-                    result_col_start + col * result_col_inc ] = r;
+          result [ ResultIndexT::apply(row, col,
+                                       result_row_start, result_row_inc,
+                                       result_col_start, result_col_inc,
+                                       result_internal_rows, result_internal_cols) ] = r;
         }
 
       }
@@ -1197,12 +1370,13 @@ namespace viennacl
       * @param d_mat      The dense matrix
       * @param result     The result matrix
       */
-      template<class ScalarType, unsigned int ALIGNMENT, class NumericT, typename F >
+      template<class ScalarType, unsigned int ALIGNMENT, class NumericT, typename F1, typename F2 >
       void prod_impl(const viennacl::ell_matrix<ScalarType, ALIGNMENT> & sp_mat,
-                     const viennacl::matrix_base<NumericT, F> & d_mat,
-                           viennacl::matrix_base<NumericT, F> & result) {
+                     const viennacl::matrix_base<NumericT, F1> & d_mat,
+                           viennacl::matrix_base<NumericT, F2> & result) {
 
-        ell_matrix_d_mat_mul_kernel<<<128, 128>>>(detail::cuda_arg<unsigned int>(sp_mat.handle2().cuda_handle()),
+        ell_matrix_d_mat_mul_kernel<mat_mult_matrix_index<F1>, mat_mult_matrix_index<F2> ><<<128, 128>>>
+                                                 (detail::cuda_arg<unsigned int>(sp_mat.handle2().cuda_handle()),
                                                   detail::cuda_arg<ScalarType>(sp_mat.handle().cuda_handle()),
                                                   static_cast<unsigned int>(sp_mat.size1()),
                                                   static_cast<unsigned int>(sp_mat.size2()),
@@ -1224,7 +1398,7 @@ namespace viennacl
         VIENNACL_CUDA_LAST_ERROR_CHECK("ell_matrix_d_mat_mul_kernel");
       }
 
-      template <typename ScalarType, typename NumericT >
+      template <typename DMatIndexT, typename ResultIndexT, typename ScalarType, typename NumericT >
       __global__ void ell_matrix_d_tr_mat_mul_kernel(const unsigned int * sp_mat_coords,
                                                   const ScalarType * sp_mat_elements,
                                                   unsigned int sp_mat_row_num,
@@ -1268,14 +1442,18 @@ namespace viennacl
 
             if(x != (NumericT)0) {
 
-                NumericT y = d_mat[ (d_mat_row_start + col * d_mat_row_inc) * d_mat_internal_cols +
-                                     d_mat_col_start + j * d_mat_col_inc ];
+                NumericT y = d_mat[ DMatIndexT::apply(col, j,
+                                                      d_mat_row_start, d_mat_row_inc,
+                                                      d_mat_col_start, d_mat_col_inc,
+                                                      d_mat_internal_rows, d_mat_internal_cols) ];
 
                 r += x*y;
               }
             }
-          result [ (result_row_start + row * result_row_inc) * result_internal_cols +
-                    result_col_start + col * result_col_inc ] = r;
+          result [ ResultIndexT::apply(row, col,
+                                       result_row_start, result_row_inc,
+                                       result_col_start, result_col_inc,
+                                       result_internal_rows, result_internal_cols) ] = r;
         }
 
       }
@@ -1289,14 +1467,15 @@ namespace viennacl
       * @param d_mat      The dense matrix
       * @param result     The result matrix
       */
-      template<class ScalarType, unsigned int ALIGNMENT, class NumericT, typename F >
+      template<class ScalarType, unsigned int ALIGNMENT, class NumericT, typename F1, typename F2 >
       void prod_impl(const viennacl::ell_matrix<ScalarType, ALIGNMENT> & sp_mat,
-                     const viennacl::matrix_expression< const viennacl::matrix_base<NumericT, F>,
-                                                        const viennacl::matrix_base<NumericT, F>,
+                     const viennacl::matrix_expression< const viennacl::matrix_base<NumericT, F1>,
+                                                        const viennacl::matrix_base<NumericT, F1>,
                                                         viennacl::op_trans > & d_mat,
-                           viennacl::matrix_base<NumericT, F> & result) {
+                           viennacl::matrix_base<NumericT, F2> & result) {
 
-        ell_matrix_d_tr_mat_mul_kernel<<<128, 128>>>(detail::cuda_arg<unsigned int>(sp_mat.handle2().cuda_handle()),
+        ell_matrix_d_tr_mat_mul_kernel<mat_mult_matrix_index<F1>, mat_mult_matrix_index<F2> ><<<128, 128>>>
+                                                    (detail::cuda_arg<unsigned int>(sp_mat.handle2().cuda_handle()),
                                                      detail::cuda_arg<ScalarType>(sp_mat.handle().cuda_handle()),
                                                      static_cast<unsigned int>(sp_mat.size1()),
                                                      static_cast<unsigned int>(sp_mat.size2()),
@@ -1410,7 +1589,237 @@ namespace viennacl
       }
 
 
-    } // namespace opencl
+
+      template <typename DMatIndexT, typename ResultIndexT, typename NumericT>
+      __global__ void hyb_matrix_d_mat_mul_kernel(const unsigned int * ell_coords,
+                                                const NumericT * ell_elements,
+                                                const unsigned int * csr_rows,
+                                                const unsigned int * csr_cols,
+                                                const NumericT * csr_elements,
+                                                unsigned int row_num,
+                                                unsigned int internal_row_num,
+                                                unsigned int items_per_row,
+                                                unsigned int aligned_items_per_row,
+                                                const NumericT * d_mat,
+                                                unsigned int d_mat_row_start,
+                                                unsigned int d_mat_col_start,
+                                                unsigned int d_mat_row_inc,
+                                                unsigned int d_mat_col_inc,
+                                                unsigned int d_mat_row_size,
+                                                unsigned int d_mat_col_size,
+                                                unsigned int d_mat_internal_rows,
+                                                unsigned int d_mat_internal_cols,
+                                                NumericT * result,
+                                                unsigned int result_row_start,
+                                                unsigned int result_col_start,
+                                                unsigned int result_row_inc,
+                                                unsigned int result_col_inc,
+                                                unsigned int result_row_size,
+                                                unsigned int result_col_size,
+                                                unsigned int result_internal_rows,
+                                                unsigned int result_internal_cols)
+      {
+        uint glb_id = blockDim.x * blockIdx.x + threadIdx.x;
+        uint glb_sz = gridDim.x * blockDim.x;
+
+        for(uint result_col = 0; result_col < result_col_size; ++result_col)
+        {
+          for(uint row_id = glb_id; row_id < row_num; row_id += glb_sz)
+          {
+            NumericT sum = 0;
+
+            uint offset = row_id;
+            for(uint item_id = 0; item_id < items_per_row; item_id++, offset += internal_row_num)
+            {
+              NumericT val = ell_elements[offset];
+
+              if(val != 0.0f)
+              {
+                sum += d_mat[DMatIndexT::apply(ell_coords[offset], result_col,
+                                               d_mat_row_start, d_mat_row_inc,
+                                               d_mat_col_start, d_mat_col_inc,
+                                               d_mat_internal_rows, d_mat_internal_cols)] * val;
+              }
+            }
+
+            uint col_begin = csr_rows[row_id];
+            uint col_end   = csr_rows[row_id + 1];
+
+            for(uint item_id = col_begin; item_id < col_end; item_id++)
+            {
+              sum += d_mat[DMatIndexT::apply(csr_cols[item_id], result_col,
+                                             d_mat_row_start, d_mat_row_inc,
+                                             d_mat_col_start, d_mat_col_inc,
+                                             d_mat_internal_rows, d_mat_internal_cols)] * csr_elements[item_id];
+            }
+
+            result[ResultIndexT::apply(row_id, result_col,
+                                       result_row_start, result_row_inc,
+                                       result_col_start, result_col_inc,
+                                       result_internal_rows, result_internal_cols)] = sum;
+          }
+        }
+      }
+
+
+
+      /** @brief Carries out matrix-vector multiplication with a hyb_matrix
+      *
+      * Implementation of the convenience expression result = prod(mat, vec);
+      *
+      * @param mat    The matrix
+      * @param vec    The vector
+      * @param result The result vector
+      */
+      template<typename NumericT, unsigned int ALIGNMENT, typename F1, typename F2>
+      void prod_impl(const viennacl::hyb_matrix<NumericT, ALIGNMENT> & mat,
+                     const viennacl::matrix_base<NumericT, F1> & d_mat,
+                           viennacl::matrix_base<NumericT, F2> & result)
+      {
+        hyb_matrix_d_mat_mul_kernel<mat_mult_matrix_index<F1>, mat_mult_matrix_index<F2> ><<<256, 128>>>(
+          detail::cuda_arg<unsigned int>(mat.handle2().cuda_handle()),
+          detail::cuda_arg<NumericT>(mat.handle().cuda_handle()),
+          detail::cuda_arg<unsigned int>(mat.handle3().cuda_handle()),
+          detail::cuda_arg<unsigned int>(mat.handle4().cuda_handle()),
+          detail::cuda_arg<NumericT>(mat.handle5().cuda_handle()),
+          static_cast<unsigned int>(mat.size1()),
+          static_cast<unsigned int>(mat.internal_size1()),
+          static_cast<unsigned int>(mat.ell_nnz()),
+          static_cast<unsigned int>(mat.internal_ellnnz()),
+
+          detail::cuda_arg<NumericT>(d_mat),
+          static_cast<unsigned int>(viennacl::traits::start1(d_mat)),         static_cast<unsigned int>(viennacl::traits::start2(d_mat)),
+          static_cast<unsigned int>(viennacl::traits::stride1(d_mat)),        static_cast<unsigned int>(viennacl::traits::stride2(d_mat)),
+          static_cast<unsigned int>(viennacl::traits::size1(d_mat)),          static_cast<unsigned int>(viennacl::traits::size2(d_mat)),
+          static_cast<unsigned int>(viennacl::traits::internal_size1(d_mat)), static_cast<unsigned int>(viennacl::traits::internal_size2(d_mat)),
+
+          detail::cuda_arg<NumericT>(result),
+          static_cast<unsigned int>(viennacl::traits::start1(result)),         static_cast<unsigned int>(viennacl::traits::start2(result)),
+          static_cast<unsigned int>(viennacl::traits::stride1(result)),        static_cast<unsigned int>(viennacl::traits::stride2(result)),
+          static_cast<unsigned int>(viennacl::traits::size1(result)),          static_cast<unsigned int>(viennacl::traits::size2(result)),
+          static_cast<unsigned int>(viennacl::traits::internal_size1(result)), static_cast<unsigned int>(viennacl::traits::internal_size2(result))
+         );
+        VIENNACL_CUDA_LAST_ERROR_CHECK("hyb_matrix_vec_mul_kernel");
+      }
+
+
+
+      template <typename DMatIndexT, typename ResultIndexT, typename NumericT>
+      __global__ void hyb_matrix_d_tr_mat_mul_kernel(const unsigned int * ell_coords,
+                                                const NumericT * ell_elements,
+                                                const unsigned int * csr_rows,
+                                                const unsigned int * csr_cols,
+                                                const NumericT * csr_elements,
+                                                unsigned int row_num,
+                                                unsigned int internal_row_num,
+                                                unsigned int items_per_row,
+                                                unsigned int aligned_items_per_row,
+                                                const NumericT * d_mat,
+                                                unsigned int d_mat_row_start,
+                                                unsigned int d_mat_col_start,
+                                                unsigned int d_mat_row_inc,
+                                                unsigned int d_mat_col_inc,
+                                                unsigned int d_mat_row_size,
+                                                unsigned int d_mat_col_size,
+                                                unsigned int d_mat_internal_rows,
+                                                unsigned int d_mat_internal_cols,
+                                                NumericT * result,
+                                                unsigned int result_row_start,
+                                                unsigned int result_col_start,
+                                                unsigned int result_row_inc,
+                                                unsigned int result_col_inc,
+                                                unsigned int result_row_size,
+                                                unsigned int result_col_size,
+                                                unsigned int result_internal_rows,
+                                                unsigned int result_internal_cols)
+      {
+        uint glb_id = blockDim.x * blockIdx.x + threadIdx.x;
+        uint glb_sz = gridDim.x * blockDim.x;
+
+        for(uint result_col = 0; result_col < result_col_size; ++result_col)
+        {
+          for(uint row_id = glb_id; row_id < row_num; row_id += glb_sz)
+          {
+            NumericT sum = 0;
+
+            uint offset = row_id;
+            for(uint item_id = 0; item_id < items_per_row; item_id++, offset += internal_row_num)
+            {
+              NumericT val = ell_elements[offset];
+
+              if(val != 0.0f)
+              {
+                sum += d_mat[DMatIndexT::apply(result_col, ell_coords[offset],
+                                               d_mat_row_start, d_mat_row_inc,
+                                               d_mat_col_start, d_mat_col_inc,
+                                               d_mat_internal_rows, d_mat_internal_cols)] * val;
+              }
+            }
+
+            uint col_begin = csr_rows[row_id];
+            uint col_end   = csr_rows[row_id + 1];
+
+            for(uint item_id = col_begin; item_id < col_end; item_id++)
+            {
+              sum += d_mat[DMatIndexT::apply(result_col, csr_cols[item_id],
+                                             d_mat_row_start, d_mat_row_inc,
+                                             d_mat_col_start, d_mat_col_inc,
+                                             d_mat_internal_rows, d_mat_internal_cols)] * csr_elements[item_id];
+            }
+
+            result[ResultIndexT::apply(row_id, result_col,
+                                       result_row_start, result_row_inc,
+                                       result_col_start, result_col_inc,
+                                       result_internal_rows, result_internal_cols)] = sum;
+          }
+        }
+      }
+
+
+
+      /** @brief Carries out matrix-vector multiplication with a hyb_matrix
+      *
+      * Implementation of the convenience expression result = prod(mat, vec);
+      *
+      * @param mat    The matrix
+      * @param vec    The vector
+      * @param result The result vector
+      */
+      template<typename NumericT, unsigned int ALIGNMENT, typename F1, typename F2>
+      void prod_impl(const viennacl::hyb_matrix<NumericT, ALIGNMENT> & mat,
+                     const viennacl::matrix_expression< const viennacl::matrix_base<NumericT, F1>,
+                                                        const viennacl::matrix_base<NumericT, F1>,
+                                                        viennacl::op_trans > & d_mat,
+                           viennacl::matrix_base<NumericT, F2> & result)
+      {
+        hyb_matrix_d_tr_mat_mul_kernel<mat_mult_matrix_index<F1>, mat_mult_matrix_index<F2> ><<<256, 128>>>(
+          detail::cuda_arg<unsigned int>(mat.handle2().cuda_handle()),
+          detail::cuda_arg<NumericT>(mat.handle().cuda_handle()),
+          detail::cuda_arg<unsigned int>(mat.handle3().cuda_handle()),
+          detail::cuda_arg<unsigned int>(mat.handle4().cuda_handle()),
+          detail::cuda_arg<NumericT>(mat.handle5().cuda_handle()),
+          static_cast<unsigned int>(mat.size1()),
+          static_cast<unsigned int>(mat.internal_size1()),
+          static_cast<unsigned int>(mat.ell_nnz()),
+          static_cast<unsigned int>(mat.internal_ellnnz()),
+
+          detail::cuda_arg<NumericT>(d_mat.lhs()),
+          static_cast<unsigned int>(viennacl::traits::start1(d_mat.lhs())),         static_cast<unsigned int>(viennacl::traits::start2(d_mat.lhs())),
+          static_cast<unsigned int>(viennacl::traits::stride1(d_mat.lhs())),        static_cast<unsigned int>(viennacl::traits::stride2(d_mat.lhs())),
+          static_cast<unsigned int>(viennacl::traits::size1(d_mat.lhs())),          static_cast<unsigned int>(viennacl::traits::size2(d_mat.lhs())),
+          static_cast<unsigned int>(viennacl::traits::internal_size1(d_mat.lhs())), static_cast<unsigned int>(viennacl::traits::internal_size2(d_mat.lhs())),
+
+          detail::cuda_arg<NumericT>(result),
+          static_cast<unsigned int>(viennacl::traits::start1(result)),         static_cast<unsigned int>(viennacl::traits::start2(result)),
+          static_cast<unsigned int>(viennacl::traits::stride1(result)),        static_cast<unsigned int>(viennacl::traits::stride2(result)),
+          static_cast<unsigned int>(viennacl::traits::size1(result)),          static_cast<unsigned int>(viennacl::traits::size2(result)),
+          static_cast<unsigned int>(viennacl::traits::internal_size1(result)), static_cast<unsigned int>(viennacl::traits::internal_size2(result))
+         );
+        VIENNACL_CUDA_LAST_ERROR_CHECK("hyb_matrix_vec_mul_kernel");
+      }
+
+
+    } // namespace cuda
   } //namespace linalg
 } //namespace viennacl
 

@@ -31,7 +31,6 @@
 #include <vector>
 #include <string>
 #include <sstream>
-#include "viennacl/ocl/context.hpp"
 #include "viennacl/ocl/device.hpp"
 #include "viennacl/ocl/handle.hpp"
 
@@ -46,7 +45,7 @@ namespace viennacl
     class command_queue
     {
       public:
-        command_queue() {};
+        command_queue() {}
         command_queue(viennacl::ocl::handle<cl_command_queue> h) : handle_(h) {}
 
         //Copy constructor:

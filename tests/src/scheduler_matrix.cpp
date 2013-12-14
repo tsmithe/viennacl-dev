@@ -329,8 +329,8 @@ int run_test(double epsilon,
 
   std::cout << "--- Testing elementwise operations (unary) ---" << std::endl;
 #define GENERATE_UNARY_OP_TEST(OPNAME) \
-  ublas_A = ublas::scalar_matrix<cpu_value_type>(ublas_A.size1(), ublas_A.size2(), 0.21); \
-  ublas_B = 3.1415 * ublas_A; \
+  ublas_A = ublas::scalar_matrix<cpu_value_type>(ublas_A.size1(), ublas_A.size2(), cpu_value_type(0.21)); \
+  ublas_B = cpu_value_type(3.1415) * ublas_A; \
   viennacl::copy(ublas_A, vcl_A); \
   viennacl::copy(ublas_B, vcl_B); \
   { \
@@ -386,7 +386,6 @@ int run_test(double epsilon)
 {
     //typedef float               ScalarType;
     typedef boost::numeric::ublas::matrix<ScalarType>       MatrixType;
-    typedef boost::numeric::ublas::vector<ScalarType>       VectorType;
 
     typedef viennacl::matrix<ScalarType, T>    VCLMatrixType;
 

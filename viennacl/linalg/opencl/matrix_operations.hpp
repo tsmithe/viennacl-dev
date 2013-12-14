@@ -64,7 +64,7 @@ namespace viennacl
       template <typename NumericT, typename F,
                 typename ScalarType1>
       void am(matrix_base<NumericT, F> & mat1,
-              matrix_base<NumericT, F> const & mat2, ScalarType1 const & alpha, std::size_t len_alpha, bool reciprocal_alpha, bool flip_sign_alpha)
+              matrix_base<NumericT, F> const & mat2, ScalarType1 const & alpha, vcl_size_t len_alpha, bool reciprocal_alpha, bool flip_sign_alpha)
       {
         typedef NumericT        value_type;
 
@@ -98,8 +98,8 @@ namespace viennacl
       template <typename NumericT, typename F,
                 typename ScalarType1, typename ScalarType2>
       void ambm(matrix_base<NumericT, F> & mat1,
-                matrix_base<NumericT, F> const & mat2, ScalarType1 const & alpha, std::size_t len_alpha, bool reciprocal_alpha, bool flip_sign_alpha,
-                matrix_base<NumericT, F> const & mat3, ScalarType2 const & beta,  std::size_t len_beta,  bool reciprocal_beta,  bool flip_sign_beta)
+                matrix_base<NumericT, F> const & mat2, ScalarType1 const & alpha, vcl_size_t len_alpha, bool reciprocal_alpha, bool flip_sign_alpha,
+                matrix_base<NumericT, F> const & mat3, ScalarType2 const & beta,  vcl_size_t len_beta,  bool reciprocal_beta,  bool flip_sign_beta)
       {
         typedef NumericT        value_type;
 
@@ -152,8 +152,8 @@ namespace viennacl
       template <typename NumericT, typename F,
                 typename ScalarType1, typename ScalarType2>
       void ambm_m(matrix_base<NumericT, F> & mat1,
-                  matrix_base<NumericT, F> const & mat2, ScalarType1 const & alpha, std::size_t len_alpha, bool reciprocal_alpha, bool flip_sign_alpha,
-                  matrix_base<NumericT, F> const & mat3, ScalarType2 const & beta,  std::size_t len_beta,  bool reciprocal_beta,  bool flip_sign_beta)
+                  matrix_base<NumericT, F> const & mat2, ScalarType1 const & alpha, vcl_size_t len_alpha, bool reciprocal_alpha, bool flip_sign_alpha,
+                  matrix_base<NumericT, F> const & mat3, ScalarType2 const & beta,  vcl_size_t len_beta,  bool reciprocal_beta,  bool flip_sign_beta)
       {
         typedef NumericT        value_type;
 
@@ -224,7 +224,7 @@ namespace viennacl
                                  cl_uint(viennacl::traits::stride1(mat)),          cl_uint(viennacl::traits::stride2(mat)),
                                  s1,                                               s2,
                                  cl_uint(viennacl::traits::internal_size1(mat)),   cl_uint(viennacl::traits::internal_size2(mat)),
-                                 alpha
+                                 viennacl::traits::opencl_handle(viennacl::tools::promote_if_host_scalar<value_type>(alpha))
                                 )
                               );
       }
@@ -246,7 +246,7 @@ namespace viennacl
                                  cl_uint(viennacl::traits::stride1(mat)),          cl_uint(viennacl::traits::stride2(mat)),
                                  cl_uint(viennacl::traits::size1(mat)),            cl_uint(viennacl::traits::size2(mat)),
                                  cl_uint(viennacl::traits::internal_size1(mat)),   cl_uint(viennacl::traits::internal_size2(mat)),
-                                 alpha
+                                 viennacl::traits::opencl_handle(viennacl::tools::promote_if_host_scalar<value_type>(alpha))
                                 )
                               );
       }
@@ -254,8 +254,6 @@ namespace viennacl
       template <typename NumericT, typename F>
       void matrix_diag_from_vector(const vector_base<NumericT> & vec, int k, matrix_base<NumericT, F> & mat)
       {
-        typedef NumericT        value_type;
-
         // Step 1: set everything to zero
         matrix_assign(mat, NumericT(0));
 
@@ -270,12 +268,12 @@ namespace viennacl
         viennacl::ocl::packed_cl_uint size_mat;
         if (viennacl::is_row_major<F>::value)
         {
-          std::size_t first_row_index = 0;
-          std::size_t first_col_index = 0;
+          vcl_size_t first_row_index = 0;
+          vcl_size_t first_col_index = 0;
           if (k < 0)
-            first_row_index = std::size_t(-k);
+            first_row_index = vcl_size_t(-k);
           else
-            first_col_index = std::size_t(k);
+            first_col_index = vcl_size_t(k);
           size_mat.start  = cl_uint( (viennacl::traits::start1(mat) + first_row_index * viennacl::traits::stride1(mat)) * viennacl::traits::internal_size2(mat)
                                     + viennacl::traits::start2(mat) + first_col_index * viennacl::traits::stride2(mat));
           size_mat.stride = cl_uint(viennacl::traits::stride1(mat) * viennacl::traits::internal_size2(mat) + viennacl::traits::stride2(mat));
@@ -284,12 +282,12 @@ namespace viennacl
         }
         else
         {
-          std::size_t first_row_index = 0;
-          std::size_t first_col_index = 0;
+          vcl_size_t first_row_index = 0;
+          vcl_size_t first_col_index = 0;
           if (k < 0)
-            first_row_index = std::size_t(-k);
+            first_row_index = vcl_size_t(-k);
           else
-            first_col_index = std::size_t(k);
+            first_col_index = vcl_size_t(k);
           size_mat.start  = cl_uint(   viennacl::traits::start1(mat) + first_row_index * viennacl::traits::stride1(mat)
                                     + (viennacl::traits::start2(mat) + first_col_index * viennacl::traits::stride2(mat)) * viennacl::traits::internal_size1(mat));
           size_mat.stride = cl_uint(viennacl::traits::stride2(mat) * viennacl::traits::internal_size1(mat) + viennacl::traits::stride1(mat));
@@ -317,8 +315,6 @@ namespace viennacl
       template <typename NumericT, typename F>
       void matrix_diag_to_vector(const matrix_base<NumericT, F> & mat, int k, vector_base<NumericT> & vec)
       {
-        typedef NumericT        value_type;
-
         // reuse vector ambm kernel for assigning the elements:
         viennacl::ocl::context & ctx = const_cast<viennacl::ocl::context &>(viennacl::traits::opencl_handle(mat).context());
         typedef viennacl::linalg::opencl::kernels::vector<NumericT>  KernelClass;
@@ -328,12 +324,12 @@ namespace viennacl
         viennacl::ocl::packed_cl_uint size_mat;
         if (viennacl::is_row_major<F>::value)
         {
-          std::size_t first_row_index = 0;
-          std::size_t first_col_index = 0;
+          vcl_size_t first_row_index = 0;
+          vcl_size_t first_col_index = 0;
           if (k < 0)
-            first_row_index = std::size_t(-k);
+            first_row_index = vcl_size_t(-k);
           else
-            first_col_index = std::size_t(k);
+            first_col_index = vcl_size_t(k);
           size_mat.start  = cl_uint( (viennacl::traits::start1(mat) + first_row_index * viennacl::traits::stride1(mat)) * viennacl::traits::internal_size2(mat)
                                     + viennacl::traits::start2(mat) + first_col_index * viennacl::traits::stride2(mat));
           size_mat.stride = cl_uint(viennacl::traits::stride1(mat) * viennacl::traits::internal_size2(mat) + viennacl::traits::stride2(mat));
@@ -342,12 +338,12 @@ namespace viennacl
         }
         else
         {
-          std::size_t first_row_index = 0;
-          std::size_t first_col_index = 0;
+          vcl_size_t first_row_index = 0;
+          vcl_size_t first_col_index = 0;
           if (k < 0)
-            first_row_index = std::size_t(-k);
+            first_row_index = vcl_size_t(-k);
           else
-            first_col_index = std::size_t(k);
+            first_col_index = vcl_size_t(k);
           size_mat.start  = cl_uint(   viennacl::traits::start1(mat) + first_row_index * viennacl::traits::stride1(mat)
                                     + (viennacl::traits::start2(mat) + first_col_index * viennacl::traits::stride2(mat)) * viennacl::traits::internal_size1(mat));
           size_mat.stride = cl_uint(viennacl::traits::stride2(mat) * viennacl::traits::internal_size1(mat) + viennacl::traits::stride1(mat));
@@ -376,8 +372,6 @@ namespace viennacl
       template <typename NumericT, typename F>
       void matrix_row(const matrix_base<NumericT, F> & mat, unsigned int i, vector_base<NumericT> & vec)
       {
-        typedef NumericT        value_type;
-
         // reuse vector ambm kernel for assigning the elements:
         viennacl::ocl::context & ctx = const_cast<viennacl::ocl::context &>(viennacl::traits::opencl_handle(mat).context());
         typedef viennacl::linalg::opencl::kernels::vector<NumericT>  KernelClass;
@@ -421,8 +415,6 @@ namespace viennacl
       template <typename NumericT, typename F>
       void matrix_column(const matrix_base<NumericT, F> & mat, unsigned int j, vector_base<NumericT> & vec)
       {
-        typedef NumericT        value_type;
-
         // reuse vector ambm kernel for assigning the elements:
         viennacl::ocl::context & ctx = const_cast<viennacl::ocl::context &>(viennacl::traits::opencl_handle(mat).context());
         typedef viennacl::linalg::opencl::kernels::vector<NumericT>  KernelClass;
@@ -810,14 +802,17 @@ namespace viennacl
         assert( (viennacl::traits::size2(A) == viennacl::traits::size1(B)) && bool("Size mismatch in C = prod(A, B): size2(A) != size1(B)"));
         assert( (viennacl::traits::size2(B) == viennacl::traits::size2(C)) && bool("Size mismatch in C = prod(A, B): size2(B) != size2(C)"));
 
+        bool A_not_aligned = (A.internal_size1()%matrix_base<NumericT, F1>::alignment>0) ||(A.internal_size2()%matrix_base<NumericT, F1>::alignment>0);
+        bool B_not_aligned = (B.internal_size1()%matrix_base<NumericT, F2>::alignment>0) ||(B.internal_size2()%matrix_base<NumericT, F2>::alignment>0);
+        bool C_not_aligned = (C.internal_size1()%matrix_base<NumericT, F3>::alignment>0) ||(C.internal_size2()%matrix_base<NumericT, F3>::alignment>0);
         // Inplace matrix-vector products like B = prod(A, B) are currently illegal: Introduce a temporary like C = prod(A, B); B = C; instead
         /*assert(  (viennacl::traits::handle(C) != viennacl::traits::handle(A))
               && (viennacl::traits::handle(C) != viennacl::traits::handle(B))
               && bool("No direct inplace matrix-matrix product possible. Introduce a temporary!"));*/
 
-        if(A.start1() > 0 || A.start2() > 0 || A.stride1() > 1 || A.stride2() > 1
-         ||B.start1() > 0 || B.start2() > 0 || B.stride1() > 1 || B.stride2() > 1
-         ||C.start1() > 0 || C.start2() > 0 || C.stride1() > 1 || C.stride2() > 1)
+        if(A_not_aligned || A.start1() > 0 || A.start2() > 0 || A.stride1() > 1 || A.stride2() > 1
+         ||B_not_aligned || B.start1() > 0 || B.start2() > 0 || B.stride1() > 1 || B.stride2() > 1
+         ||C_not_aligned || C.start1() > 0 || C.start2() > 0 || C.stride1() > 1 || C.stride2() > 1)
           detail::prod(A, B, C, alpha, beta, "prod16_AA", "prod_AA");
         else{
           typedef matrix_expression<const matrix_base<NumericT, F1>, const matrix_base<NumericT, F2>, op_mat_mat_prod> ProdType;
@@ -852,11 +847,14 @@ namespace viennacl
               && (viennacl::traits::handle(C) != viennacl::traits::handle(B))
               && bool("No direct inplace matrix-matrix product possible. Introduce a temporary!"));*/
 
+        bool A_not_aligned = (A.lhs().internal_size1()%matrix_base<NumericT, F1>::alignment>0) ||(A.lhs().internal_size2()%matrix_base<NumericT, F1>::alignment>0);
+        bool B_not_aligned = (B.internal_size1()%matrix_base<NumericT, F2>::alignment>0) ||(B.internal_size2()%matrix_base<NumericT, F2>::alignment>0);
+        bool C_not_aligned = (C.internal_size1()%matrix_base<NumericT, F3>::alignment>0) ||(C.internal_size2()%matrix_base<NumericT, F3>::alignment>0);
 
 
-        if(A.lhs().start1() > 0 || A.lhs().start2() > 0 || A.lhs().stride1() > 1 || A.lhs().stride2() > 1
-         ||B.start1() > 0 || B.start2() > 0 || B.stride1() > 1 || B.stride2() > 1
-         ||C.start1() > 0 || C.start2() > 0 || C.stride1() > 1 || C.stride2() > 1)
+        if(A_not_aligned || A.lhs().start1() > 0 || A.lhs().start2() > 0 || A.lhs().stride1() > 1 || A.lhs().stride2() > 1
+         ||B_not_aligned || B.start1() > 0 || B.start2() > 0 || B.stride1() > 1 || B.stride2() > 1
+         ||C_not_aligned || C.start1() > 0 || C.start2() > 0 || C.stride1() > 1 || C.stride2() > 1)
           detail::prod(A.lhs(), B, C, alpha, beta, "prod16_TA", "prod_TA");
         else{
           typedef const viennacl::matrix_expression< const matrix_base<NumericT, F1>, const matrix_base<NumericT, F1>, op_trans> LhsType;
@@ -884,14 +882,18 @@ namespace viennacl
         assert( (viennacl::traits::size2(A)       == viennacl::traits::size2(B.lhs())) && bool("Size mismatch in C = prod(A, trans(B)): size2(A) != size2(B)"));
         assert( (viennacl::traits::size1(B.lhs()) == viennacl::traits::size2(C))       && bool("Size mismatch in C = prod(A, trans(B)): size1(B) != size2(C)"));
 
+        bool A_not_aligned = (A.internal_size1()%matrix_base<NumericT, F1>::alignment>0) ||(A.internal_size2()%matrix_base<NumericT, F1>::alignment>0);
+        bool B_not_aligned = (B.lhs().internal_size1()%matrix_base<NumericT, F2>::alignment>0) ||(B.lhs().internal_size2()%matrix_base<NumericT, F2>::alignment>0);
+        bool C_not_aligned = (C.internal_size1()%matrix_base<NumericT, F3>::alignment>0) ||(C.internal_size2()%matrix_base<NumericT, F3>::alignment>0);
+
         // Inplace matrix-vector products like B = prod(A, B) are currently illegal: Introduce a temporary like C = prod(A, B); B = C; instead
         /*assert(  (viennacl::traits::handle(C) != viennacl::traits::handle(A))
               && (viennacl::traits::handle(C) != viennacl::traits::handle(B.lhs()))
               && bool("No direct inplace matrix-matrix product possible. Introduce a temporary!"));*/
 
-        if(A.start1() > 0 || A.start2() > 0 || A.stride1() > 1 || A.stride2() > 1
-         ||B.lhs().start1() > 0 || B.lhs().start2() > 0 || B.lhs().stride1() > 1 || B.lhs().stride2() > 1
-         ||C.start1() > 0 || C.start2() > 0 || C.stride1() > 1 || C.stride2() > 1)
+        if(A_not_aligned || A.start1() > 0 || A.start2() > 0 || A.stride1() > 1 || A.stride2() > 1
+         ||B_not_aligned || B.lhs().start1() > 0 || B.lhs().start2() > 0 || B.lhs().stride1() > 1 || B.lhs().stride2() > 1
+         ||C_not_aligned || C.start1() > 0 || C.start2() > 0 || C.stride1() > 1 || C.stride2() > 1)
           detail::prod(A, B.lhs(), C, alpha, beta, "prod16_AT", "prod_AT");
         else{
           typedef const viennacl::matrix_expression< const matrix_base<NumericT, F2>, const matrix_base<NumericT, F2>, op_trans> RhsType;
@@ -918,14 +920,18 @@ namespace viennacl
         assert(viennacl::traits::size1(A.lhs()) == viennacl::traits::size2(B.lhs()) && bool("Size mismatch in C = prod(trans(A), trans(B)): size1(A) != size2(B)"));
         assert(viennacl::traits::size1(B.lhs()) == viennacl::traits::size2(C)       && bool("Size mismatch in C = prod(trans(A), trans(B)): size1(B) != size2(C)"));
 
+        bool A_not_aligned = (A.lhs().internal_size1()%matrix_base<NumericT, F1>::alignment>0) ||(A.lhs().internal_size2()%matrix_base<NumericT, F1>::alignment>0);
+        bool B_not_aligned = (B.lhs().internal_size1()%matrix_base<NumericT, F2>::alignment>0) ||(B.lhs().internal_size2()%matrix_base<NumericT, F2>::alignment>0);
+        bool C_not_aligned = (C.internal_size1()%matrix_base<NumericT, F3>::alignment>0) ||(C.internal_size2()%matrix_base<NumericT, F3>::alignment>0);
+
         // Inplace matrix-vector products like B = prod(A, B) are currently illegal: Introduce a temporary like C = prod(A, B); B = C; instead
         /*assert(  (viennacl::traits::handle(C) != viennacl::traits::handle(A.lhs()))
               && (viennacl::traits::handle(C) != viennacl::traits::handle(B.lhs()))
               && bool("No direct inplace matrix-matrix product possible. Introduce a temporary!"));*/
 
-        if(A.lhs().start1() > 0 || A.lhs().start2() > 0 || A.lhs().stride1() > 1 || A.lhs().stride2() > 1
-         ||B.lhs().start1() > 0 || B.lhs().start2() > 0 || B.lhs().stride1() > 1 || B.lhs().stride2() > 1
-         ||C.start1() > 0 || C.start2() > 0 || C.stride1() > 1 || C.stride2() > 1)
+        if(A_not_aligned || A.lhs().start1() > 0 || A.lhs().start2() > 0 || A.lhs().stride1() > 1 || A.lhs().stride2() > 1
+         ||B_not_aligned || B.lhs().start1() > 0 || B.lhs().start2() > 0 || B.lhs().stride1() > 1 || B.lhs().stride2() > 1
+         ||C_not_aligned || C.start1() > 0 || C.start2() > 0 || C.stride1() > 1 || C.stride2() > 1)
           detail::prod(A.lhs(), B.lhs(), C, alpha, beta, "prod16_TT", "prod_TT");
         else{
           typedef const viennacl::matrix_expression< const matrix_base<NumericT, F1>, const matrix_base<NumericT, F1>, op_trans> LhsType;
@@ -957,7 +963,7 @@ namespace viennacl
       */
       template <typename NumericT, typename F, typename S1>
       void scaled_rank_1_update(matrix_base<NumericT, F> & mat1,
-                                S1 const & alpha, std::size_t len_alpha, bool reciprocal_alpha, bool flip_sign_alpha,
+                                S1 const & alpha, vcl_size_t len_alpha, bool reciprocal_alpha, bool flip_sign_alpha,
                                 const vector_base<NumericT> & vec1,
                                 const vector_base<NumericT> & vec2)
       {

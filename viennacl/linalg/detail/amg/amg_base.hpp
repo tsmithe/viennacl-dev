@@ -24,6 +24,7 @@
     AMG code contributed by Markus Wagner
 */
 
+#include <boost/numeric/ublas/operation.hpp>
 #include <boost/numeric/ublas/vector.hpp>
 #include <cmath>
 #include <set>
@@ -82,7 +83,7 @@ namespace viennacl
                     unsigned int coarselevels = 0)
             : coarse_(coarse), interpol_(interpol),
               threshold_(threshold), interpolweight_(interpolweight), jacobiweight_(jacobiweight),
-              presmooth_(presmooth), postsmooth_(postsmooth), coarselevels_(coarselevels) {};
+              presmooth_(presmooth), postsmooth_(postsmooth), coarselevels_(coarselevels) {}
 
             // Getter-/Setter-Functions
             void set_coarse(unsigned int coarse) { if (coarse > 0) coarse_ = coarse; }
@@ -394,7 +395,7 @@ namespace viennacl
             // Note: Only internal_mat is written using operators and methods while internal_mat_trans is built from internal_mat using do_trans().
             InternalType internal_mat_trans;
             // Saves sizes.
-            std::size_t s1, s2;
+            vcl_size_t s1, s2;
 
             // True if the transposed of the matrix is used (for calculations, iteration, etc.).
             bool transposed_mode;
@@ -649,7 +650,7 @@ namespace viennacl
               transposed = true;
             }
 
-            std::size_t size1()
+            vcl_size_t size1()
             {
               if (!transposed_mode)
                 return s1;
@@ -657,7 +658,7 @@ namespace viennacl
                 return s2;
             }
 
-            std::size_t size1() const
+            vcl_size_t size1() const
             {
               if (!transposed_mode)
                 return s1;
@@ -666,7 +667,7 @@ namespace viennacl
             }
 
 
-            std::size_t size2()
+            vcl_size_t size2()
             {
               if (!transposed_mode)
                 return s2;
@@ -674,7 +675,7 @@ namespace viennacl
                 return s1;
             }
 
-            std::size_t size2() const
+            vcl_size_t size2() const
             {
               if (!transposed_mode)
                 return s2;
@@ -1242,14 +1243,11 @@ namespace viennacl
             */
             void slice_new (unsigned int level, InternalType1 const & A)
             {
-              typedef typename SparseMatrixType::const_iterator1 ConstRowIterator;
-              typedef typename SparseMatrixType::const_iterator2 ConstColIterator;
-
               // Determine index offset of all the slices (index of A[level] when the respective slice starts).
             #ifdef VIENNACL_WITH_OPENMP
               #pragma omp parallel for
             #endif
-              for (unsigned int i=0; i<=threads_; ++i)
+              for (long i=0; i<=static_cast<long>(threads_); ++i)
               {
                 // Offset of first piece is zero. Pieces 1,...,threads-1 have equal size while the last one might be greater.
                 if (i == 0) Offset[i][level] = 0;
@@ -1274,7 +1272,7 @@ namespace viennacl
             #ifdef VIENNACL_WITH_OPENMP
               #pragma omp parallel for private (x,y,point)
             #endif
-              for (unsigned int i=0; i<threads_; ++i)
+              for (long i=0; i<static_cast<long>(threads_); ++i)
               {
                 // Allocate space for the matrix slice and the pointvector.
                 A_slice[i][level] = SparseMatrixType(Offset[i+1][level]-Offset[i][level],Offset[i+1][level]-Offset[i][level]);
@@ -1324,7 +1322,7 @@ namespace viennacl
           typedef typename SparseMatrixType::iterator1 InternalRowIterator;
           typedef typename SparseMatrixType::iterator2 InternalColIterator;
 
-          unsigned int x,y,z;
+          long x,y,z;
           ScalarType prod;
           RES = SparseMatrixType(A.size1(), B.size2());
           RES.clear();
@@ -1332,7 +1330,7 @@ namespace viennacl
     #ifdef VIENNACL_WITH_OPENMP
           #pragma omp parallel for private (x,y,z,prod) shared (A,B,RES)
     #endif
-          for (x=0; x<A.size1(); ++x)
+          for (x=0; x<static_cast<long>(A.size1()); ++x)
           {
             InternalRowIterator row_iter = A.begin1();
             row_iter += x;
@@ -1364,7 +1362,7 @@ namespace viennacl
           typedef typename SparseMatrixType::iterator1 InternalRowIterator;
           typedef typename SparseMatrixType::iterator2 InternalColIterator;
 
-          unsigned int x,y1,y2,z;
+          long x,y1,y2,z;
           amg_sparsevector<ScalarType> row;
           RES = SparseMatrixType(P.size2(), P.size2());
           RES.clear();
@@ -1372,7 +1370,7 @@ namespace viennacl
     #ifdef VIENNACL_WITH_OPENMP
           #pragma omp parallel for private (x,y1,y2,z,row) shared (A,P,RES)
     #endif
-          for (x=0; x<P.size2(); ++x)
+          for (x=0; x<static_cast<long>(P.size2()); ++x)
           {
             row = amg_sparsevector<ScalarType>(A.size2());
             InternalRowIterator row_iter = P.begin1(true);

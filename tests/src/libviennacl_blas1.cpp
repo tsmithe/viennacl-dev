@@ -65,7 +65,7 @@ ScalarType diff(std::vector<ScalarType> const & v1, ViennaCLVectorType const & v
 template <typename T, typename U, typename EpsilonT>
 void check(T const & t, U const & u, EpsilonT eps)
 {
-  EpsilonT rel_error = diff(t,u);
+  EpsilonT rel_error = static_cast<EpsilonT>(diff(t,u));
   if (rel_error > eps)
   {
     std::cerr << "Relative error: " << rel_error << std::endl;
@@ -124,8 +124,8 @@ int main()
   viennacl::vector<double> *opencl_double_y = NULL;
   if( viennacl::ocl::current_device().double_support() )
   {
-    *opencl_double_x = viennacl::scalar_vector<double>(size, 1.0, viennacl::context(viennacl::ocl::get_context(context_id)));
-    *opencl_double_y = viennacl::scalar_vector<double>(size, 2.0, viennacl::context(viennacl::ocl::get_context(context_id)));
+    opencl_double_x = new viennacl::vector<double>(viennacl::scalar_vector<double>(size, 1.0, viennacl::context(viennacl::ocl::get_context(context_id))));
+    opencl_double_y = new viennacl::vector<double>(viennacl::scalar_vector<double>(size, 2.0, viennacl::context(viennacl::ocl::get_context(context_id))));
   }
 
   ViennaCLOpenCLBackend_impl my_opencl_backend_impl;
@@ -431,8 +431,8 @@ int main()
   std::cout << std::endl << "-- Testing xROT...";
   for (std::size_t i=0; i<size/4; ++i)
   {
-    float tmp            =  0.6 * ref_float_x[2 + 3*i] + 0.8 * ref_float_y[1 + 2*i];
-    ref_float_y[1 + 2*i] = -0.8 * ref_float_x[2 + 3*i] + 0.6 * ref_float_y[1 + 2*i];;
+    float tmp            =  0.6f * ref_float_x[2 + 3*i] + 0.8f * ref_float_y[1 + 2*i];
+    ref_float_y[1 + 2*i] = -0.8f * ref_float_x[2 + 3*i] + 0.6f * ref_float_y[1 + 2*i];;
     ref_float_x[2 + 3*i] = tmp;
 
     double tmp2           =  0.6 * ref_double_x[2 + 3*i] + 0.8 * ref_double_y[1 + 2*i];
@@ -592,7 +592,7 @@ int main()
 
   // IAMAX
   std::cout << std::endl << "-- Testing IxASUM...";
-  size_t ref_index = 0;
+  ViennaCLInt ref_index = 0;
   ref_float_alpha = 0;
   for (std::size_t i=0; i<size/3; ++i)
   {
@@ -604,11 +604,11 @@ int main()
   }
 
   std::cout << std::endl << "Host: ";
-  size_t idx = 0;
+  ViennaCLInt idx = 0;
   ViennaCLHostiSamax(my_host_backend, size/3,
                      &idx,
                      viennacl::linalg::host_based::detail::extract_raw_pointer<float>(host_float_x), 0, 2);
-  check(ref_index, idx, eps_float);
+  check(static_cast<float>(ref_index), static_cast<float>(idx), eps_float);
   idx = 0;
   ViennaCLHostiDamax(my_host_backend, size/3,
                      &idx,
@@ -646,7 +646,14 @@ int main()
   }
 #endif
 
-
+#ifdef VIENNACL_WITH_OPENCL
+  //cleanup
+  if( viennacl::ocl::current_device().double_support() )
+  {
+    delete opencl_double_x;
+    delete opencl_double_y;
+  }
+#endif
 
   //
   //  That's it.
