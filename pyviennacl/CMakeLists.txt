@@ -42,7 +42,8 @@ add_custom_command(
   DEPENDS ${DEPS} build-stamp
 )
 
-add_custom_target(target ALL DEPENDS ${OUTPUT}/build-stamp ${OUTPUT}/doc-stamp)
+add_custom_target(target ALL DEPENDS ${OUTPUT}/doc-stamp)
 
-install(CODE "execute_process(COMMAND ${PYTHON_EXECUTABLE} ${SETUP_PY} install)")
-
+install(CODE "execute_process(COMMAND ${PYTHON_EXECUTABLE} ${SETUP_PY} install --install-layout deb --prefix \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX} )")
+install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory \"\$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/share/doc/pyviennacl-doc/\" )")
+install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory \"${CMAKE_CURRENT_BINARY_DIR}/build/doc\" \"\$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/share/doc/pyviennacl/\" )")

@@ -68,10 +68,12 @@ if(BUILD_MANUAL)
 endif()
 
 if(BUILD_PYVIENNACL)
-  set(
-    PYTHON_EXECUTABLE "python"
-    CACHE STRING
-    "Change this to the path for your interpreter; for instance 'python3'")
+  if(NOT DEFINED PYTHON_EXECUTABLE)
+    set(
+      PYTHON_EXECUTABLE "python"
+      CACHE STRING
+      "Change this to the path for your interpreter; for instance 'python3'")
+  endif()
   execute_process(
     COMMAND "${PYTHON_EXECUTABLE}" ${CMAKE_SOURCE_DIR}/pyviennacl/pyversions.py python
     OUTPUT_VARIABLE PYVERSION
@@ -82,9 +84,12 @@ if(BUILD_PYVIENNACL)
     OUTPUT_VARIABLE BOOST_COMPONENTS
     OUTPUT_STRIP_TRAILING_WHITESPACE
     )
-  set(Python_ADDITIONAL_VERSIONS ${PYVERSION})
+  #set(Python_ADDITIONAL_VERSIONS ${PYVERSION})
   find_package(PythonInterp ${PYVERSION} EXACT)
-  message(${PYTHON_VERSION_STRING})
+  #message(${PYTHON_VERSION_STRING})
+  if(DEFINED PYTHON_INCLUDE_DIR AND NOT DEFINED PYTHON_INCLUDE_DIR2)
+    set(PYTHON_INCLUDE_DIR2 ${PYTHON_INCLUDE_DIR})
+  endif()
   find_package(PythonLibs ${PYTHON_VERSION_STRING} EXACT)
   find_package(Numpy REQUIRED)
 endif()
@@ -112,9 +117,9 @@ if(BUILD_TESTING)
    add_subdirectory(tests)
 endif()
 
-add_subdirectory(doc)
+#add_subdirectory(doc)
 
-add_subdirectory(libviennacl)
+#add_subdirectory(libviennacl)
 
 # Install
 #########

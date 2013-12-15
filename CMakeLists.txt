@@ -66,10 +66,12 @@ if(BUILD_MANUAL)
 endif()
 
 if(BUILD_PYVIENNACL)
-  set(
-    PYTHON_EXECUTABLE "python"
-    CACHE STRING
-    "Change this to the path for your interpreter; for instance 'python3'")
+  if(NOT DEFINED PYTHON_EXECUTABLE)
+    set(
+      PYTHON_EXECUTABLE "python"
+      CACHE STRING
+      "Change this to the path for your interpreter; for instance 'python3'")
+  endif()
   execute_process(
     COMMAND "${PYTHON_EXECUTABLE}" ${CMAKE_SOURCE_DIR}/pyviennacl/pyversions.py python
     OUTPUT_VARIABLE PYVERSION
@@ -83,6 +85,9 @@ if(BUILD_PYVIENNACL)
   #set(Python_ADDITIONAL_VERSIONS ${PYVERSION})
   find_package(PythonInterp ${PYVERSION} EXACT)
   #message(${PYTHON_VERSION_STRING})
+  if(DEFINED PYTHON_INCLUDE_DIR AND NOT DEFINED PYTHON_INCLUDE_DIR2)
+    set(PYTHON_INCLUDE_DIR2 ${PYTHON_INCLUDE_DIR})
+  endif()
   find_package(PythonLibs ${PYTHON_VERSION_STRING} EXACT)
   find_package(Numpy REQUIRED)
 endif()
@@ -132,10 +137,10 @@ install(DIRECTORY viennacl ${CMAKE_CURRENT_BINARY_DIR}/viennacl
 if(ENABLE_DIST)
    file(MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/dist")
 
-   set(DISTDIR "${PROJECT_BINARY_DIR}/dist/PyViennaCL-${VERSION}-all-arch")
+   set(DISTDIR "${PROJECT_BINARY_DIR}/dist/pyviennacl-${VERSION}-all-arch")
    configure_file(cmake/CMakeLists.txt.in "${DISTDIR}/CMakeLists.txt" @ONLY)
 
-   set(DIST_SOURCES_DIR "${PROJECT_BINARY_DIR}/dist/PyViennaCL-${VERSION}-src")
+   set(DIST_SOURCES_DIR "${PROJECT_BINARY_DIR}/dist/pyviennacl-${VERSION}")
    configure_file(cmake/CMakeLists.txt.in.src "${DIST_SOURCES_DIR}/CMakeLists.txt" @ONLY)
 
    #
@@ -188,29 +193,32 @@ if(ENABLE_DIST)
       COMMAND "${CMAKE_COMMAND}" -E copy_if_different
          "${PROJECT_SOURCE_DIR}/cmake/ViennaCLConfigVersion.cmake.in" "${DISTDIR}/cmake/ViennaCLConfigVersion.cmake.in"
 
-      COMMAND "${CMAKE_COMMAND}" -E make_directory "${DISTDIR}/doc"
-      COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-         "${PROJECT_BINARY_DIR}/doc/viennacl.pdf" "${DISTDIR}/doc/viennacl.pdf"
-      COMMAND "${CMAKE_COMMAND}" -E copy_directory
-         "${CMAKE_CURRENT_BINARY_DIR}/doc/doxygen"
-         "${DISTDIR}/doc/doxygen"
+      #COMMAND "${CMAKE_COMMAND}" -E make_directory "${DISTDIR}/doc"
+      #COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+      #   "${PROJECT_BINARY_DIR}/doc/viennacl.pdf" "${DISTDIR}/doc/viennacl.pdf"
+      #COMMAND "${CMAKE_COMMAND}" -E copy_directory
+      #   "${CMAKE_CURRENT_BINARY_DIR}/doc/doxygen"
+      #   "${DISTDIR}/doc/doxygen"
 
-      COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-         "${PROJECT_SOURCE_DIR}/doc/Doxyfile.in" "${DISTDIR}/doc/Doxyfile.in"
+      #COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+      #   "${PROJECT_SOURCE_DIR}/doc/Doxyfile.in" "${DISTDIR}/doc/Doxyfile.in"
 
-      COMMAND "${CMAKE_COMMAND}" -E copy_directory
-         "${PROJECT_SOURCE_DIR}/examples" "${DISTDIR}/examples"
+      #COMMAND "${CMAKE_COMMAND}" -E copy_directory
+      #   "${PROJECT_SOURCE_DIR}/examples" "${DISTDIR}/examples"
 
-      COMMAND "${CMAKE_COMMAND}" -E copy_directory
-         "${PROJECT_SOURCE_DIR}/libviennacl" "${DISTDIR}/libviennacl"
+      #COMMAND "${CMAKE_COMMAND}" -E copy_directory
+      #   "${PROJECT_SOURCE_DIR}/libviennacl" "${DISTDIR}/libviennacl"
 
       COMMAND "${CMAKE_COMMAND}" -E copy_directory
          "${PROJECT_SOURCE_DIR}/external" "${DISTDIR}/external"
 
       COMMAND "${CMAKE_COMMAND}" -E make_directory "${DISTDIR}/tests"
       COMMAND "${CMAKE_COMMAND}" -E make_directory "${DISTDIR}/tests/src"
+      COMMAND "${CMAKE_COMMAND}" -E make_directory "${DISTDIR}/tests/pyviennacl"
       COMMAND "${CMAKE_COMMAND}" -E copy_directory
          "${PROJECT_SOURCE_DIR}/tests/src" "${DISTDIR}/tests/src"
+      COMMAND "${CMAKE_COMMAND}" -E copy_directory
+         "${PROJECT_SOURCE_DIR}/tests/pyviennacl" "${DISTDIR}/tests/pyviennacl"
       COMMAND "${CMAKE_COMMAND}" -E copy_if_different
          "${PROJECT_SOURCE_DIR}/tests/CMakeLists.txt" "${DISTDIR}/tests/CMakeLists.txt"
 
@@ -220,10 +228,10 @@ if(ENABLE_DIST)
          "${CMAKE_CURRENT_BINARY_DIR}/viennacl/linalg/kernels"
          "${DISTDIR}/viennacl/linalg/kernels"
 
-      COMMAND "${CMAKE_COMMAND}" -E tar czf PyViennaCL-${VERSION}-all-arch.tar.gz
-           PyViennaCL-${VERSION}-all-arch
+      COMMAND "${CMAKE_COMMAND}" -E tar czf pyviennacl-${VERSION}-all-arch.tar.gz
+           pyviennacl-${VERSION}-all-arch
       WORKING_DIRECTORY "${PROJECT_BINARY_DIR}/dist"
-      COMMENT "Generating dist/PyViennaCL-${VERSION}-all-arch.tar.gz"
+      COMMENT "Generating dist/pyviennacl-${VERSION}-all-arch.tar.gz"
       VERBATIM)
    add_dependencies(dist kernels apidoc manual)
 
@@ -263,13 +271,16 @@ if(ENABLE_DIST)
          "${PROJECT_SOURCE_DIR}/pyviennacl" "${DIST_SOURCES_DIR}/pyviennacl"
 
       COMMAND "${CMAKE_COMMAND}" -E copy_directory
+         "${PROJECT_SOURCE_DIR}/debian" "${DIST_SOURCES_DIR}/debian"
+
+      COMMAND "${CMAKE_COMMAND}" -E copy_directory
          "${PROJECT_SOURCE_DIR}/CL" "${DIST_SOURCES_DIR}/CL"
 
-      COMMAND "${CMAKE_COMMAND}" -E copy_directory
-         "${PROJECT_SOURCE_DIR}/examples" "${DIST_SOURCES_DIR}/examples"
+      #COMMAND "${CMAKE_COMMAND}" -E copy_directory
+      #   "${PROJECT_SOURCE_DIR}/examples" "${DIST_SOURCES_DIR}/examples"
 
-      COMMAND "${CMAKE_COMMAND}" -E copy_directory
-         "${PROJECT_SOURCE_DIR}/libviennacl" "${DIST_SOURCES_DIR}/libviennacl"
+      #COMMAND "${CMAKE_COMMAND}" -E copy_directory
+      #   "${PROJECT_SOURCE_DIR}/libviennacl" "${DIST_SOURCES_DIR}/libviennacl"
 
       COMMAND "${CMAKE_COMMAND}" -E make_directory "${DIST_SOURCES_DIR}/tests"
       COMMAND "${CMAKE_COMMAND}" -E make_directory "${DIST_SOURCES_DIR}/tests/src"
@@ -287,23 +298,23 @@ if(ENABLE_DIST)
       COMMAND "${CMAKE_COMMAND}" -E copy_directory
          "${PROJECT_SOURCE_DIR}/external" "${DIST_SOURCES_DIR}/external"
 
-      COMMAND "${CMAKE_COMMAND}" -E copy_directory
-         "${PROJECT_SOURCE_DIR}/doc/manual/figures" "${DIST_SOURCES_DIR}/doc/manual/figures"
+      #COMMAND "${CMAKE_COMMAND}" -E copy_directory
+      #   "${PROJECT_SOURCE_DIR}/doc/manual/figures" "${DIST_SOURCES_DIR}/doc/manual/figures"
 
-      COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-         "${PROJECT_SOURCE_DIR}/doc/Doxyfile.in" "${DIST_SOURCES_DIR}/doc/Doxyfile.in"
+      #COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+      #   "${PROJECT_SOURCE_DIR}/doc/Doxyfile.in" "${DIST_SOURCES_DIR}/doc/Doxyfile.in"
 
-      COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-         "${PROJECT_SOURCE_DIR}/doc/CMakeLists.txt" "${DIST_SOURCES_DIR}/doc/CMakeLists.txt"
+      #COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+      #   "${PROJECT_SOURCE_DIR}/doc/CMakeLists.txt" "${DIST_SOURCES_DIR}/doc/CMakeLists.txt"
 
       COMMAND "${CMAKE_COMMAND}" -E copy_directory
          "${PROJECT_SOURCE_DIR}/viennacl" "${DIST_SOURCES_DIR}/viennacl"
 
       # Create archive:
-      COMMAND "${CMAKE_COMMAND}" -E tar czf PyViennaCL-${VERSION}-src.tar.gz
-           PyViennaCL-${VERSION}-src
+      COMMAND "${CMAKE_COMMAND}" -E tar czf pyviennacl-${VERSION}-src.tar.gz
+           pyviennacl-${VERSION}
       WORKING_DIRECTORY "${PROJECT_BINARY_DIR}/dist"
-      COMMENT "Generating dist/PyViennaCL-${VERSION}-src.tar.gz"
+      COMMENT "Generating dist/pyviennacl-${VERSION}-src.tar.gz"
       VERBATIM)
    add_dependencies(dist-src copymanual-src)
 
