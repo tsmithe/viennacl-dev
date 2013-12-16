@@ -9,9 +9,9 @@ endif(COMMAND cmake_policy)
 
 project(ViennaCL)
 
-set(VERSION_MAJOR 1)
-set(VERSION_MINOR 0)
-set(VERSION_PATCH 0)
+set(VERSION_MAJOR 0)
+set(VERSION_MINOR 9999)
+set(VERSION_PATCH 2)
 set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
 
 SET(CMAKE_VERBOSE_MAKEFILE ON)   #uncomment this line to increase CMake verbosity
@@ -122,7 +122,7 @@ if(BUILD_PYVIENNACL)
    add_subdirectory(pyviennacl)
 endif()
 
-add_subdirectory(libviennacl)
+#add_subdirectory(libviennacl)
 
 # Install
 #########
@@ -270,8 +270,9 @@ if(ENABLE_DIST)
       COMMAND "${CMAKE_COMMAND}" -E copy_directory
          "${PROJECT_SOURCE_DIR}/pyviennacl" "${DIST_SOURCES_DIR}/pyviennacl"
 
-      COMMAND "${CMAKE_COMMAND}" -E copy_directory
-         "${PROJECT_SOURCE_DIR}/debian" "${DIST_SOURCES_DIR}/debian"
+      COMMAND "${CMAKE_COMMAND}" -E remove_directory "${DIST_SOURCES_DIR}/pyviennacl/debian"
+      #COMMAND "${CMAKE_COMMAND}" -E copy_directory
+      #   "${PROJECT_SOURCE_DIR}/pyviennacl/debian" "${DIST_SOURCES_DIR}/debian"
 
       COMMAND "${CMAKE_COMMAND}" -E copy_directory
          "${PROJECT_SOURCE_DIR}/CL" "${DIST_SOURCES_DIR}/CL"
@@ -311,10 +312,10 @@ if(ENABLE_DIST)
          "${PROJECT_SOURCE_DIR}/viennacl" "${DIST_SOURCES_DIR}/viennacl"
 
       # Create archive:
-      COMMAND "${CMAKE_COMMAND}" -E tar czf pyviennacl-${VERSION}-src.tar.gz
+      COMMAND tar cJf pyviennacl_${VERSION}.orig.tar.xz
            pyviennacl-${VERSION}
       WORKING_DIRECTORY "${PROJECT_BINARY_DIR}/dist"
-      COMMENT "Generating dist/pyviennacl-${VERSION}-src.tar.gz"
+      COMMENT "Generating dist/pyviennacl_${VERSION}.orig.tar.xz"
       VERBATIM)
    add_dependencies(dist-src copymanual-src)
 
