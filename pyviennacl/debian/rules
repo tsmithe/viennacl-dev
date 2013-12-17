@@ -10,4 +10,4 @@ export PYBUILD_DISABLE=test
 #export PYBUILD_BEFORE_INSTALL=cmake -DDESTDIR={destdir}
 
 %:
-	dh $@ --with python2,python3 --buildsystem=pybuild
+	dh $@ --buildsystem=pybuild
