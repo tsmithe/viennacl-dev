@@ -10,7 +10,7 @@ Homepage: http://viennacl.sourceforge.net/pyviennacl.html
 
 Package: python-pyviennacl
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
+Depends: ${shlibs:Depends}, ${misc:Depends}, python-scipy
 Suggests: pyviennacl-doc
 Description: Python bindings for ViennaCL linear algebra library (for Python 2)
  The Vienna Computing Library (ViennaCL) is a free open-source
@@ -28,7 +28,7 @@ Description: Python bindings for ViennaCL linear algebra library (for Python 2)
 
 Package: python3-pyviennacl
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
+Depends: ${shlibs:Depends}, ${misc:Depends}, python3-scipy
 Description: Python bindings for ViennaCL linear algebra library (for Python 3)
  The Vienna Computing Library (ViennaCL) is a free open-source
  scientific computing library written in C++ and provides CUDA, OpenCL
