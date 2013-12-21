@@ -24,6 +24,7 @@
     Contributed by Philippe Tillet.
 */
 
+#include <cstdio>
 #include <cstdlib>
 #include <algorithm>
 
@@ -85,6 +86,7 @@ namespace viennacl
         T* pt;
 
       public:
+        typedef T element_type;
 
         shared_ptr() :pa(NULL), pt(NULL) {}
 
@@ -114,7 +116,6 @@ namespace viennacl
             std::swap(pa, other.pa);
         }
 
-
         shared_ptr& operator=(const shared_ptr& s)
         {
             if(this!=&s)
@@ -133,13 +134,19 @@ namespace viennacl
 
         T& operator*() const { return *pt; }
 
-        void inc() { if(pa) pa->count.inc(); }
+        void inc() { 
+          if(pa) {
+            pa->count.inc();
+            printf("vcl::tools::shared_ptr @ %p has count %d after inc called\n", this, pa->count.val());
+          }
+        }
 
         void dec()
         {
           if(pa)
           {
             pa->count.dec();
+            printf("vcl::tools::shared_ptr @ %p has count %d after dec called\n", this, pa->count.val());
 
             if(pa->count.is_null())
             {

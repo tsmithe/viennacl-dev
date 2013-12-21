@@ -1,7 +1,9 @@
-#include "_viennacl.h"
+#include "viennacl.h"
 
-void export_eig() {
+#include <viennacl/linalg/power_iter.hpp>
+#include <viennacl/linalg/lanczos.hpp>
 
+PYVCL_MODULE(eig)
   DISAMBIGUATE_CLASS_FUNCTION_PTR(vcl::linalg::power_iter_tag, double,
                                   factor, get_power_iter_factor, () const)
   DISAMBIGUATE_CLASS_FUNCTION_PTR(vcl::linalg::power_iter_tag, std::size_t,

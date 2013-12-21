@@ -1,6 +1,6 @@
-#include "_viennacl.h"
+#include "scheduler.h"
 
-void export_scheduler() {
+PYVCL_MODULE(scheduler)
 
 #define VALUE(NS, V) .value( #V, NS :: V )
 

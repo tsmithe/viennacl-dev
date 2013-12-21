@@ -1,4 +1,4 @@
-#include "_viennacl.h"
+#include "viennacl.h"
 
 #define EXPORT_FUNCTIONS(TYPE, F)                                       \
   bp::def("outer", pyvcl_do_2ary_op<vcl::matrix<TYPE, vcl::column_major>, \
@@ -15,7 +15,7 @@
           TYPE, TYPE,                                                   \
           op_plane_rotation, 0>);                                  
 
-void export_extra_functions() {
+PYVCL_MODULE(extra_functions)
 
   // vector: outer, element_pow, plane_rotation
   // matrix: element_pow

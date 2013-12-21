@@ -433,12 +433,9 @@ def run_test(*args, **kwargs):
 def test():
     print("----------------------------------------------")
     print("----------------------------------------------")
-    print("## Test :: BLAS 3 routines") #TODO
+    print("## Test :: vector operations") #TODO
     print("----------------------------------------------")
     print("----------------------------------------------")
-    print()
-    print("----------------------------------------------")
-    print("--- Part 1: Testing matrix-matrix products ---")
 
     print("*** Using float numeric type ***")
     print("# Testing setup:")

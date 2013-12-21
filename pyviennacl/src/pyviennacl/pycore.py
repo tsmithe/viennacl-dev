@@ -1133,8 +1133,10 @@ class Vector(Leaf):
     def __getitem__(self, key):
         if isinstance(key, slice):
             view = View(key, self.size)
-            return Vector(_v.project(self.vcl_leaf,
-                                     view.vcl_view),
+            project = getattr(_v,
+                            "project_vector_" + vcl_statement_node_numeric_type_strings[
+                                self.statement_node_numeric_type])
+            return Vector(project(self.vcl_leaf, view.vcl_view),
                           dtype=self.dtype,
                           view_of=self,
                           view=(view,))
@@ -1693,6 +1695,9 @@ class Matrix(Leaf):
         self.internal_size2 = self.vcl_leaf.internal_size2
 
     def __getitem__(self, key):
+        project = getattr(_v,
+                          "project_matrix_" + vcl_statement_node_numeric_type_strings[
+                              self.statement_node_numeric_type])
         if isinstance(key, tuple) or isinstance(key, list):
             if len(key) == 0:
                 return self
@@ -1709,9 +1714,9 @@ class Matrix(Leaf):
                         #  (int, slice) - range/slice from row -> row vector
                         view1 = View(slice(0, key[0]+1), self.size1)
                         view2 = View(key[1], self.size2)
-                        return Matrix(_v.project(self.vcl_leaf,
-                                                 view1.vcl_view,
-                                                 view2.vcl_view),
+                        return Matrix(project(self.vcl_leaf,
+                                              view1.vcl_view,
+                                              view2.vcl_view),
                                       dtype=self.dtype,
                                       layout=self.layout,
                                       view_of=self,
@@ -1724,9 +1729,9 @@ class Matrix(Leaf):
                         #  (slice, int) - range/slice from col -> col vector
                         view1 = View(key[0], self.size1)
                         view2 = View(slice(0, key[1]+1), self.size2)
-                        return Matrix(_v.project(self.vcl_leaf,
-                                                 view1.vcl_view,
-                                                 view2.vcl_view),
+                        return Matrix(project(self.vcl_leaf,
+                                              view1.vcl_view,
+                                              view2.vcl_view),
                                       dtype=self.dtype,
                                       layout=self.layout,
                                       view_of=self,
@@ -1735,9 +1740,9 @@ class Matrix(Leaf):
                         #  (slice, slice) - sub-matrix
                         view1 = View(key[0], self.size1)
                         view2 = View(key[1], self.size2)
-                        return Matrix(_v.project(self.vcl_leaf,
-                                                 view1.vcl_view,
-                                                 view2.vcl_view),
+                        return Matrix(project(self.vcl_leaf,
+                                              view1.vcl_view,
+                                              view2.vcl_view),
                                       dtype=self.dtype,
                                       layout=self.layout,
                                       view_of=self,
@@ -1749,9 +1754,9 @@ class Matrix(Leaf):
         elif isinstance(key, slice):
             view1 = View(key, self.size1)
             view2 = View(slice(0, 1, self.size2), self.size2)
-            return Matrix(_v.project(self.vcl_leaf,
-                                     view1.vcl_view,
-                                     view2.vcl_view),
+            return Matrix(project(self.vcl_leaf,
+                                  view1.vcl_view,
+                                  view2.vcl_view),
                           dtype=self.dtype,
                           layout=self.layout,
                           view_of=self,

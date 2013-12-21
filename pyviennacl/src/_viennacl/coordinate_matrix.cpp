@@ -1,6 +1,6 @@
-#include "_viennacl.h"
+#include "sparse_matrix.h"
 
-void export_coordinate_matrix() {
+PYVCL_MODULE(coordinate_matrix)
   bp::class_<vcl::coordinate_matrix<double>, 
              boost::shared_ptr<vcl::coordinate_matrix<double> >,
              boost::noncopyable >

@@ -1,6 +1,6 @@
-#include "_viennacl.h"
+#include "sparse_matrix.h"
 
-void export_hyb_matrix() {
+PYVCL_MODULE(hyb_matrix)
   bp::class_<vcl::hyb_matrix<double>, 
              boost::shared_ptr<vcl::hyb_matrix<double> >,
              boost::noncopyable >

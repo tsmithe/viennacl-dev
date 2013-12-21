@@ -1,6 +1,6 @@
-#include "_viennacl.h"
+#include "sparse_matrix.h"
 
-void export_ell_matrix() {
+PYVCL_MODULE(ell_matrix)
   bp::class_<vcl::ell_matrix<double>, 
              boost::shared_ptr<vcl::ell_matrix<double> >,
              boost::noncopyable >
