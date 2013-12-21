@@ -2,7 +2,7 @@
 
 PYVCL_MODULE(coordinate_matrix)
   bp::class_<vcl::coordinate_matrix<double>, 
-             boost::shared_ptr<vcl::coordinate_matrix<double> >,
+             vcl::tools::shared_ptr<vcl::coordinate_matrix<double> >,
              boost::noncopyable >
     ("coordinate_matrix", bp::no_init)
     .add_property("size1",

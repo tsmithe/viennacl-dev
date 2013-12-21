@@ -36,7 +36,7 @@ PYVCL_MODULE(compressed_matrix)
     ;
 
     bp::class_<vcl::compressed_matrix<double>,
-             boost::shared_ptr<vcl::compressed_matrix<double> > >
+             vcl::tools::shared_ptr<vcl::compressed_matrix<double> > >
     ("compressed_matrix", bp::no_init)
     .add_property("size1",
 		  make_function(&vcl::compressed_matrix<double>::size1,

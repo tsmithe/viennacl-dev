@@ -102,21 +102,21 @@ public:
   }
 
   template<class SparseT>
-  boost::shared_ptr<SparseT>
+  vcl::tools::shared_ptr<SparseT>
   as_vcl_sparse_matrix()
   {
     SparseT* vcl_sparse_matrix = new SparseT();
     vcl::copy(cpu_compressed_matrix, *vcl_sparse_matrix);
-    return boost::shared_ptr<SparseT>(vcl_sparse_matrix);
+    return vcl::tools::shared_ptr<SparseT>(vcl_sparse_matrix);
   }
 
   template<class SparseT>
-  boost::shared_ptr<SparseT>
+  vcl::tools::shared_ptr<SparseT>
   as_vcl_sparse_matrix_with_size()
   {
     SparseT* vcl_sparse_matrix = new SparseT(size1(), size2(), nnz());
     vcl::copy(cpu_compressed_matrix, *vcl_sparse_matrix);
-    return boost::shared_ptr<SparseT>(vcl_sparse_matrix);
+    return vcl::tools::shared_ptr<SparseT>(vcl_sparse_matrix);
   }
 
   void update_places()

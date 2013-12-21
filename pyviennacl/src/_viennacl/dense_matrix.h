@@ -36,20 +36,20 @@ public:
 };
 
 template<class SCALARTYPE, class F>
-boost::shared_ptr<vcl::matrix<SCALARTYPE, F> >
+vcl::tools::shared_ptr<vcl::matrix<SCALARTYPE, F> >
 matrix_init_scalar(uint32_t n, uint32_t m, SCALARTYPE value)
 {
   ublas::scalar_matrix<SCALARTYPE> s_m(n, m, value);
   ublas::matrix<SCALARTYPE> cpu_m(s_m);
   vcl::matrix<SCALARTYPE, F>* mat = new vcl::matrix<SCALARTYPE, F>(n, m);
   vcl::copy(cpu_m, (*mat));
-  return boost::shared_ptr<vcl::matrix<SCALARTYPE, F> >(mat);
+  return vcl::tools::shared_ptr<vcl::matrix<SCALARTYPE, F> >(mat);
 }
 
 
 /** @brief Creates the matrix from the supplied ndarray */
 template<class SCALARTYPE, class F>
-boost::shared_ptr<vcl::matrix<SCALARTYPE, F> >
+vcl::tools::shared_ptr<vcl::matrix<SCALARTYPE, F> >
 matrix_init_ndarray(const np::ndarray& array)
 {
   int d = array.get_nd();
@@ -64,7 +64,7 @@ matrix_init_ndarray(const np::ndarray& array)
 
   vcl::copy(wrapper, (*mat));
   
-  return boost::shared_ptr<vcl::matrix<SCALARTYPE, F> >(mat);
+  return vcl::tools::shared_ptr<vcl::matrix<SCALARTYPE, F> >(mat);
 }
 
 template<class SCALARTYPE>
@@ -119,7 +119,7 @@ np::ndarray vcl_matrix_to_ndarray(const vcl::matrix_base<SCALARTYPE, VCL_F>& m)
 
 #define EXPORT_DENSE_MATRIX_CLASS(TYPE, LAYOUT, F, CPU_F)               \
   bp::class_<vcl::matrix_base<TYPE, F>,                                 \
-	     boost::shared_ptr<vcl::matrix_base<TYPE, F> > >            \
+	     vcl::tools::shared_ptr<vcl::matrix_base<TYPE, F> > >            \
     ("matrix_base", bp::no_init)                                        \
     .def("as_ndarray", &vcl_matrix_to_ndarray<TYPE, F>)                 \
     .add_property("size1", &vcl::matrix_base<TYPE, F>::size1)           \
@@ -245,17 +245,17 @@ np::ndarray vcl_matrix_to_ndarray(const vcl::matrix_base<SCALARTYPE, VCL_F>& m)
 	 op_solve, 0>)                                                  \
     ;                                                                   \
   bp::class_<vcl::matrix_range<vcl::matrix_base<TYPE, F> >,             \
-             boost::shared_ptr<vcl::matrix_range<vcl::matrix_base<TYPE, \
+             vcl::tools::shared_ptr<vcl::matrix_range<vcl::matrix_base<TYPE, \
                                                                   F> > >, \
              bp::bases<vcl::matrix_base<TYPE, F> > >                    \
     ("matrix_range", bp::no_init);                                      \
   bp::class_<vcl::matrix_slice<vcl::matrix_base<TYPE, F> >,             \
-             boost::shared_ptr<vcl::matrix_slice<vcl::matrix_base<TYPE, \
+             vcl::tools::shared_ptr<vcl::matrix_slice<vcl::matrix_base<TYPE, \
                                                                   F> > >, \
              bp::bases<vcl::matrix_base<TYPE, F> > >                    \
     ("matrix_slice", bp::no_init);                                      \
   bp::class_<vcl::matrix<TYPE, F>,                                      \
-             boost::shared_ptr<vcl::matrix<TYPE, F> >,                  \
+             vcl::tools::shared_ptr<vcl::matrix<TYPE, F> >,                  \
              bp::bases<vcl::matrix_base<TYPE, F> > >                    \
     ( "matrix_" #LAYOUT "_" #TYPE )                                     \
     .def(bp::init<vcl::matrix<TYPE, F> >())                             \

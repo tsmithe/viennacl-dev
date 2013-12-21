@@ -2,7 +2,7 @@
 
 PYVCL_MODULE(hyb_matrix)
   bp::class_<vcl::hyb_matrix<double>, 
-             boost::shared_ptr<vcl::hyb_matrix<double> >,
+             vcl::tools::shared_ptr<vcl::hyb_matrix<double> >,
              boost::noncopyable >
     ("hyb_matrix", bp::no_init)
     .add_property("size1",

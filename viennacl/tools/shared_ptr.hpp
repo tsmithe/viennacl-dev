@@ -141,7 +141,7 @@ namespace viennacl
         void inc() { 
           if(pa) {
             pa->count.inc();
-            printf("vcl::tools::shared_ptr @ %p has count %d after inc called\n", this, pa->count.val());
+            //printf("vcl::tools::shared_ptr @ %p has count %d after inc called\n", this, pa->count.val());
           }
         }
 
@@ -150,7 +150,7 @@ namespace viennacl
           if(pa)
           {
             pa->count.dec();
-            printf("vcl::tools::shared_ptr @ %p has count %d after dec called\n", this, pa->count.val());
+            //printf("vcl::tools::shared_ptr @ %p has count %d after dec called\n", this, pa->count.val());
 
             if(pa->count.is_null())
             {
