@@ -26,6 +26,8 @@
 #include <map>
 #include <set>
 #include <list>
+#include <stdexcept>
+
 #include "viennacl/tools/shared_ptr.hpp"
 #include "viennacl/scheduler/forwards.h"
 
@@ -33,8 +35,8 @@ namespace viennacl{
 
   namespace generator{
 
-    static void generate_enqueue_statement(viennacl::scheduler::statement const & s, scheduler::statement_node const & root_node);
-    static void generate_enqueue_statement(viennacl::scheduler::statement const & s);
+    inline void generate_enqueue_statement(viennacl::scheduler::statement const & s, scheduler::statement_node const & root_node);
+    inline void generate_enqueue_statement(viennacl::scheduler::statement const & s);
 
     enum expression_type_family{
       SCALAR_SAXPY_FAMILY,
@@ -78,6 +80,7 @@ namespace viennacl{
 
     typedef std::pair<expression_type, vcl_size_t> expression_key_type;
 
+    /** @brief A class for holding meta information such as the type or the underlying scalar type of an expression (such as x = inner_prod(y, z)). */
     struct expression_descriptor{
         expression_key_type make_key() const { return expression_key_type(type,scalartype_size); }
         bool operator==(expression_descriptor const & other) const
@@ -89,14 +92,22 @@ namespace viennacl{
         vcl_size_t scalartype_size;
     };
 
+    /** @brief Emulation of C++11's .at() member for std::map<> */
+    template <typename KeyT, typename ValueT>
+    ValueT const & at(std::map<KeyT, ValueT> const & map, KeyT const & key)
+    {
+      typename std::map<KeyT, ValueT>::const_iterator it = map.find(key);
+      if (it != map.end())
+        return it->second;
+
+      throw std::out_of_range("Generator: Key not found in map");
+    }
 
     namespace utils{
       class kernel_generation_stream;
     }
 
     namespace detail{
-
-      using namespace viennacl::scheduler;
 
       enum node_type{
         LHS_NODE_TYPE,
@@ -106,18 +117,18 @@ namespace viennacl{
 
       class mapped_object;
 
-      typedef std::pair<scheduler::statement_node const *, node_type> key_type;
+      typedef std::pair<viennacl::scheduler::statement_node const *, node_type> key_type;
       typedef tools::shared_ptr<detail::mapped_object> container_ptr_type;
       typedef std::map<key_type, container_ptr_type> mapping_type;
 
       template<class Fun>
-      static void traverse(scheduler::statement const & statement, scheduler::statement_node const & root_node, Fun const & fun, bool recurse_binary_leaf = true);
-      static std::string generate(std::pair<std::string, std::string> const & index, int vector_index, mapped_object const & s);
+      static void traverse(viennacl::scheduler::statement const & statement, viennacl::scheduler::statement_node const & root_node, Fun const & fun, bool recurse_binary_leaf = true);
+      inline std::string generate(std::pair<std::string, std::string> const & index, int vector_element, mapped_object const & s);
       static std::string & append_kernel_arguments(std::set<std::string> & already_generated, std::string & str, unsigned int vector_size, mapped_object const & s);
       static void fetch(std::pair<std::string, std::string> const & index, unsigned int vectorization, std::set<std::string> & fetched, utils::kernel_generation_stream & stream, mapped_object & s);
-      static const char * generate(scheduler::operation_node_type arg);
-      static void generate_all_rhs(scheduler::statement const & statement
-                                , scheduler::statement_node const & root_node
+      inline const char * generate(viennacl::scheduler::operation_node_type type);
+      static void generate_all_rhs(viennacl::scheduler::statement const & statement
+                                , viennacl::scheduler::statement_node const & root_node
                                 , std::pair<std::string, std::string> const & index
                                 , int vector_element
                                 , std::string & str

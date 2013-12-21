@@ -101,15 +101,13 @@ namespace viennacl
                       vector_base<ScalarType> & vec,
                       viennacl::linalg::detail::row_info_types info_selector)
         {
-          ScalarType const * ptr1 = detail::cuda_arg<ScalarType>(mat.handle().cuda_handle());
-          ScalarType       * ptr2 = detail::cuda_arg<ScalarType>(vec);
-          //csr_row_info_extractor_kernel<<<128, 128>>>(detail::cuda_arg<unsigned int>(mat.handle1().cuda_handle()),
-          //                                            detail::cuda_arg<unsigned int>(mat.handle2().cuda_handle()),
-          //                                            detail::cuda_arg<ScalarType>(mat.handle().cuda_handle()),
-          //                                            detail::cuda_arg<ScalarType>(vec),
-          //                                            static_cast<unsigned int>(mat.size1()),
-          //                                           static_cast<unsigned int>(info_selector)
-          //                                           );
+          csr_row_info_extractor_kernel<<<128, 128>>>(detail::cuda_arg<unsigned int>(mat.handle1().cuda_handle()),
+                                                      detail::cuda_arg<unsigned int>(mat.handle2().cuda_handle()),
+                                                      detail::cuda_arg<ScalarType>(mat.handle().cuda_handle()),
+                                                      detail::cuda_arg<ScalarType>(vec),
+                                                      static_cast<unsigned int>(mat.size1()),
+                                                      static_cast<unsigned int>(info_selector)
+                                                     );
           VIENNACL_CUDA_LAST_ERROR_CHECK("csr_row_info_extractor_kernel");
         }
 
@@ -172,6 +170,10 @@ namespace viennacl
         VIENNACL_CUDA_LAST_ERROR_CHECK("compressed_matrix_vec_mul_kernel");
       }
 
+      /** @brief Helper struct for accessing an element of a row- or column-major matrix.
+        *
+        * @param LayoutT   The layout tag: Either row_major or column_major
+        */
       template <typename LayoutT>
       struct mat_mult_matrix_index
       {
@@ -184,6 +186,7 @@ namespace viennacl
         }
       };
 
+      /** \cond */
       template <>
       struct mat_mult_matrix_index<viennacl::column_major>
       {
@@ -195,6 +198,7 @@ namespace viennacl
           return (row_start + i * row_inc) + (col_start + j * col_inc) * internal_rows;
         }
       };
+      /** \endcond */
 
 
       template <typename DMatIndexT, typename ResultIndexT, typename T>
@@ -726,7 +730,7 @@ namespace viennacl
         template <typename T>
         __global__ void coo_row_info_extractor( const unsigned int * coords, //(row_index, column_index)
                                                 const T * elements,
-                                                const uint  * group_boundaries,
+                                                const unsigned int * group_boundaries,
                                                 T * result,
                                                 unsigned int option)
         {
@@ -735,14 +739,14 @@ namespace viennacl
 
           uint2 tmp;
           T val;
-          uint last_index  = blockDim.x - 1;
-          uint group_start = group_boundaries[blockIdx.x];
-          uint group_end   = group_boundaries[blockIdx.x + 1];
-          uint k_end = (group_end > group_start) ? 1 + (group_end - group_start - 1) / blockDim.x : 0;   // -1 in order to have correct behavior if group_end - group_start == j * blockDim.x
+          unsigned int last_index  = blockDim.x - 1;
+          unsigned int group_start = group_boundaries[blockIdx.x];
+          unsigned int group_end   = group_boundaries[blockIdx.x + 1];
+          unsigned int k_end = (group_end > group_start) ? 1 + (group_end - group_start - 1) / blockDim.x : 0;   // -1 in order to have correct behavior if group_end - group_start == j * blockDim.x
 
-          uint local_index = 0;
+          unsigned int local_index = 0;
 
-          for (uint k = 0; k < k_end; ++k)
+          for (unsigned int k = 0; k < k_end; ++k)
           {
             local_index = group_start + k * blockDim.x + threadIdx.x;
 
@@ -885,13 +889,13 @@ namespace viennacl
 
         uint2 tmp;
         T val;
-        uint group_start = group_boundaries[blockIdx.x];
-        uint group_end   = group_boundaries[blockIdx.x + 1];
-        uint k_end = (group_end > group_start) ? 1 + (group_end - group_start - 1) / blockDim.x : 0;   // -1 in order to have correct behavior if group_end - group_start == j * blockDim.x
+        unsigned int group_start = group_boundaries[blockIdx.x];
+        unsigned int group_end   = group_boundaries[blockIdx.x + 1];
+        unsigned int k_end = (group_end > group_start) ? 1 + (group_end - group_start - 1) / blockDim.x : 0;   // -1 in order to have correct behavior if group_end - group_start == j * blockDim.x
 
-        uint local_index = 0;
+        unsigned int local_index = 0;
 
-        for (uint k = 0; k < k_end; ++k)
+        for (unsigned int k = 0; k < k_end; ++k)
         {
           local_index = group_start + k * blockDim.x + threadIdx.x;
 
@@ -996,15 +1000,15 @@ namespace viennacl
 
         uint2 tmp;
         NumericT val;
-        uint group_start = group_boundaries[blockIdx.x];
-        uint group_end   = group_boundaries[blockIdx.x + 1];
-        uint k_end = (group_end > group_start) ? 1 + (group_end - group_start - 1) / blockDim.x : 0;   // -1 in order to have correct behavior if group_end - group_start == j * blockDim.x
+        unsigned int group_start = group_boundaries[blockIdx.x];
+        unsigned int group_end   = group_boundaries[blockIdx.x + 1];
+        unsigned int k_end = (group_end > group_start) ? 1 + (group_end - group_start - 1) / blockDim.x : 0;   // -1 in order to have correct behavior if group_end - group_start == j * blockDim.x
 
-        uint local_index = 0;
+        unsigned int local_index = 0;
 
-        for (uint result_col = 0; result_col < result_col_size; ++result_col)
+        for (unsigned int result_col = 0; result_col < result_col_size; ++result_col)
         {
-          for (uint k = 0; k < k_end; ++k)
+          for (unsigned int k = 0; k < k_end; ++k)
           {
             local_index = group_start + k * blockDim.x + threadIdx.x;
 
@@ -1124,15 +1128,15 @@ namespace viennacl
 
         uint2 tmp;
         NumericT val;
-        uint group_start = group_boundaries[blockIdx.x];
-        uint group_end   = group_boundaries[blockIdx.x + 1];
-        uint k_end = (group_end > group_start) ? 1 + (group_end - group_start - 1) / blockDim.x : 0;   // -1 in order to have correct behavior if group_end - group_start == j * blockDim.x
+        unsigned int group_start = group_boundaries[blockIdx.x];
+        unsigned int group_end   = group_boundaries[blockIdx.x + 1];
+        unsigned int k_end = (group_end > group_start) ? 1 + (group_end - group_start - 1) / blockDim.x : 0;   // -1 in order to have correct behavior if group_end - group_start == j * blockDim.x
 
-        uint local_index = 0;
+        unsigned int local_index = 0;
 
-        for (uint result_col = 0; result_col < result_col_size; ++result_col)
+        for (unsigned int result_col = 0; result_col < result_col_size; ++result_col)
         {
-          for (uint k = 0; k < k_end; ++k)
+          for (unsigned int k = 0; k < k_end; ++k)
           {
             local_index = group_start + k * blockDim.x + threadIdx.x;
 
@@ -1247,15 +1251,15 @@ namespace viennacl
                                                 unsigned int aligned_items_per_row
                                                )
       {
-        uint glb_id = blockDim.x * blockIdx.x + threadIdx.x;
-        uint glb_sz = gridDim.x * blockDim.x;
+        unsigned int glb_id = blockDim.x * blockIdx.x + threadIdx.x;
+        unsigned int glb_sz = gridDim.x * blockDim.x;
 
-        for(uint row_id = glb_id; row_id < row_num; row_id += glb_sz)
+        for(unsigned int row_id = glb_id; row_id < row_num; row_id += glb_sz)
         {
           T sum = 0;
 
-          uint offset = row_id;
-          for(uint item_id = 0; item_id < items_per_row; item_id++, offset += internal_row_num)
+          unsigned int offset = row_id;
+          for(unsigned int item_id = 0; item_id < items_per_row; item_id++, offset += internal_row_num)
           {
             T val = elements[offset];
 
@@ -1329,16 +1333,16 @@ namespace viennacl
                                                   unsigned int result_internal_cols) {
 
 
-        uint glb_id = blockDim.x * blockIdx.x + threadIdx.x;
-        uint glb_sz = gridDim.x * blockDim.x;
-        for( uint rc = glb_id; rc < (sp_mat_row_num * d_mat_col_size); rc += glb_sz) {
-          uint row = rc % sp_mat_row_num;
-          uint col = rc / sp_mat_row_num;
+        unsigned int glb_id = blockDim.x * blockIdx.x + threadIdx.x;
+        unsigned int glb_sz = gridDim.x * blockDim.x;
+        for( unsigned int rc = glb_id; rc < (sp_mat_row_num * d_mat_col_size); rc += glb_sz) {
+          unsigned int row = rc % sp_mat_row_num;
+          unsigned int col = rc / sp_mat_row_num;
 
-          uint offset = row;
+          unsigned int offset = row;
           NumericT r = (NumericT)0;
 
-          for(uint k = 0; k < sp_mat_items_per_row; k++, offset += sp_mat_internal_row_num) {
+          for(unsigned int k = 0; k < sp_mat_items_per_row; k++, offset += sp_mat_internal_row_num) {
 
             unsigned int j = sp_mat_coords[offset];
             NumericT x = static_cast<NumericT>(sp_mat_elements[offset]);
@@ -1426,16 +1430,16 @@ namespace viennacl
                                                   unsigned int result_internal_cols) {
 
 
-        uint glb_id = blockDim.x * blockIdx.x + threadIdx.x;
-        uint glb_sz = gridDim.x * blockDim.x;
-        for( uint rc = glb_id; rc < (sp_mat_row_num * d_mat_row_size); rc += glb_sz) {
-          uint row = rc % sp_mat_row_num;
-          uint col = rc / sp_mat_row_num;
+        unsigned int glb_id = blockDim.x * blockIdx.x + threadIdx.x;
+        unsigned int glb_sz = gridDim.x * blockDim.x;
+        for( unsigned int rc = glb_id; rc < (sp_mat_row_num * d_mat_row_size); rc += glb_sz) {
+          unsigned int row = rc % sp_mat_row_num;
+          unsigned int col = rc / sp_mat_row_num;
 
-          uint offset = row;
+          unsigned int offset = row;
           NumericT r = (NumericT)0;
 
-          for(uint k = 0; k < sp_mat_items_per_row; k++, offset += sp_mat_internal_row_num) {
+          for(unsigned int k = 0; k < sp_mat_items_per_row; k++, offset += sp_mat_internal_row_num) {
 
             unsigned int j = sp_mat_coords[offset];
             NumericT x = static_cast<NumericT>(sp_mat_elements[offset]);
@@ -1522,15 +1526,15 @@ namespace viennacl
                                                 unsigned int aligned_items_per_row
                                                )
       {
-        uint glb_id = blockDim.x * blockIdx.x + threadIdx.x;
-        uint glb_sz = gridDim.x * blockDim.x;
+        unsigned int glb_id = blockDim.x * blockIdx.x + threadIdx.x;
+        unsigned int glb_sz = gridDim.x * blockDim.x;
 
-        for(uint row_id = glb_id; row_id < row_num; row_id += glb_sz)
+        for(unsigned int row_id = glb_id; row_id < row_num; row_id += glb_sz)
         {
           T sum = 0;
 
-          uint offset = row_id;
-          for(uint item_id = 0; item_id < items_per_row; item_id++, offset += internal_row_num)
+          unsigned int offset = row_id;
+          for(unsigned int item_id = 0; item_id < items_per_row; item_id++, offset += internal_row_num)
           {
             T val = ell_elements[offset];
 
@@ -1542,10 +1546,10 @@ namespace viennacl
             }
           }
 
-          uint col_begin = csr_rows[row_id];
-          uint col_end   = csr_rows[row_id + 1];
+          unsigned int col_begin = csr_rows[row_id];
+          unsigned int col_end   = csr_rows[row_id + 1];
 
-          for(uint item_id = col_begin; item_id < col_end; item_id++)
+          for(unsigned int item_id = col_begin; item_id < col_end; item_id++)
           {
             sum += (x[csr_cols[item_id] * inc_x + start_x] * csr_elements[item_id]);
           }
@@ -1619,17 +1623,17 @@ namespace viennacl
                                                 unsigned int result_internal_rows,
                                                 unsigned int result_internal_cols)
       {
-        uint glb_id = blockDim.x * blockIdx.x + threadIdx.x;
-        uint glb_sz = gridDim.x * blockDim.x;
+        unsigned int glb_id = blockDim.x * blockIdx.x + threadIdx.x;
+        unsigned int glb_sz = gridDim.x * blockDim.x;
 
-        for(uint result_col = 0; result_col < result_col_size; ++result_col)
+        for(unsigned int result_col = 0; result_col < result_col_size; ++result_col)
         {
-          for(uint row_id = glb_id; row_id < row_num; row_id += glb_sz)
+          for(unsigned int row_id = glb_id; row_id < row_num; row_id += glb_sz)
           {
             NumericT sum = 0;
 
-            uint offset = row_id;
-            for(uint item_id = 0; item_id < items_per_row; item_id++, offset += internal_row_num)
+            unsigned int offset = row_id;
+            for(unsigned int item_id = 0; item_id < items_per_row; item_id++, offset += internal_row_num)
             {
               NumericT val = ell_elements[offset];
 
@@ -1642,10 +1646,10 @@ namespace viennacl
               }
             }
 
-            uint col_begin = csr_rows[row_id];
-            uint col_end   = csr_rows[row_id + 1];
+            unsigned int col_begin = csr_rows[row_id];
+            unsigned int col_end   = csr_rows[row_id + 1];
 
-            for(uint item_id = col_begin; item_id < col_end; item_id++)
+            for(unsigned int item_id = col_begin; item_id < col_end; item_id++)
             {
               sum += d_mat[DMatIndexT::apply(csr_cols[item_id], result_col,
                                              d_mat_row_start, d_mat_row_inc,
@@ -1665,11 +1669,11 @@ namespace viennacl
 
       /** @brief Carries out matrix-vector multiplication with a hyb_matrix
       *
-      * Implementation of the convenience expression result = prod(mat, vec);
+      * Implementation of the convenience expression result = prod(mat, d_mat);
       *
-      * @param mat    The matrix
-      * @param vec    The vector
-      * @param result The result vector
+      * @param mat      The sparse matrix
+      * @param d_mat    The dense matrix (row- or column-major)
+      * @param result   The dense result matrix (row- or column-major)
       */
       template<typename NumericT, unsigned int ALIGNMENT, typename F1, typename F2>
       void prod_impl(const viennacl::hyb_matrix<NumericT, ALIGNMENT> & mat,
@@ -1733,17 +1737,17 @@ namespace viennacl
                                                 unsigned int result_internal_rows,
                                                 unsigned int result_internal_cols)
       {
-        uint glb_id = blockDim.x * blockIdx.x + threadIdx.x;
-        uint glb_sz = gridDim.x * blockDim.x;
+        unsigned int glb_id = blockDim.x * blockIdx.x + threadIdx.x;
+        unsigned int glb_sz = gridDim.x * blockDim.x;
 
-        for(uint result_col = 0; result_col < result_col_size; ++result_col)
+        for(unsigned int result_col = 0; result_col < result_col_size; ++result_col)
         {
-          for(uint row_id = glb_id; row_id < row_num; row_id += glb_sz)
+          for(unsigned int row_id = glb_id; row_id < row_num; row_id += glb_sz)
           {
             NumericT sum = 0;
 
-            uint offset = row_id;
-            for(uint item_id = 0; item_id < items_per_row; item_id++, offset += internal_row_num)
+            unsigned int offset = row_id;
+            for(unsigned int item_id = 0; item_id < items_per_row; item_id++, offset += internal_row_num)
             {
               NumericT val = ell_elements[offset];
 
@@ -1756,10 +1760,10 @@ namespace viennacl
               }
             }
 
-            uint col_begin = csr_rows[row_id];
-            uint col_end   = csr_rows[row_id + 1];
+            unsigned int col_begin = csr_rows[row_id];
+            unsigned int col_end   = csr_rows[row_id + 1];
 
-            for(uint item_id = col_begin; item_id < col_end; item_id++)
+            for(unsigned int item_id = col_begin; item_id < col_end; item_id++)
             {
               sum += d_mat[DMatIndexT::apply(result_col, csr_cols[item_id],
                                              d_mat_row_start, d_mat_row_inc,
@@ -1779,11 +1783,11 @@ namespace viennacl
 
       /** @brief Carries out matrix-vector multiplication with a hyb_matrix
       *
-      * Implementation of the convenience expression result = prod(mat, vec);
+      * Implementation of the convenience expression result = prod(mat, trans(d_mat));
       *
-      * @param mat    The matrix
-      * @param vec    The vector
-      * @param result The result vector
+      * @param mat      The sparse matrix
+      * @param d_mat    Transposed matrix proxy object for the rhs dense matrix (row- or column-major)
+      * @param result   The dense result matrix (row- or column-major)
       */
       template<typename NumericT, unsigned int ALIGNMENT, typename F1, typename F2>
       void prod_impl(const viennacl::hyb_matrix<NumericT, ALIGNMENT> & mat,

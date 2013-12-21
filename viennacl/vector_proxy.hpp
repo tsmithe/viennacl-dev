@@ -30,7 +30,10 @@
 
 namespace viennacl
 {
-
+  /** @brief Class for representing non-strided subvectors of a bigger vector x.
+    *
+    * In MATLAB notation, this could for example refer to the subvector x(3:8) of a vector x.
+    */
   template <typename VectorType>
   class vector_range : public vector_base<typename VectorType::cpu_value_type>
   {
@@ -68,7 +71,7 @@ namespace viennacl
   void copy(const VectorType & cpu_vector,
             vector_range<vector<SCALARTYPE> > & gpu_vector_range )
   {
-    assert(cpu_vector.end() - cpu_vector.begin() >= 0);
+    assert(cpu_vector.end() - cpu_vector.begin() >= 0 && bool("Range must have nonnegative length!"));
 
     if (cpu_vector.end() - cpu_vector.begin() > 0)
     {
@@ -100,7 +103,7 @@ namespace viennacl
   void copy(vector_range<vector<SCALARTYPE> > const & gpu_vector_range,
             VectorType & cpu_vector)
   {
-    assert(cpu_vector.end() - cpu_vector.begin() >= 0);
+    assert(cpu_vector.end() - cpu_vector.begin() >= 0 && bool("Range must have nonnegative length!"));
 
     if (cpu_vector.end() > cpu_vector.begin())
     {
@@ -153,7 +156,10 @@ namespace viennacl
 
 
 
-
+  /** @brief Class for representing strided subvectors of a bigger vector x.
+    *
+    * In MATLAB notation, this could for example refer to the subvector x(3:2:8) of a vector x.
+    */
   template <typename VectorType>
   class vector_slice : public vector_base<typename VectorType::cpu_value_type>
   {
@@ -214,7 +220,7 @@ namespace viennacl
   void copy(vector_slice<vector<SCALARTYPE> > const & gpu_vector_slice,
             VectorType & cpu_vector)
   {
-    assert(gpu_vector_slice.end() - gpu_vector_slice.begin() >= 0);
+    assert(gpu_vector_slice.end() - gpu_vector_slice.begin() >= 0 && bool("Range must have nonnegative length!"));
 
     if (gpu_vector_slice.end() - gpu_vector_slice.begin() > 0)
     {

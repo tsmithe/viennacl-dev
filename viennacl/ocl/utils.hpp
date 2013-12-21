@@ -40,6 +40,7 @@ namespace viennacl
       static void apply(viennacl::ocl::context const &) {}
     };
 
+    /** \cond */
     template <>
     struct DOUBLE_PRECISION_CHECKER<double>
     {
@@ -49,10 +50,13 @@ namespace viennacl
           throw viennacl::ocl::double_precision_not_provided_error();
       }
     };
+    /** \endcond */
 
+    /** \brief Helper class for converting a type to its string representation. */
     template <typename T>
     struct type_to_string;
 
+    /** \cond */
     template <> struct type_to_string<char>   { static std::string apply() { return "char";  } };
     template <> struct type_to_string<short>  { static std::string apply() { return "short"; } };
     template <> struct type_to_string<int>    { static std::string apply() { return "int";   } };
@@ -65,6 +69,7 @@ namespace viennacl
 
     template <> struct type_to_string<float>  { static std::string apply() { return "float";  } };
     template <> struct type_to_string<double> { static std::string apply() { return "double"; } };
+    /** \endcond */
 
     template <typename T>
     void append_double_precision_pragma(viennacl::ocl::context const & /*ctx*/, std::string & /*source*/) {}

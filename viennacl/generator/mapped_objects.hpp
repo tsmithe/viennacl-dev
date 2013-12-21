@@ -40,12 +40,14 @@ namespace viennacl{
        */
       class mapped_object{
         protected:
+          /** \cond */
           struct node_info{
               node_info() : mapping(NULL), statement(NULL), root_node(NULL) { }
               mapping_type const * mapping;
               scheduler::statement const * statement;
               scheduler::statement_node const * root_node;
           };
+          /** \endcond */
           virtual std::string generate_default(std::pair<std::string, std::string> const & index) const = 0;
           virtual std::string append_vector_size(std::string const & scalartype, unsigned int) const { return scalartype; }
 
@@ -91,9 +93,9 @@ namespace viennacl{
       class mapped_reduction : public mapped_binary_leaf{
         public:
           mapped_reduction(std::string const & scalartype) : mapped_binary_leaf(scalartype){ }
-          operation_node_type reduction_type() const { return reduction_type_; }
+          viennacl::scheduler::operation_node_type reduction_type() const { return reduction_type_; }
         private:
-          operation_node_type reduction_type_;
+          viennacl::scheduler::operation_node_type reduction_type_;
       };
 
       /** @brief Mapping of a scalar reduction (based on inner product) */
@@ -290,7 +292,6 @@ namespace viennacl{
           friend class map_functor;
           std::string value_name_;
           std::string index_name_;
-          bool is_value_static_;
         public:
           mapped_implicit_vector(std::string const & scalartype) : mapped_object(scalartype){ }
           std::string generate_default(std::pair<std::string, std::string> const & /*index*/) const{
@@ -309,7 +310,6 @@ namespace viennacl{
       class mapped_implicit_matrix : public mapped_object{
           friend class map_functor;
           std::string value_name_;
-          bool is_diag_;
         public:
           mapped_implicit_matrix(std::string const & scalartype) : mapped_object(scalartype){ }
           std::string generate_default(std::pair<std::string, std::string> const & /* index */) const{
@@ -322,7 +322,7 @@ namespace viennacl{
           }
       };
 
-      static std::string generate(std::pair<std::string, std::string> const & index, int vector_element, mapped_object const & s){
+      inline std::string generate(std::pair<std::string, std::string> const & index, int vector_element, mapped_object const & s){
         return s.generate(index, vector_element);
       }
 

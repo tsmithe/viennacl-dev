@@ -19,6 +19,7 @@
 #include <iostream>
 
 #include "viennacl.hpp"
+#include "viennacl_private.hpp"
 
 //include basic scalar and vector types of ViennaCL
 #include "viennacl/scalar.hpp"
@@ -32,12 +33,12 @@
 
 // xGEMV
 
-ViennaCLStatus ViennaCLHostSgemv(ViennaCLHostBackend /*backend*/,
-                                 ViennaCLOrder order, ViennaCLTranspose transA,
-                                 ViennaCLInt m, ViennaCLInt n, float alpha, float *A, ViennaCLInt offA_row, ViennaCLInt offA_col, int incA_row, int incA_col, ViennaCLInt lda,
-                                 float *x, ViennaCLInt offx, int incx,
-                                 float beta,
-                                 float *y, ViennaCLInt offy, int incy)
+VIENNACL_EXPORTED_FUNCTION ViennaCLStatus ViennaCLHostSgemv(ViennaCLBackend /*backend*/,
+                                                            ViennaCLOrder order, ViennaCLTranspose transA,
+                                                            ViennaCLInt m, ViennaCLInt n, float alpha, float *A, ViennaCLInt offA_row, ViennaCLInt offA_col, int incA_row, int incA_col, ViennaCLInt lda,
+                                                            float *x, ViennaCLInt offx, int incx,
+                                                            float beta,
+                                                            float *y, ViennaCLInt offy, int incy)
 {
   if (order == ViennaCLRowMajor)
   {
@@ -69,12 +70,12 @@ ViennaCLStatus ViennaCLHostSgemv(ViennaCLHostBackend /*backend*/,
   return ViennaCLSuccess;
 }
 
-ViennaCLStatus ViennaCLHostDgemv(ViennaCLHostBackend /*backend*/,
-                                 ViennaCLOrder order, ViennaCLTranspose transA,
-                                 ViennaCLInt m, ViennaCLInt n, double alpha, double *A, ViennaCLInt offA_row, ViennaCLInt offA_col, int incA_row, int incA_col, ViennaCLInt lda,
-                                 double *x, ViennaCLInt offx, int incx,
-                                 double beta,
-                                 double *y, ViennaCLInt offy, int incy)
+VIENNACL_EXPORTED_FUNCTION ViennaCLStatus ViennaCLHostDgemv(ViennaCLBackend /*backend*/,
+                                                            ViennaCLOrder order, ViennaCLTranspose transA,
+                                                            ViennaCLInt m, ViennaCLInt n, double alpha, double *A, ViennaCLInt offA_row, ViennaCLInt offA_col, int incA_row, int incA_col, ViennaCLInt lda,
+                                                            double *x, ViennaCLInt offx, int incx,
+                                                            double beta,
+                                                            double *y, ViennaCLInt offy, int incy)
 {
   if (order == ViennaCLRowMajor)
   {
@@ -110,10 +111,10 @@ ViennaCLStatus ViennaCLHostDgemv(ViennaCLHostBackend /*backend*/,
 
 // xTRSV
 
-ViennaCLStatus ViennaCLHostStrsv(ViennaCLHostBackend /*backend*/,
-                                 ViennaCLUplo uplo, ViennaCLOrder order, ViennaCLTranspose transA,
-                                 ViennaCLInt n, float *A, ViennaCLInt offA_row, ViennaCLInt offA_col, int incA_row, int incA_col, ViennaCLInt lda,
-                                 float *x, ViennaCLInt offx, int incx)
+VIENNACL_EXPORTED_FUNCTION ViennaCLStatus ViennaCLHostStrsv(ViennaCLBackend /*backend*/,
+                                                            ViennaCLUplo uplo, ViennaCLOrder order, ViennaCLTranspose transA,
+                                                            ViennaCLInt n, float *A, ViennaCLInt offA_row, ViennaCLInt offA_col, int incA_row, int incA_col, ViennaCLInt lda,
+                                                            float *x, ViennaCLInt offx, int incx)
 {
   if (order == ViennaCLRowMajor)
   {
@@ -161,10 +162,10 @@ ViennaCLStatus ViennaCLHostStrsv(ViennaCLHostBackend /*backend*/,
   return ViennaCLSuccess;
 }
 
-ViennaCLStatus ViennaCLHostDtrsv(ViennaCLHostBackend /*backend*/,
-                                 ViennaCLUplo uplo, ViennaCLOrder order, ViennaCLTranspose transA,
-                                 ViennaCLInt n, double *A, ViennaCLInt offA_row, ViennaCLInt offA_col, int incA_row, int incA_col, ViennaCLInt lda,
-                                 double *x, ViennaCLInt offx, int incx)
+VIENNACL_EXPORTED_FUNCTION ViennaCLStatus ViennaCLHostDtrsv(ViennaCLBackend /*backend*/,
+                                                            ViennaCLUplo uplo, ViennaCLOrder order, ViennaCLTranspose transA,
+                                                            ViennaCLInt n, double *A, ViennaCLInt offA_row, ViennaCLInt offA_col, int incA_row, int incA_col, ViennaCLInt lda,
+                                                            double *x, ViennaCLInt offx, int incx)
 {
   if (order == ViennaCLRowMajor)
   {
@@ -216,13 +217,13 @@ ViennaCLStatus ViennaCLHostDtrsv(ViennaCLHostBackend /*backend*/,
 
 // xGER
 
-ViennaCLStatus ViennaCLHostSger(ViennaCLHostBackend /*backend*/,
-                                ViennaCLOrder order,
-                                ViennaCLInt m, ViennaCLInt n,
-                                float alpha,
-                                float *x, ViennaCLInt offx, int incx,
-                                float *y, ViennaCLInt offy, int incy,
-                                float *A, ViennaCLInt offA_row, ViennaCLInt offA_col, int incA_row, int incA_col, ViennaCLInt lda)
+VIENNACL_EXPORTED_FUNCTION ViennaCLStatus ViennaCLHostSger(ViennaCLBackend /*backend*/,
+                                                           ViennaCLOrder order,
+                                                           ViennaCLInt m, ViennaCLInt n,
+                                                           float alpha,
+                                                           float *x, ViennaCLInt offx, int incx,
+                                                           float *y, ViennaCLInt offy, int incy,
+                                                           float *A, ViennaCLInt offA_row, ViennaCLInt offA_col, int incA_row, int incA_col, ViennaCLInt lda)
 {
   if (order == ViennaCLRowMajor)
   {
@@ -248,13 +249,13 @@ ViennaCLStatus ViennaCLHostSger(ViennaCLHostBackend /*backend*/,
   return ViennaCLSuccess;
 }
 
-ViennaCLStatus ViennaCLHostDger(ViennaCLHostBackend /*backend*/,
-                                ViennaCLOrder order,
-                                ViennaCLInt m, ViennaCLInt n,
-                                double alpha,
-                                double *x, ViennaCLInt offx, int incx,
-                                double *y, ViennaCLInt offy, int incy,
-                                double *A, ViennaCLInt offA_row, ViennaCLInt offA_col, int incA_row, int incA_col, ViennaCLInt lda)
+VIENNACL_EXPORTED_FUNCTION ViennaCLStatus ViennaCLHostDger(ViennaCLBackend /*backend*/,
+                                                           ViennaCLOrder order,
+                                                           ViennaCLInt m, ViennaCLInt n,
+                                                           double alpha,
+                                                           double *x, ViennaCLInt offx, int incx,
+                                                           double *y, ViennaCLInt offy, int incy,
+                                                           double *A, ViennaCLInt offA_row, ViennaCLInt offA_col, int incA_row, int incA_col, ViennaCLInt lda)
 {
   if (order == ViennaCLRowMajor)
   {

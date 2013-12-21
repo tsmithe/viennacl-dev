@@ -21,7 +21,7 @@
 
 /** @file viennacl/generator/vector_reduction.hpp
  *
- * Kernel template for the vector reduction operation
+ * @brief Kernel template for the vector reduction operation
 */
 
 #include <vector>
@@ -40,6 +40,7 @@ namespace viennacl{
 
   namespace generator{
 
+    /** @brief OpenCL kernel template for reductions resulting in a vector. Example: Computing the row norms of a matrix concurrently. */
     class vector_reduction : public profile_base{
 
         vcl_size_t lmem_used(vcl_size_t scalartype_size) const {

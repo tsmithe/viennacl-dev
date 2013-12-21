@@ -82,7 +82,7 @@ namespace viennacl
       //unsigned int i;
 
 #ifdef VIENNACL_WITH_OPENMP
-      #pragma omp parallel for private (max,diag_sign) shared (A,Pointvector)
+      #pragma omp parallel for private (max,diag_sign)
 #endif
       for (long i=0; i<static_cast<long>(A[level].size1()); ++i)
       {
@@ -110,7 +110,7 @@ namespace viennacl
         // Find all points that strongly influence current point (Yang, p.5)
         for (ConstColIterator col_iter = row_iter.begin(); col_iter != row_iter.end(); ++col_iter)
         {
-          unsigned int j = col_iter.index2();
+          unsigned int j = static_cast<unsigned int>(col_iter.index2());
           if (i == j) continue;
           if (diag_sign * (-*col_iter) >= tag.get_threshold() * (diag_sign * (-max)))
           {
@@ -164,7 +164,7 @@ namespace viennacl
       // Traverse through points and calculate initial influence measure
       long i;
 #ifdef VIENNACL_WITH_OPENMP
-      #pragma omp parallel for private (i) shared (Pointvector)
+      #pragma omp parallel for private (i)
 #endif
       for (i=0; i<static_cast<long>(Pointvector[level].size()); ++i)
   Pointvector[level][i]->calc_influence();
@@ -375,7 +375,7 @@ namespace viennacl
       // Run classical coarsening in parallel
       total_points = 0;
 #ifdef VIENNACL_WITH_OPENMP
-      #pragma omp parallel for shared (total_points,Slicing,level)
+      #pragma omp parallel for
 #endif
       for (long i=0; i<static_cast<long>(Slicing.threads_); ++i)
       {
@@ -394,7 +394,7 @@ namespace viennacl
       if (total_points != 0)
       {
       #ifdef VIENNACL_WITH_OPENMP
-        #pragma omp parallel for shared (Slicing)
+        #pragma omp parallel for
       #endif
         for (long i=0; i<static_cast<long>(Slicing.threads_); ++i)
         {
@@ -404,7 +404,7 @@ namespace viennacl
             // All points become C points
             for (unsigned int j=0; j<Slicing.A_slice[i][level].size1(); ++j)
               Slicing.Pointvector_slice[i][level].make_cpoint(Slicing.Pointvector_slice[i][level][j]);
-            Slicing.Offset[i+1][level+1] = Slicing.A_slice[i][level].size1();
+            Slicing.Offset[i+1][level+1] = static_cast<unsigned int>(Slicing.A_slice[i][level].size1());
           }
         }
 
@@ -558,20 +558,6 @@ namespace viennacl
           Pointvector[level].get_F(F);
           printvector (F);
           #endif
-
-          #ifdef VIENNACL_AMG_DEBUG
-          unsigned int i;
-    #ifdef VIENNACL_WITH_OPENMP
-          #pragma omp critical
-    #endif
-          {
-            std::cout << "No C and no F point: ";
-            for (typename PointVectorType::iterator iter = Pointvector[level].begin(); iter != Pointvector[level].end(); ++iter)
-              if ((*iter)->is_undecided())
-                std::cout << i << " ";
-            std::cout << std::endl;
-          }
-          #endif
         }
 
         /** @brief AG (aggregation based) coarsening. Single-Threaded! (VIENNACL_AMG_COARSE_SA)
@@ -601,7 +587,7 @@ namespace viennacl
           // SA algorithm (Vanek et al. p.6)
           // Build neighborhoods
     #ifdef VIENNACL_WITH_OPENMP
-          #pragma omp parallel for private (x,y,diag) shared (A)
+          #pragma omp parallel for private (x,y,diag)
     #endif
           for (x=0; x<static_cast<long>(A[level].size1()); ++x)
           {
@@ -610,7 +596,7 @@ namespace viennacl
             diag = A[level](x,x);
             for (InternalColIterator col_iter = row_iter.begin(); col_iter != row_iter.end(); ++col_iter)
             {
-              y = col_iter.index2();
+              y = static_cast<long>(col_iter.index2());
               if (y == x || (std::fabs(*col_iter) >= tag.get_threshold()*pow(0.5, static_cast<double>(level-1)) * std::sqrt(std::fabs(diag*A[level](y,y)))))
               {
                 // Neighborhood x includes point y

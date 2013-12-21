@@ -21,7 +21,7 @@
 
 /** @file viennacl/generator/matrix_product.hpp
  *
- * Kernel template for the matrix product operation
+ * @brief Kernel template for the matrix product operation
 */
 
 #include <vector>
@@ -40,6 +40,7 @@ namespace viennacl{
 
   namespace generator{
 
+    /** @brief Kernel generation class for matrix-matrix products. */
     class matrix_product : public profile_base{
 
         enum access_flow{
@@ -123,8 +124,8 @@ namespace viennacl{
         void configure_range_enqueue_arguments(vcl_size_t kernel_id, statements_type  const & statements, viennacl::ocl::kernel & k, unsigned int & n_arg)  const {
           //set M, N
           scheduler::statement_node const & first_node = statements.front().second;
-          unsigned int M = utils::call_on_matrix(first_node.lhs, utils::internal_size1_fun());
-          unsigned int N = utils::call_on_matrix(first_node.lhs, utils::internal_size2_fun());
+          vcl_size_t M = utils::call_on_matrix(first_node.lhs, utils::internal_size1_fun());
+          vcl_size_t N = utils::call_on_matrix(first_node.lhs, utils::internal_size2_fun());
 
           //set ND range
           configure_local_sizes(k, kernel_id);
@@ -250,8 +251,8 @@ namespace viennacl{
           stream << aligned_scalartype << " val;" << std::endl;
           //Can unroll
           if(bound2%local_size2_==0 && bound1%local_size1_==0){
-              for(unsigned int j = 0 ; j < bound2 ; j+=local_size2_){
-                  for(unsigned int i = 0 ; i < bound1 ; i+=local_size1_){
+              for(unsigned int j = 0 ; j < bound2 ; j+=static_cast<unsigned int>(local_size2_)){
+                  for(unsigned int i = 0 ; i < bound1 ; i+=static_cast<unsigned int>(local_size1_)){
                       std::string indi = "(get_local_id(0) + " + utils::to_string(i)+")";
                       std::string indj = "(get_local_id(1) + " + utils::to_string(j)+")";
                       fetch_element_to_local_mem(stream,lmem_name,lmem_size2,global_ptr,mat,flow,indi,indj);
@@ -281,7 +282,7 @@ namespace viennacl{
           /// INIT
           /// //////////////
 
-          detail::mapped_matrix const * assigned = static_cast<detail::mapped_matrix const *>(mapping.at(0).at(std::make_pair(&statements.front().second,detail::LHS_NODE_TYPE)).get());
+          detail::mapped_matrix const * assigned = static_cast<detail::mapped_matrix const *>(at(mapping.at(0), std::make_pair(&statements.front().second,detail::LHS_NODE_TYPE)).get());
           detail::mapped_matrix_product* prod = NULL;
           detail::mapped_matrix const * lhs = NULL;
           detail::mapped_matrix const * rhs = NULL;
@@ -294,23 +295,23 @@ namespace viennacl{
             vcl_size_t i = std::distance(statements.begin(), it);
             for(scheduler::statement::container_type::const_iterator iit = exprs.begin() ; iit != exprs.end() ; ++iit){
               if(iit->op.type==scheduler::OPERATION_BINARY_MAT_MAT_PROD_TYPE){
-                prod = (detail::mapped_matrix_product *)mapping.at(i).at(std::make_pair(&(*iit), detail::PARENT_NODE_TYPE)).get();
+                prod = (detail::mapped_matrix_product *)at(mapping.at(i), std::make_pair(&(*iit), detail::PARENT_NODE_TYPE)).get();
                 if(iit->lhs.type_family == scheduler::COMPOSITE_OPERATION_FAMILY){
                   is_lhs_transposed = true;
-                  lhs = (detail::mapped_matrix const *)mapping.at(i).at(std::make_pair(&exprs[iit->lhs.node_index],detail::LHS_NODE_TYPE)).get();
+                  lhs = (detail::mapped_matrix const *)at(mapping.at(i), std::make_pair(&exprs[iit->lhs.node_index],detail::LHS_NODE_TYPE)).get();
                 }
                 else{
                   is_lhs_transposed = false;
-                  lhs = (detail::mapped_matrix const *)mapping.at(i).at(std::make_pair(&(*iit), detail::LHS_NODE_TYPE)).get();
+                  lhs = (detail::mapped_matrix const *)at(mapping.at(i), std::make_pair(&(*iit), detail::LHS_NODE_TYPE)).get();
                 }
 
                 if(iit->rhs.type_family == scheduler::COMPOSITE_OPERATION_FAMILY){
                   is_rhs_transposed = true;
-                  rhs = (detail::mapped_matrix const *)mapping.at(i).at(std::make_pair(&exprs[iit->rhs.node_index], detail::LHS_NODE_TYPE)).get();
+                  rhs = (detail::mapped_matrix const *)at(mapping.at(i), std::make_pair(&exprs[iit->rhs.node_index], detail::LHS_NODE_TYPE)).get();
                 }
                 else{
                   is_rhs_transposed = false;
-                  rhs = (detail::mapped_matrix const *)mapping.at(i).at(std::make_pair(&(*iit),detail::RHS_NODE_TYPE)).get();
+                  rhs = (detail::mapped_matrix const *)at(mapping.at(i), std::make_pair(&(*iit),detail::RHS_NODE_TYPE)).get();
                 }
 
               }
@@ -406,9 +407,9 @@ namespace viennacl{
             rhs_value_scalartype = aligned_scalartype;
 
 
-          unsigned int ml_res = ml_, nl_res = nl_, ms_res = ms_, ns_res = ns_;
-          unsigned int ml_lhs = ml_, cache_width_lhs = cache_width_, ms_lhs = ms_, ks_lhs = ks_;
-          unsigned int cache_width_rhs = cache_width_, nl_rhs = nl_, ks_rhs = ks_, ns_rhs = ns_;
+          unsigned int ml_res = static_cast<unsigned int>(ml_), nl_res = static_cast<unsigned int>(nl_), ms_res = static_cast<unsigned int>(ms_), ns_res = static_cast<unsigned int>(ns_);
+          unsigned int ml_lhs = static_cast<unsigned int>(ml_), cache_width_lhs = static_cast<unsigned int>(cache_width_), ms_lhs = static_cast<unsigned int>(ms_), ks_lhs = static_cast<unsigned int>(ks_);
+          unsigned int cache_width_rhs = static_cast<unsigned int>(cache_width_), nl_rhs = static_cast<unsigned int>(nl_), ks_rhs = static_cast<unsigned int>(ks_), ns_rhs = static_cast<unsigned int>(ns_);
 
           transform_block(*assigned,false,ml_res,nl_res,ms_res,ns_res,result_access_flow);
           transform_block(*lhs,use_lhs_shared_,ml_lhs,cache_width_lhs,ms_lhs,ks_lhs,lhs_access_flow);

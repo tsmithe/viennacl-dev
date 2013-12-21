@@ -73,10 +73,11 @@ namespace viennacl
         namespace spai
         {
 
-          typedef std::pair<unsigned int, double> PairT;
+          /** @brief Helper functor for comparing std::pair<> based on the second member. */
           struct CompareSecond
           {
-            bool operator()(const PairT& left, const PairT& right)
+            template <typename T1, typename T2>
+            bool operator()(std::pair<T1, T2> const & left, std::pair<T1, T2> const & right)
             {
               return static_cast<double>(left.second) > static_cast<double>(right.second);
             }
@@ -184,7 +185,7 @@ namespace viennacl
                 inprod = norm2 = 0;
                 sparse_inner_prod(res, A_v_c[res_it->first], inprod);
                 sparse_norm_2(A_v_c[res_it->first], norm2);
-                p.push_back(std::pair<vcl_size_t, ScalarType>(res_it->first, (inprod*inprod)/(norm2*norm2)));
+                p.push_back(std::pair<unsigned int, ScalarType>(res_it->first, (inprod*inprod)/(norm2*norm2)));
               }
             }
 

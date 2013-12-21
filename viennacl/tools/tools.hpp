@@ -59,6 +59,7 @@ namespace viennacl
         typedef typename T::ERROR_SCALAR_MUST_HAVE_TEMPLATE_ARGUMENT_FLOAT_OR_DOUBLE  ResultType;
     };
 
+    /** \cond */
     template <>
     struct CHECK_SCALAR_TEMPLATE_ARGUMENT<float>
     {
@@ -70,6 +71,7 @@ namespace viennacl
     {
         typedef double  ResultType;
     };
+    /** \endcond */
 
 
 
@@ -186,11 +188,13 @@ namespace viennacl
       typedef T   ResultType;
     };
 
+    /** \cond */
     template <typename T>
     struct CONST_REMOVER<const T>
     {
       typedef T   ResultType;
     };
+    /** \endcond */
 
 
     /////// CPU scalar type deducer ///////////

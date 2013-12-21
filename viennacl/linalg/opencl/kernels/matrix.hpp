@@ -6,8 +6,8 @@
 #include "viennacl/ocl/platform.hpp"
 #include "viennacl/ocl/utils.hpp"
 
-/** @file viennacl/linalg/opencl/kernels/vector.hpp
- *  @brief OpenCL kernel file for vector operations */
+/** @file viennacl/linalg/opencl/kernels/matrix.hpp
+ *  @brief Runtime generation of OpenCL kernels for matrix operations */
 namespace viennacl
 {
   namespace linalg
@@ -27,6 +27,7 @@ namespace viennacl
           VIENNACL_AMBM_GPU
         };
 
+        /** @brief Configuration struct for generating OpenCL kernels for linear combinations of matrices */
         struct ambm_config
         {
           ambm_config() : with_stride_and_range(true), is_row_major(true), a(VIENNACL_AMBM_CPU), b(VIENNACL_AMBM_NONE) {}
@@ -869,6 +870,7 @@ namespace viennacl
         //////////////////////////// Part 2: Main kernel class ////////////////////////////////////
 
         // main kernel class
+        /** @brief Main kernel class for generating OpenCL kernels for operations on/with dense matrix objects of type viennacl::matrix<>. */
         template <typename NumericT, typename F>
         struct matrix
         {

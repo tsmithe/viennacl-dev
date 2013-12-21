@@ -39,6 +39,10 @@
 namespace viennacl
 {
 
+  /** @brief Common base class for representing vectors where the entries are not all stored explicitly.
+    *
+    * Typical examples are zero_vector or scalar_vector.
+    */
   template<typename SCALARTYPE>
   class implicit_vector_base
   {
@@ -90,7 +94,7 @@ namespace viennacl
       typedef implicit_vector_base<SCALARTYPE> base_type;
     public:
       typedef typename base_type::size_type size_type;
-      unit_vector(size_type s, size_type ind, viennacl::context ctx = viennacl::context()) : base_type(s, ind, std::make_pair(1,true), ctx)
+      unit_vector(size_type s, size_type ind, viennacl::context ctx = viennacl::context()) : base_type(s, ind, std::make_pair(SCALARTYPE(1),true), ctx)
       {
         assert( (ind < s) && bool("Provided index out of range!") );
       }
@@ -105,7 +109,7 @@ namespace viennacl
     public:
       typedef typename base_type::size_type size_type;
       typedef SCALARTYPE        const_reference;
-      zero_vector(size_type s, viennacl::context ctx = viennacl::context()) : base_type(s, std::make_pair(0,true), ctx) {}
+      zero_vector(size_type s, viennacl::context ctx = viennacl::context()) : base_type(s, std::make_pair(SCALARTYPE(0),true), ctx) {}
   };
 
   /** @brief Represents a vector consisting of ones only. */
@@ -116,7 +120,7 @@ namespace viennacl
     public:
       typedef typename base_type::size_type size_type;
       typedef SCALARTYPE        const_reference;
-      one_vector(size_type s, viennacl::context ctx = viennacl::context()) : base_type(s, std::make_pair(1,true), ctx) {}
+      one_vector(size_type s, viennacl::context ctx = viennacl::context()) : base_type(s, std::make_pair(SCALARTYPE(1),true), ctx) {}
   };
 
 
@@ -213,7 +217,7 @@ namespace viennacl
       typedef const_vector_iterator<SCALARTYPE, ALIGNMENT>    self_type;
     public:
       typedef scalar<SCALARTYPE>            value_type;
-      typedef long                          difference_type;
+      typedef vcl_ptrdiff_t                 difference_type;
       typedef viennacl::backend::mem_handle handle_type;
 
       //const_vector_iterator() {}
@@ -364,8 +368,8 @@ namespace viennacl
       typedef scalar<SCALARTYPE>                                value_type;
       typedef SCALARTYPE                                        cpu_value_type;
       typedef viennacl::backend::mem_handle                     handle_type;
-      typedef SizeType                                        size_type;
-      typedef DistanceType                                     difference_type;
+      typedef SizeType                                          size_type;
+      typedef DistanceType                                      difference_type;
       typedef const_vector_iterator<SCALARTYPE, 1>              const_iterator;
       typedef vector_iterator<SCALARTYPE, 1>                    iterator;
 
@@ -410,7 +414,7 @@ namespace viennacl
           elements_.cuda_handle().reset(reinterpret_cast<char*>(ptr_to_mem));
           elements_.cuda_handle().inc(); //prevents that the user-provided memory is deleted once the vector object is destroyed.
 #else
-          throw "CUDA not activated!";
+          throw cuda_not_available_exception();
 #endif
         }
         else if (mem_type == viennacl::MAIN_MEMORY)
@@ -1055,7 +1059,7 @@ namespace viennacl
     vector(unit_vector<SCALARTYPE> const & v) : base_type(v.size())
     {
       if (v.size() > 0)
-        this->operator()(v.index()) = 1;
+        this->operator()(v.index()) = SCALARTYPE(1);;
     }
 
     /** @brief Creates the vector from the supplied zero vector. */
@@ -1114,6 +1118,7 @@ namespace viennacl
 
   }; //vector
 
+  /** @brief Tuple class holding pointers to multiple vectors. Mainly used as a temporary object returned from viennacl::tie(). */
   template <typename ScalarT>
   class vector_tuple
   {
@@ -2052,11 +2057,12 @@ namespace viennacl
   // Specify available operations:
   //
 
+  /** \cond */
+
   namespace linalg
   {
     namespace detail
     {
-
       // x = y
       template <typename T>
       struct op_executor<vector_base<T>, op_assign, vector_base<T> >
@@ -3224,6 +3230,8 @@ namespace viennacl
     } // namespace detail
 
   } // namespace linalg
+
+  /** \endcond */
 
 } // namespace viennacl
 

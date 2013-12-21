@@ -18,6 +18,10 @@
    License:         MIT (X11), see file LICENSE in the base directory
 ============================================================================= */
 
+
+/** @file   viennacl/tools/timer.hpp
+    @brief  A simple, yet (mostly) sufficiently accurate timer for benchmarking and profiling. */
+
 #include <iostream>
 
 
@@ -32,6 +36,10 @@ namespace viennacl{
 
   namespace tools{
 
+    /** @brief Simple timer class based on gettimeofday (POSIX) or QueryPerformanceCounter (Windows).
+      *
+      * Avoids messing with Boost and should be sufficient for benchmarking purposes.
+      */
     class timer
     {
     public:
@@ -56,7 +64,7 @@ namespace viennacl{
 
     private:
       LARGE_INTEGER freq;
-        LARGE_INTEGER start_time;
+      LARGE_INTEGER start_time;
     };
 
   }
@@ -72,6 +80,10 @@ namespace viennacl{
 
   namespace tools{
 
+    /** @brief Simple timer class based on gettimeofday (POSIX) or QueryPerformanceCounter (Windows).
+      *
+      * Avoids messing with Boost and should be sufficient for benchmarking purposes.
+      */
     class timer
     {
     public:

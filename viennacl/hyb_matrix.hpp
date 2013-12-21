@@ -33,6 +33,7 @@
 
 namespace viennacl
 {
+    /** @brief Sparse matrix class using a hybrid format composed of the ELL and CSR format for storing the nonzeros. */
     template<typename SCALARTYPE, unsigned int ALIGNMENT  /* see forwards.h for default argument */>
     class hyb_matrix
     {
@@ -110,6 +111,9 @@ namespace viennacl
     template <typename CPU_MATRIX, typename SCALARTYPE, unsigned int ALIGNMENT>
     void copy(const CPU_MATRIX& cpu_matrix, hyb_matrix<SCALARTYPE, ALIGNMENT>& gpu_matrix )
     {
+      assert( (gpu_matrix.size1() == 0 || viennacl::traits::size1(cpu_matrix) == gpu_matrix.size1()) && bool("Size mismatch") );
+      assert( (gpu_matrix.size2() == 0 || viennacl::traits::size2(cpu_matrix) == gpu_matrix.size2()) && bool("Size mismatch") );
+
       if(cpu_matrix.size1() > 0 && cpu_matrix.size2() > 0)
       {
         //determine max capacity for row
@@ -171,7 +175,7 @@ namespace viennacl
             }
             else
             {
-                csr_cols.push_back(col_it.index2());
+                csr_cols.push_back(static_cast<unsigned int>(col_it.index2()));
                 csr_elements.push_back(*col_it);
 
                 csr_index++;
@@ -208,10 +212,11 @@ namespace viennacl
     template <typename CPU_MATRIX, typename SCALARTYPE, unsigned int ALIGNMENT>
     void copy(const hyb_matrix<SCALARTYPE, ALIGNMENT>& gpu_matrix, CPU_MATRIX& cpu_matrix)
     {
+      assert( (viennacl::traits::size1(cpu_matrix) == gpu_matrix.size1()) && bool("Size mismatch") );
+      assert( (viennacl::traits::size2(cpu_matrix) == gpu_matrix.size2()) && bool("Size mismatch") );
+
       if(gpu_matrix.size1() > 0 && gpu_matrix.size2() > 0)
       {
-        cpu_matrix.resize(gpu_matrix.size1(), gpu_matrix.size2(), false);
-
         std::vector<SCALARTYPE> ell_elements(gpu_matrix.internal_size1() * gpu_matrix.internal_ellnnz());
         viennacl::backend::typesafe_host_array<unsigned int> ell_coords(gpu_matrix.handle2(), gpu_matrix.internal_size1() * gpu_matrix.internal_ellnnz());
 
@@ -264,6 +269,13 @@ namespace viennacl
         }
       }
     }
+
+
+    //
+    // Specify available operations:
+    //
+
+    /** \cond */
 
     namespace linalg
     {
@@ -347,11 +359,10 @@ namespace viennacl
             }
         };
 
+      } // namespace detail
+    } // namespace linalg
 
-
-     } // namespace detail
-   } // namespace linalg
-
+    /** \endcond */
 }
 
 #endif

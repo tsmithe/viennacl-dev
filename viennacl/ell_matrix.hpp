@@ -34,6 +34,21 @@
 
 namespace viennacl
 {
+    /** @brief Sparse matrix class using the ELLPACK format for storing the nonzeros.
+      *
+      * This format works best for matrices where the number of nonzeros per row is mostly the same.
+      * Finite element and finite difference methods on nicely shaped domains often result in such a nonzero pattern.
+      * For a matrix
+      *
+      *   (1 2 0 0 0)
+      *   (2 3 4 0 0)
+      *   (0 5 6 0 7)
+      *   (0 0 8 9 0)
+      *
+      * the entries are layed out in chunks of size 3 as
+      *   (1 2 5 8; 2 3 6 9; 0 4 7 0)
+      * Note that this is a 'transposed' representation in order to maximize coalesced memory access.
+      */
     template<typename SCALARTYPE, unsigned int ALIGNMENT /* see forwards.h for default argument */>
     class ell_matrix
     {
@@ -97,6 +112,9 @@ namespace viennacl
     template <typename CPU_MATRIX, typename SCALARTYPE, unsigned int ALIGNMENT>
     void copy(const CPU_MATRIX& cpu_matrix, ell_matrix<SCALARTYPE, ALIGNMENT>& gpu_matrix )
     {
+      assert( (gpu_matrix.size1() == 0 || viennacl::traits::size1(cpu_matrix) == gpu_matrix.size1()) && bool("Size mismatch") );
+      assert( (gpu_matrix.size2() == 0 || viennacl::traits::size2(cpu_matrix) == gpu_matrix.size2()) && bool("Size mismatch") );
+
       if(cpu_matrix.size1() > 0 && cpu_matrix.size2() > 0)
       {
         //determine max capacity for row
@@ -146,10 +164,11 @@ namespace viennacl
     template <typename CPU_MATRIX, typename SCALARTYPE, unsigned int ALIGNMENT>
     void copy(const ell_matrix<SCALARTYPE, ALIGNMENT>& gpu_matrix, CPU_MATRIX& cpu_matrix)
     {
+      assert( (viennacl::traits::size1(cpu_matrix) == gpu_matrix.size1()) && bool("Size mismatch") );
+      assert( (viennacl::traits::size2(cpu_matrix) == gpu_matrix.size2()) && bool("Size mismatch") );
+
       if(gpu_matrix.size1() > 0 && gpu_matrix.size2() > 0)
       {
-        cpu_matrix.resize(gpu_matrix.size1(), gpu_matrix.size2(), false);
-
         std::vector<SCALARTYPE> elements(gpu_matrix.internal_nnz());
         viennacl::backend::typesafe_host_array<unsigned int> coords(gpu_matrix.handle2(), gpu_matrix.internal_nnz());
 
@@ -176,6 +195,13 @@ namespace viennacl
         }
       }
     }
+
+
+    //
+    // Specify available operations:
+    //
+
+    /** \cond */
 
     namespace linalg
     {
@@ -259,11 +285,10 @@ namespace viennacl
             }
         };
 
-
-
      } // namespace detail
    } // namespace linalg
 
+    /** \endcond */
 }
 
 #endif

@@ -30,6 +30,10 @@
 namespace viennacl
 {
 
+  /** @brief Class for representing non-strided submatrices of a bigger matrix A.
+    *
+    * In MATLAB notation, this could for example refer to the submatrix A(3:8, 6:10) of a matrix A.
+    */
   template <typename MatrixType>
   class matrix_range : public matrix_base<typename MatrixType::cpu_value_type, typename MatrixType::orientation_functor>
   {
@@ -90,7 +94,7 @@ namespace viennacl
     else
     {
       //full block can be copied:
-      std::vector<SCALARTYPE> entries(gpu_matrix_range.size1()*gpu_matrix_range.size2());
+      std::vector<SCALARTYPE> entries(gpu_matrix_range.size1()*gpu_matrix_range.internal_size2());
 
       //copy each stride separately:
       for (vcl_size_t i=0; i < gpu_matrix_range.size1(); ++i)
@@ -98,7 +102,7 @@ namespace viennacl
           entries[i*gpu_matrix_range.internal_size2() + j] = cpu_matrix(i,j);
 
       vcl_size_t start_offset = gpu_matrix_range.start1() * gpu_matrix_range.internal_size2();
-      vcl_size_t num_entries = gpu_matrix_range.size1() * gpu_matrix_range.size2();
+      vcl_size_t num_entries = gpu_matrix_range.size1() * gpu_matrix_range.internal_size2();
       viennacl::backend::memory_write(gpu_matrix_range.handle(), sizeof(SCALARTYPE)*start_offset, sizeof(SCALARTYPE)*num_entries, &(entries[0]));
       //std::cout << "Block copy worked!" << std::endl;
     }
@@ -132,7 +136,7 @@ namespace viennacl
      else
      {
        //full block can be copied:
-       std::vector<SCALARTYPE> entries(gpu_matrix_range.size1()*gpu_matrix_range.size2());
+       std::vector<SCALARTYPE> entries(gpu_matrix_range.internal_size1()*gpu_matrix_range.size2());
 
        //copy each stride separately:
        for (vcl_size_t i=0; i < gpu_matrix_range.size1(); ++i)
@@ -140,7 +144,7 @@ namespace viennacl
            entries[i + j*gpu_matrix_range.internal_size1()] = cpu_matrix(i,j);
 
        vcl_size_t start_offset = gpu_matrix_range.start2() * gpu_matrix_range.internal_size1();
-       vcl_size_t num_entries = gpu_matrix_range.size1() * gpu_matrix_range.size2();
+       vcl_size_t num_entries = gpu_matrix_range.internal_size1() * gpu_matrix_range.size2();
        viennacl::backend::memory_write(gpu_matrix_range.handle(), sizeof(SCALARTYPE)*start_offset, sizeof(SCALARTYPE)*num_entries, &(entries[0]));
        //std::cout << "Block copy worked!" << std::endl;
      }
@@ -181,7 +185,7 @@ namespace viennacl
      else
      {
        //full block can be copied:
-       std::vector<SCALARTYPE> entries(gpu_matrix_range.size1()*gpu_matrix_range.size2());
+       std::vector<SCALARTYPE> entries(gpu_matrix_range.size1()*gpu_matrix_range.internal_size2());
 
        vcl_size_t start_offset = gpu_matrix_range.start1() * gpu_matrix_range.internal_size2();
        vcl_size_t num_entries = gpu_matrix_range.size1() * gpu_matrix_range.size2();
@@ -224,11 +228,11 @@ namespace viennacl
      else
      {
        //full block can be copied:
-       std::vector<SCALARTYPE> entries(gpu_matrix_range.size1()*gpu_matrix_range.size2());
+       std::vector<SCALARTYPE> entries(gpu_matrix_range.internal_size1()*gpu_matrix_range.size2());
 
        //copy each stride separately:
        vcl_size_t start_offset = gpu_matrix_range.start2() * gpu_matrix_range.internal_size1();
-       vcl_size_t num_entries = gpu_matrix_range.size1() * gpu_matrix_range.size2();
+       vcl_size_t num_entries = gpu_matrix_range.internal_size1() * gpu_matrix_range.size2();
        viennacl::backend::memory_read(gpu_matrix_range.handle(), sizeof(SCALARTYPE)*start_offset, sizeof(SCALARTYPE)*num_entries, &(entries[0]));
        //std::cout << "Block copy worked!" << std::endl;
 
@@ -278,7 +282,10 @@ namespace viennacl
 
 
 
-
+  /** @brief Class for representing strided submatrices of a bigger matrix A.
+    *
+    * In MATLAB notation, this could for example refer to the submatrix A(3:2:8, 6:3:16) of a matrix A.
+    */
   template <typename MatrixType>
   class matrix_slice : public matrix_base<typename MatrixType::cpu_value_type, typename MatrixType::orientation_functor>
   {

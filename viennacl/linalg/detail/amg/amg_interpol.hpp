@@ -84,7 +84,7 @@ namespace viennacl
       unsigned int c_points = Pointvector[level].get_cpoints();
 
       // Setup Prolongation/Interpolation matrix
-      P[level] = SparseMatrixType(A[level].size1(),c_points);
+      P[level] = SparseMatrixType(static_cast<unsigned int>(A[level].size1()),c_points);
       P[level].clear();
 
       // Assign indices to C points
@@ -92,7 +92,7 @@ namespace viennacl
 
       // Direct Interpolation (Yang, p.14)
 #ifdef VIENNACL_WITH_OPENMP
-      #pragma omp parallel for private (pointx,pointy,row_sum,c_sum,temp_res,y,x,diag) shared (P,A,Pointvector,tag)
+      #pragma omp parallel for private (pointx,pointy,row_sum,c_sum,temp_res,y,x,diag)
 #endif
       for (x=0; x < static_cast<long>(Pointvector[level].size()); ++x)
       {
@@ -117,7 +117,7 @@ namespace viennacl
           row_sum = c_sum = diag = 0;
           for (InternalColIterator col_iter = row_iter.begin(); col_iter != row_iter.end(); ++col_iter)
           {
-            y = col_iter.index2();
+            y = static_cast<long>(col_iter.index2());
             if (x == y)// || *col_iter * diag_sign > 0)
             {
               diag += *col_iter;
@@ -188,7 +188,7 @@ namespace viennacl
       unsigned int c_points = Pointvector[level].get_cpoints();
 
       // Setup Prolongation/Interpolation matrix
-      P[level] = SparseMatrixType(A[level].size1(), c_points);
+      P[level] = SparseMatrixType(static_cast<unsigned int>(A[level].size1()), c_points);
       P[level].clear();
 
       // Assign indices to C points
@@ -196,7 +196,7 @@ namespace viennacl
 
       // Classical Interpolation (Yang, p.13-14)
 #ifdef VIENNACL_WITH_OPENMP
-      #pragma omp parallel for private (pointx,pointy,pointk,pointm,weak_sum,strong_sum,c_sum_row,temp_res,x,y,k,m,diag_sign) shared (A,P,Pointvector)
+      #pragma omp parallel for private (pointx,pointy,pointk,pointm,weak_sum,strong_sum,c_sum_row,temp_res,x,y,k,m,diag_sign)
 #endif
       for (x=0; x < static_cast<long>(Pointvector[level].size()); ++x)
       {
@@ -218,11 +218,11 @@ namespace viennacl
           row_iter += x;
 
           weak_sum = 0;
-          c_sum_row = amg_sparsevector<ScalarType>(A[level].size1());
+          c_sum_row = amg_sparsevector<ScalarType>(static_cast<unsigned int>(A[level].size1()));
           c_sum_row.clear();
           for (InternalColIterator col_iter = row_iter.begin(); col_iter != row_iter.end(); ++col_iter)
           {
-            k = col_iter.index2();
+            k = static_cast<unsigned int>(col_iter.index2());
             pointk = Pointvector[level][k];
 
             // Sum of weakly influencing neighbors + diagonal coefficient
@@ -367,11 +367,11 @@ namespace viennacl
       //typedef typename SparseMatrixType::iterator1 InternalRowIterator;
       //typedef typename SparseMatrixType::iterator2 InternalColIterator;
 
-      unsigned int x;
+      long x;
       amg_point *pointx, *pointy;
       unsigned int c_points = Pointvector[level].get_cpoints();
 
-      P[level] = SparseMatrixType(A[level].size1(), c_points);
+      P[level] = SparseMatrixType(static_cast<unsigned int>(A[level].size1()), c_points);
       P[level].clear();
 
       // Assign indices to C points
@@ -379,7 +379,7 @@ namespace viennacl
 
       // Set prolongation such that F point is interpolated (weight=1) by the aggregate it belongs to (Vanek et al p.6)
 #ifdef VIENNACL_WITH_OPENMP
-      #pragma omp parallel for private (x,pointx) shared (P)
+      #pragma omp parallel for private (x,pointx)
 #endif
       for (x=0; x<static_cast<long>(Pointvector[level].size()); ++x)
       {
@@ -416,14 +416,14 @@ namespace viennacl
       unsigned int c_points = Pointvector[level].get_cpoints();
 
       InternalType1 P_tentative = InternalType1(P.size());
-      SparseMatrixType Jacobi = SparseMatrixType(A[level].size1(), A[level].size2());
+      SparseMatrixType Jacobi = SparseMatrixType(static_cast<unsigned int>(A[level].size1()), static_cast<unsigned int>(A[level].size2()));
       Jacobi.clear();
-      P[level] = SparseMatrixType(A[level].size1(), c_points);
+      P[level] = SparseMatrixType(static_cast<unsigned int>(A[level].size1()), c_points);
       P[level].clear();
 
       // Build Jacobi Matrix via filtered A matrix (Vanek et al. p.6)
 #ifdef VIENNACL_WITH_OPENMP
-      #pragma omp parallel for private (x,y,diag) shared (A,Pointvector)
+      #pragma omp parallel for private (x,y,diag)
 #endif
       for (x=0; x<static_cast<long>(A[level].size1()); ++x)
       {
@@ -432,7 +432,7 @@ namespace viennacl
         row_iter += x;
         for (InternalColIterator col_iter = row_iter.begin(); col_iter != row_iter.end(); ++col_iter)
         {
-          y = col_iter.index2();
+          y = static_cast<long>(col_iter.index2());
           // Determine the structure of the Jacobi matrix by using a filtered matrix of A:
           // The diagonal consists of the diagonal coefficient minus all coefficients of points not in the neighborhood of x.
           // All other coefficients are the same as in A.

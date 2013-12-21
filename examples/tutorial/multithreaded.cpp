@@ -56,9 +56,9 @@ public:
   {
     std::size_t N = 6;
 
-    viennacl::context ctx(viennacl::ocl::get_context(thread_id_));
-    viennacl::vector<NumericT> u = viennacl::scalar_vector<NumericT>(N, NumericT(1) * (thread_id_ + 1), ctx);
-    viennacl::vector<NumericT> v = viennacl::scalar_vector<NumericT>(N, NumericT(2) * (thread_id_ + 1), ctx);
+    viennacl::context ctx(viennacl::ocl::get_context(static_cast<long>(thread_id_)));
+    viennacl::vector<NumericT> u = viennacl::scalar_vector<NumericT>(N, NumericT(1) * NumericT(thread_id_ + 1), ctx);
+    viennacl::vector<NumericT> v = viennacl::scalar_vector<NumericT>(N, NumericT(2) * NumericT(thread_id_ + 1), ctx);
     viennacl::matrix<NumericT> A = viennacl::linalg::outer_prod(u, v);
     viennacl::vector<NumericT> x(u);
 
@@ -66,7 +66,7 @@ public:
     NumericT result = viennacl::linalg::norm_2(u);
 
     std::stringstream ss;
-    ss << "Result of thread " << thread_id_ << " on device " << viennacl::ocl::get_context(thread_id_).devices()[0].name() << ": " << result << std::endl;
+    ss << "Result of thread " << thread_id_ << " on device " << viennacl::ocl::get_context(static_cast<long>(thread_id_)).devices()[0].name() << ": " << result << std::endl;
     ss << "  A: " << A << std::endl;
     ss << "  x: " << x << std::endl;
     message_ = ss.str();

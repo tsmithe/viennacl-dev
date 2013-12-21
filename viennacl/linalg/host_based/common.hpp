@@ -44,6 +44,7 @@ namespace viennacl
           return reinterpret_cast<T const *>(viennacl::traits::ram_handle(vec).get());
         }
 
+        /** @brief Helper class for accessing a strided subvector of a larger vector. */
         template <typename NumericT>
         class vector_array_wrapper
         {
@@ -72,12 +73,14 @@ namespace viennacl
         inline bool is_row_major(viennacl::row_major_tag) { return true; }
         inline bool is_row_major(viennacl::column_major_tag) { return false; }
 
+        /** @brief Returns the row_major or column_major class of a dense matrix based on the majority-tag (layout-tag) provided. */
         template <typename T>
         struct majority_struct_for_orientation
         {
           typedef typename T::ERROR_UNRECOGNIZED_MAJORITY_CATEGORTY_TAG   type;
         };
 
+        /** \cond */
         template <>
         struct majority_struct_for_orientation<viennacl::row_major_tag>
         {
@@ -89,8 +92,10 @@ namespace viennacl
         {
           typedef viennacl::column_major type;
         };
+        /** \endcond */
 
 
+        /** @brief Helper array for accessing a strided submatrix embedded in a larger matrix. */
         template <typename NumericT, typename MajorityCategory, bool is_transposed>
         class matrix_array_wrapper
         {
@@ -120,6 +125,7 @@ namespace viennacl
             vcl_size_t internal_size1_, internal_size2_;
         };
 
+        /** \cond */
         template <typename NumericT, typename MajorityCategory>
         class matrix_array_wrapper<NumericT, MajorityCategory, true>
         {
@@ -148,6 +154,7 @@ namespace viennacl
             vcl_size_t inc1_, inc2_;
             vcl_size_t internal_size1_, internal_size2_;
         };
+        /** \endcond */
 
       }
 

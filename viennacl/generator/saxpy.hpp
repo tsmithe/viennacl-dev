@@ -21,7 +21,7 @@
 
 /** @file viennacl/generator/saxpy.hpp
  *
- * Kernel template for the saxpy-like operation
+ * @brief Kernel template for the saxpy-like operation
 */
 
 #include <vector>
@@ -40,6 +40,7 @@ namespace viennacl{
 
   namespace generator{
 
+    /** @brief OpenCL kernel generation class for vector expressions of AXPY type, i.e. x = alpha * y + beta * z, where the number of summands can in principle be arbitrarily large. */
     class vector_saxpy : public profile_base{
       public:
         static std::string csv_format() {
@@ -97,7 +98,7 @@ namespace viennacl{
           //Writes back
           for(statements_type::const_iterator it = statements.begin() ; it != statements.end() ; ++it)
              //Gets the mapped object at the LHS of each expression
-            if(detail::mapped_handle * p = dynamic_cast<detail::mapped_handle *>(mapping.at(std::distance(statements.begin(),it)).at(std::make_pair(&it->second, detail::LHS_NODE_TYPE)).get()))
+            if(detail::mapped_handle * p = dynamic_cast<detail::mapped_handle *>(at(mapping.at(std::distance(statements.begin(),it)), std::make_pair(&it->second, detail::LHS_NODE_TYPE)).get()))
               p->write_back( std::make_pair("i", "0"), fetched, stream);
 
           stream.dec_tab();
@@ -112,6 +113,7 @@ namespace viennacl{
 
 
 
+    /** @brief OpenCL kernel generation class for matrix expressions of AXPY type, i.e. A = alpha * B + beta * C, where the number of summands can in principle be arbitrarily large. */
     class matrix_saxpy : public profile_base{
 
         bool invalid_impl(viennacl::ocl::device const & /*dev*/, vcl_size_t /*scalartype_size*/) const{ return false; }
@@ -185,7 +187,7 @@ namespace viennacl{
 
           //Writes back
           for(statements_type::const_iterator it = statements.begin() ; it != statements.end() ; ++it){
-            if(detail::mapped_handle * p = dynamic_cast<detail::mapped_handle *>(mapping.at(std::distance(statements.begin(),it)).at(std::make_pair(&it->second,detail::LHS_NODE_TYPE)).get()))
+            if(detail::mapped_handle * p = dynamic_cast<detail::mapped_handle *>(at(mapping.at(std::distance(statements.begin(),it)), std::make_pair(&it->second,detail::LHS_NODE_TYPE)).get()))
               p->write_back(std::make_pair("i", "j"), fetched, stream);
           }
 

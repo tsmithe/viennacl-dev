@@ -36,6 +36,7 @@ namespace viennacl
     namespace detail
     {
 
+      /** @brief Reference counting class for the shared_ptr implementation */
       class count
       {
         public:
@@ -48,6 +49,7 @@ namespace viennacl
           unsigned int val_;
       };
 
+      /** @brief Interface for the reference counter inside the shared_ptr */
       struct aux
       {
         detail::count count;
@@ -57,6 +59,7 @@ namespace viennacl
         virtual ~aux() {}
       };
 
+      /** @brief Implementation helper for the reference counting mechanism inside shared_ptr. */
       template<class U, class Deleter>
       struct auximpl: public detail::aux
       {
@@ -67,6 +70,7 @@ namespace viennacl
         virtual void destroy() { d(p); }
       };
 
+      /** @brief Default deleter class for a pointer. The default is to just call 'delete' on the pointer. Provide your own implementations for 'delete[]' and 'free'. */
       template<class U>
       struct default_deleter
       {

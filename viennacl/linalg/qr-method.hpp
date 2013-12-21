@@ -52,7 +52,7 @@ namespace viennacl
 
           viennacl::ocl::kernel& kernel = ctx.get_kernel(viennacl::linalg::opencl::kernels::svd<CPU_ScalarType>::program_name(), SVD_GIVENS_NEXT_KERNEL);
 
-          kernel.global_work_size(0, viennacl::tools::align_to_multiple<cl_uint>(viennacl::traits::size1(matrix), 256));
+          kernel.global_work_size(0, viennacl::tools::align_to_multiple<cl_uint>(cl_uint(viennacl::traits::size1(matrix)), 256));
           kernel.local_work_size(0, 256);
 
           viennacl::ocl::enqueue(kernel(
@@ -60,7 +60,7 @@ namespace viennacl
                                         tmp1,
                                         tmp2,
                                         static_cast<cl_uint>(matrix.size1()),
-                                        static_cast<cl_uint>(matrix.internal_size1()),
+                                        static_cast<cl_uint>(matrix.internal_size2()),
                                         static_cast<cl_uint>(l),
                                         static_cast<cl_uint>(m - 1)
                                 ));
@@ -75,7 +75,7 @@ namespace viennacl
                   boost::numeric::ublas::vector<SCALARTYPE> & d,
                   boost::numeric::ublas::vector<SCALARTYPE> & e)
         {
-            int n = Q.size1();
+            int n = static_cast<int>(Q.size1());
 
             boost::numeric::ublas::vector<SCALARTYPE> cs(n), ss(n);
             viennacl::vector<SCALARTYPE> tmp1(n), tmp2(n);
@@ -87,7 +87,7 @@ namespace viennacl
 
             SCALARTYPE f = 0;
             SCALARTYPE tst1 = 0;
-            SCALARTYPE eps = 2 * EPS;
+            SCALARTYPE eps = 2 * static_cast<SCALARTYPE>(EPS);
 
             for (int l = 0; l < n; l++)
             {
@@ -287,6 +287,7 @@ namespace viennacl
             }
         }
 
+        /** @brief Internal helper class representing a row-major dense matrix used for the QR method for the purpose of computing eigenvalues. */
         template <typename SCALARTYPE>
         class FastMatrix
         {
@@ -296,20 +297,19 @@ namespace viennacl
                 size_ = 0;
             }
 
-            FastMatrix(vcl_size_t sz)
+            FastMatrix(vcl_size_t sz, vcl_size_t internal_size) : size_(sz), internal_size_(internal_size)
             {
-                size_ = sz;
-                data.resize(sz * sz);
+                data.resize(internal_size * internal_size);
             }
 
             SCALARTYPE& operator()(int i, int j)
             {
-                return data[i * size_ + j];
+                return data[i * internal_size_ + j];
             }
 
             SCALARTYPE* row(int i)
             {
-                return &data[i * size_];
+                return &data[i * internal_size_];
             }
 
             SCALARTYPE* begin()
@@ -325,6 +325,7 @@ namespace viennacl
             std::vector<SCALARTYPE> data;
         private:
             vcl_size_t size_;
+            vcl_size_t internal_size_;
         };
 
         // Nonsymmetric reduction from Hessenberg to real Schur form.
@@ -338,9 +339,9 @@ namespace viennacl
         {
             transpose(V);
 
-            int nn = vcl_H.size1();
+            int nn = static_cast<int>(vcl_H.size1());
 
-            FastMatrix<SCALARTYPE> H(nn);//, V(nn);
+            FastMatrix<SCALARTYPE> H(nn, vcl_H.internal_size2());//, V(nn);
 
             std::vector<SCALARTYPE> buf(5 * nn);
             viennacl::vector<SCALARTYPE> buf_vcl(5 * nn);
@@ -350,7 +351,7 @@ namespace viennacl
 
             int n = nn - 1;
 
-            SCALARTYPE eps = 2 * EPS;
+            SCALARTYPE eps = 2 * static_cast<SCALARTYPE>(EPS);
             SCALARTYPE exshift = 0;
             SCALARTYPE p = 0;
             SCALARTYPE q = 0;
@@ -876,7 +877,7 @@ namespace viennacl
 
             viennacl::linalg::opencl::kernels::svd<SCALARTYPE>::init(ctx);
 
-            detail::eye(Q);
+            Q = viennacl::identity_matrix<SCALARTYPE>(Q.size1(), ctx);
 
             // reduce to tridiagonal form
             detail::tridiagonal_reduction(A, Q);

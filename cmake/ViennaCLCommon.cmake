@@ -58,7 +58,7 @@ cmake_dependent_option(ENABLE_EIGEN "Enable examples that use Eigen" OFF
 cmake_dependent_option(ENABLE_MTL4 "Enable examples that use MTL4" OFF
    BUILD_EXAMPLES OFF)
 
-option(ENABLE_PEDANTIC_FLAGS "Enable pedantic compiler flags" ON)
+option(ENABLE_PEDANTIC_FLAGS "Enable pedantic compiler flags (GCC and Clang only)" OFF)
 
 mark_as_advanced(BOOSTPATH ENABLE_VIENNAPROFILER ENABLE_EIGEN
    ENABLE_MTL4 ENABLE_PEDANTIC_FLAGS)
@@ -76,10 +76,10 @@ ENDIF (BOOSTPATH)
 
 if(ENABLE_UBLAS OR BUILD_TESTING)
    set(Boost_USE_MULTITHREADED TRUE)
-   if (Boost_MINOR_VERSION GREATER 34)
-     find_package(Boost REQUIRED COMPONENTS system thread)
-   else()
+   if (Boost_MINOR_VERSION LESS 34)
      find_package(Boost REQUIRED COMPONENTS thread)
+   else()
+     find_package(Boost REQUIRED COMPONENTS serialization system thread)
    endif()
 endif()
 

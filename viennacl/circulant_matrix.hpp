@@ -112,12 +112,12 @@ namespace viennacl
          */
         entry_proxy<SCALARTYPE> operator()(vcl_size_t row_index, vcl_size_t col_index)
         {
-            int index = static_cast<int>(row_index) - static_cast<int>(col_index);
+            long index = static_cast<long>(row_index) - static_cast<long>(col_index);
 
             assert(row_index < size1() && col_index < size2() && bool("Invalid access"));
 
             while (index < 0)
-              index += size1();
+              index += static_cast<long>(size1());
             return elements_[index];
         }
 
@@ -149,7 +149,7 @@ namespace viennacl
     template <typename SCALARTYPE, unsigned int ALIGNMENT>
     void copy(std::vector<SCALARTYPE>& cpu_vec, circulant_matrix<SCALARTYPE, ALIGNMENT>& gpu_mat)
     {
-        assert(cpu_vec.size() == gpu_mat.size1() && bool("Size mismatch"));
+        assert( (gpu_mat.size1() == 0 || cpu_vec.size() == gpu_mat.size1()) && bool("Size mismatch"));
         copy(cpu_vec, gpu_mat.elements());
     }
 
@@ -175,16 +175,16 @@ namespace viennacl
     template <typename SCALARTYPE, unsigned int ALIGNMENT, typename MATRIXTYPE>
     void copy(circulant_matrix<SCALARTYPE, ALIGNMENT>& circ_src, MATRIXTYPE& com_dst) {
         vcl_size_t size = circ_src.size1();
-        assert(size == com_dst.size1() && bool("Size mismatch"));
-        assert(size == com_dst.size2() && bool("Size mismatch"));
+        assert(size == viennacl::traits::size1(com_dst) && bool("Size mismatch"));
+        assert(size == viennacl::traits::size2(com_dst) && bool("Size mismatch"));
         std::vector<SCALARTYPE> tmp(size);
         copy(circ_src, tmp);
 
         for (vcl_size_t i = 0; i < size; i++) {
             for (vcl_size_t j = 0; j < size; j++) {
-                int index = static_cast<int>(i) - static_cast<int>(j);
+                long index = static_cast<long>(i) - static_cast<long>(j);
                 if (index < 0)
-                  index = size + index;
+                  index = static_cast<long>(size + index);
                 com_dst(i, j) = tmp[index];
             }
         }
@@ -197,10 +197,12 @@ namespace viennacl
     * @param circ_dst   A circulant_matrix from ViennaCL
     */
     template <typename SCALARTYPE, unsigned int ALIGNMENT, typename MATRIXTYPE>
-    void copy(MATRIXTYPE& com_src, circulant_matrix<SCALARTYPE, ALIGNMENT>& circ_dst) {
-        vcl_size_t size = circ_dst.size1();
-        assert(size == com_src.size1() && bool("Size mismatch"));
-        assert(size == com_src.size2() && bool("Size mismatch"));
+    void copy(MATRIXTYPE& com_src, circulant_matrix<SCALARTYPE, ALIGNMENT>& circ_dst)
+    {
+        assert( (circ_dst.size1() == 0 || circ_dst.size1() == viennacl::traits::size1(com_src)) && bool("Size mismatch"));
+        assert( (circ_dst.size2() == 0 || circ_dst.size2() == viennacl::traits::size2(com_src)) && bool("Size mismatch"));
+
+        vcl_size_t size = viennacl::traits::size1(com_src);
 
         std::vector<SCALARTYPE> tmp(size);
 
@@ -243,8 +245,8 @@ namespace viennacl
         for(vcl_size_t i = 0; i < size; i++) {
             s << "(";
             for(vcl_size_t j = 0; j < size; j++) {
-                int index = (int)i - (int)j;
-                if(index < 0) index = size + index;
+                long index = static_cast<long>(i) - static_cast<long>(j);
+                if(index < 0) index = static_cast<long>(size) + index;
                 s << tmp[index];
                 //s << index;
                 if(j < (size - 1)) s << ",";
@@ -258,6 +260,8 @@ namespace viennacl
     //
     // Specify available operations:
     //
+
+    /** \cond */
 
     namespace linalg
     {
@@ -341,11 +345,10 @@ namespace viennacl
             }
         };
 
+      } // namespace detail
+    } // namespace linalg
 
-
-     } // namespace detail
-   } // namespace linalg
-
+    /** \endcond */
 }
 
 #endif // VIENNACL_CIRCULANT_MATRIX_HPP

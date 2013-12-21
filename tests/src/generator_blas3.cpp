@@ -60,7 +60,7 @@ using namespace boost::numeric;
 //
 static const unsigned int min_large_block_size = 32;
 static const unsigned int max_large_block_size = 128;
-static const unsigned int n_large_blocks = static_cast<unsigned int>(std::log(max_large_block_size/min_large_block_size)/std::log(2)+1.0);
+static const unsigned int n_large_blocks = static_cast<unsigned int>(std::log(static_cast<double>(max_large_block_size/min_large_block_size))/std::log(2.0)+1.0);
 
 static const unsigned int min_alignment = 1;
 static const unsigned int max_alignment = 8;
@@ -127,8 +127,8 @@ int test_prod(Epsilon const& epsilon,
 {
    int retval = EXIT_SUCCESS;
    NumericT act_diff = 0;
-   NumericT alpha = 3.14;
-   NumericT beta = 4.51;
+   NumericT alpha = NumericT(3.14);
+   NumericT beta  = NumericT(4.51);
 
 std::cout << "Testing C = alpha*prod(A,B) + beta*C ..." << std::endl;
 {
@@ -367,7 +367,7 @@ int main(int argc, char* argv[])
 
             int retval = EXIT_SUCCESS;
 
-            srand(time(NULL));
+            //srand(time(NULL));
 
             std::cout << std::endl;
             std::cout << "----------------------------------------------" << std::endl;

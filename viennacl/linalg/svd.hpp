@@ -59,7 +59,7 @@ namespace viennacl
         viennacl::ocl::context & ctx = const_cast<viennacl::ocl::context &>(viennacl::traits::opencl_handle(matrix).context());
         viennacl::ocl::kernel & kernel = ctx.get_kernel(viennacl::linalg::opencl::kernels::svd<CPU_ScalarType>::program_name(), SVD_GIVENS_PREV_KERNEL);
 
-        kernel.global_work_size(0, viennacl::tools::align_to_multiple<unsigned int>(viennacl::traits::size1(matrix), 256));
+        kernel.global_work_size(0, viennacl::tools::align_to_multiple<vcl_size_t>(viennacl::traits::size1(matrix), 256));
         kernel.local_work_size(0, 256);
 
         viennacl::ocl::enqueue(kernel(
@@ -83,8 +83,8 @@ namespace viennacl
         viennacl::ocl::context & ctx = const_cast<viennacl::ocl::context &>(viennacl::traits::opencl_handle(matrix).context());
         viennacl::ocl::kernel & kernel = ctx.get_kernel(viennacl::linalg::opencl::kernels::svd<CPU_ScalarType>::program_name(), SVD_INVERSE_SIGNS_KERNEL);
 
-        kernel.global_work_size(0, viennacl::tools::align_to_multiple<unsigned int>(viennacl::traits::size1(matrix), 16));
-        kernel.global_work_size(1, viennacl::tools::align_to_multiple<unsigned int>(viennacl::traits::size2(matrix), 16));
+        kernel.global_work_size(0, viennacl::tools::align_to_multiple<vcl_size_t>(viennacl::traits::size1(matrix), 16));
+        kernel.global_work_size(1, viennacl::tools::align_to_multiple<vcl_size_t>(viennacl::traits::size2(matrix), 16));
 
         kernel.local_work_size(0, 16);
         kernel.local_work_size(1, 16);
@@ -106,8 +106,8 @@ namespace viennacl
         typedef typename MatrixType::value_type                                   ScalarType;
         typedef typename viennacl::result_of::cpu_value_type<ScalarType>::type    CPU_ScalarType;
 
-        int n = q.size();
-        int m = vcl_u.size1();
+        int n = static_cast<int>(q.size());
+        int m = static_cast<int>(vcl_u.size1());
 
         detail::transpose(vcl_u);
         detail::transpose(vcl_v);
@@ -458,6 +458,8 @@ namespace viennacl
                   viennacl::matrix<SCALARTYPE, row_major, ALIGNMENT> & QL,
                   viennacl::matrix<SCALARTYPE, row_major, ALIGNMENT> & QR)
       {
+        viennacl::ocl::context & ctx = const_cast<viennacl::ocl::context &>(viennacl::traits::opencl_handle(QL).context());
+
         vcl_size_t row_num = Ai.size1();
         vcl_size_t col_num = Ai.size2();
 
@@ -467,8 +469,8 @@ namespace viennacl
         //for storing householder vector
         viennacl::vector<SCALARTYPE, ALIGNMENT> hh_vector(big_to);
 
-        eye(QL);
-        eye(QR);
+        QL = viennacl::identity_matrix<SCALARTYPE>(QL.size1(), ctx);
+        QR = viennacl::identity_matrix<SCALARTYPE>(QR.size1(), ctx);
 
         for(vcl_size_t i = 0; i < to; i++)
         {
@@ -509,8 +511,8 @@ namespace viennacl
       // second stage
       //std::vector<SCALARTYPE> dh(to, 0);
       //std::vector<SCALARTYPE> sh(to + 1, 0);
-      boost::numeric::ublas::vector<SCALARTYPE> dh(to, 0);
-      boost::numeric::ublas::vector<SCALARTYPE> sh(to + 1, 0);
+      boost::numeric::ublas::vector<SCALARTYPE> dh = boost::numeric::ublas::scalar_vector<SCALARTYPE>(to, 0);
+      boost::numeric::ublas::vector<SCALARTYPE> sh = boost::numeric::ublas::scalar_vector<SCALARTYPE>(to + 1, 0);
 
       detail::bidiag_pack(A, dh, sh);
 

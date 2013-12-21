@@ -75,7 +75,7 @@ namespace viennacl
 
       // DEPRECATED: Replace with viennacl::linalg::norm_2
       template <typename VectorType>
-      typename VectorType::value_type norm_lcl(VectorType const & x, unsigned int size)
+      typename VectorType::value_type norm_lcl(VectorType const & x, vcl_size_t size)
       {
         typename VectorType::value_type x_norm = 0.0;
         for(vcl_size_t i = 0; i < size; i++)
@@ -84,7 +84,7 @@ namespace viennacl
       }
 
       template <typename VectorType>
-      void normalize(VectorType & x, unsigned int size)
+      void normalize(VectorType & x, vcl_size_t size)
       {
         typename VectorType::value_type x_norm = norm_lcl(x, size);
         for(vcl_size_t i = 0; i < size; i++)
@@ -94,7 +94,7 @@ namespace viennacl
 
 
       template <typename VectorType>
-      void householder_vector(VectorType & v, unsigned int start)
+      void householder_vector(VectorType & v, vcl_size_t start)
       {
         typedef typename VectorType::value_type    ScalarType;
         ScalarType x_norm = norm_lcl(v, v.size());
@@ -180,10 +180,10 @@ namespace viennacl
                                     bool is_column
                                     )
       {
-        boost::numeric::ublas::vector<SCALARTYPE> tmp(size, 0);
+        boost::numeric::ublas::vector<SCALARTYPE> tmp = boost::numeric::ublas::scalar_vector<SCALARTYPE>(size, 0);
 
         copy_vec(A, D, row_start, col_start, is_column);
-        fast_copy(D.begin(), D.begin() + (size - start), tmp.begin() + start);
+        fast_copy(D.begin(), D.begin() + vcl_ptrdiff_t(size - start), tmp.begin() + start);
 
         //std::cout << "1: " << tmp << "\n";
 
@@ -191,19 +191,6 @@ namespace viennacl
         fast_copy(tmp, D);
 
         //std::cout << "2: "  << D << "\n";
-      }
-
-      template <typename SCALARTYPE, unsigned int ALIGNMENT>
-      void eye(viennacl::matrix<SCALARTYPE, row_major, ALIGNMENT>& A)
-      {
-        std::vector<SCALARTYPE> foo(A.size1() * A.size1(), 0);
-
-        for(vcl_size_t i = 0; i < A.size1(); i++)
-        {
-          foo[i*A.size1() + i] = 1;
-        }
-
-        viennacl::fast_copy(&foo[0], &foo[0] + foo.size(), A);
       }
 
       template <typename SCALARTYPE, unsigned int ALIGNMENT, typename VectorType>

@@ -19,6 +19,8 @@
 #include <iostream>
 
 #include "viennacl.hpp"
+#include "viennacl_private.hpp"
+
 #include "init_vector.hpp"
 
 //include basic scalar and vector types of ViennaCL
@@ -35,7 +37,7 @@
 
 // IxAMAX
 
-ViennaCLStatus ViennaCLiamax(ViennaCLInt *index, ViennaCLVector x)
+VIENNACL_EXPORTED_FUNCTION ViennaCLStatus ViennaCLiamax(ViennaCLInt *index, ViennaCLVector x)
 {
   viennacl::backend::mem_handle v1_handle;
 
@@ -48,7 +50,7 @@ ViennaCLStatus ViennaCLiamax(ViennaCLInt *index, ViennaCLVector x)
     {
       viennacl::vector_base<float> v1(v1_handle, x->size, x->offset, x->inc);
 
-      *index = viennacl::linalg::index_norm_inf(v1);
+      *index = static_cast<ViennaCLInt>(viennacl::linalg::index_norm_inf(v1));
       return ViennaCLSuccess;
     }
 
@@ -56,7 +58,7 @@ ViennaCLStatus ViennaCLiamax(ViennaCLInt *index, ViennaCLVector x)
     {
       viennacl::vector_base<double> v1(v1_handle, x->size, x->offset, x->inc);
 
-      *index = viennacl::linalg::index_norm_inf(v1);
+      *index = static_cast<ViennaCLInt>(viennacl::linalg::index_norm_inf(v1));
       return ViennaCLSuccess;
     }
 
@@ -70,7 +72,7 @@ ViennaCLStatus ViennaCLiamax(ViennaCLInt *index, ViennaCLVector x)
 
 // xASUM
 
-ViennaCLStatus ViennaCLasum(ViennaCLHostScalar *alpha, ViennaCLVector x)
+VIENNACL_EXPORTED_FUNCTION ViennaCLStatus ViennaCLasum(ViennaCLHostScalar *alpha, ViennaCLVector x)
 {
   if ((*alpha)->precision != x->precision)
     return ViennaCLGenericFailure;
@@ -107,7 +109,7 @@ ViennaCLStatus ViennaCLasum(ViennaCLHostScalar *alpha, ViennaCLVector x)
 
 // xAXPY
 
-ViennaCLStatus ViennaCLaxpy(ViennaCLHostScalar alpha, ViennaCLVector x, ViennaCLVector y)
+VIENNACL_EXPORTED_FUNCTION ViennaCLStatus ViennaCLaxpy(ViennaCLHostScalar alpha, ViennaCLVector x, ViennaCLVector y)
 {
   if (alpha->precision != x->precision)
     return ViennaCLGenericFailure;
@@ -152,7 +154,7 @@ ViennaCLStatus ViennaCLaxpy(ViennaCLHostScalar alpha, ViennaCLVector x, ViennaCL
 
 // xCOPY
 
-ViennaCLStatus ViennaCLcopy(ViennaCLVector x, ViennaCLVector y)
+VIENNACL_EXPORTED_FUNCTION ViennaCLStatus ViennaCLcopy(ViennaCLVector x, ViennaCLVector y)
 {
   if (x->precision != y->precision)
     return ViennaCLGenericFailure;
@@ -193,7 +195,7 @@ ViennaCLStatus ViennaCLcopy(ViennaCLVector x, ViennaCLVector y)
 
 // xDOT
 
-ViennaCLStatus ViennaCLdot(ViennaCLHostScalar *alpha, ViennaCLVector x, ViennaCLVector y)
+VIENNACL_EXPORTED_FUNCTION ViennaCLStatus ViennaCLdot(ViennaCLHostScalar *alpha, ViennaCLVector x, ViennaCLVector y)
 {
   if ((*alpha)->precision != x->precision)
     return ViennaCLGenericFailure;
@@ -237,7 +239,7 @@ ViennaCLStatus ViennaCLdot(ViennaCLHostScalar *alpha, ViennaCLVector x, ViennaCL
 
 // xNRM2
 
-ViennaCLStatus ViennaCLnrm2(ViennaCLHostScalar *alpha, ViennaCLVector x)
+VIENNACL_EXPORTED_FUNCTION ViennaCLStatus ViennaCLnrm2(ViennaCLHostScalar *alpha, ViennaCLVector x)
 {
   if ((*alpha)->precision != x->precision)
     return ViennaCLGenericFailure;
@@ -274,8 +276,8 @@ ViennaCLStatus ViennaCLnrm2(ViennaCLHostScalar *alpha, ViennaCLVector x)
 
 // xROT
 
-ViennaCLStatus ViennaCLrot(ViennaCLVector     x, ViennaCLVector     y,
-                           ViennaCLHostScalar c, ViennaCLHostScalar s)
+VIENNACL_EXPORTED_FUNCTION ViennaCLStatus ViennaCLrot(ViennaCLVector     x, ViennaCLVector     y,
+                                                      ViennaCLHostScalar c, ViennaCLHostScalar s)
 {
   if (c->precision != x->precision)
     return ViennaCLGenericFailure;
@@ -322,7 +324,7 @@ ViennaCLStatus ViennaCLrot(ViennaCLVector     x, ViennaCLVector     y,
 
 // xSCAL
 
-ViennaCLStatus ViennaCLscal(ViennaCLHostScalar alpha, ViennaCLVector x)
+VIENNACL_EXPORTED_FUNCTION ViennaCLStatus ViennaCLscal(ViennaCLHostScalar alpha, ViennaCLVector x)
 {
   if (alpha->precision != x->precision)
     return ViennaCLGenericFailure;
@@ -358,7 +360,7 @@ ViennaCLStatus ViennaCLscal(ViennaCLHostScalar alpha, ViennaCLVector x)
 
 // xSWAP
 
-ViennaCLStatus ViennaCLswap(ViennaCLVector x, ViennaCLVector y)
+VIENNACL_EXPORTED_FUNCTION ViennaCLStatus ViennaCLswap(ViennaCLVector x, ViennaCLVector y)
 {
   if (x->precision != y->precision)
     return ViennaCLGenericFailure;
