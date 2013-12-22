@@ -24,7 +24,7 @@ def run_test(*args, **kwargs):
 
     dtype = np.result_type(kwargs['dtype']).type
 
-    alpha = p.Scalar(dtype(3.1415))
+    alpha = p.HostScalar(dtype(3.1415)) ## TODO SHOULD BE GPU SCALAR
     beta = p.HostScalar(dtype(2.718))
 
     ###
@@ -87,13 +87,13 @@ def run_test(*args, **kwargs):
     print("Test: in-place scale (multiplication) passed")
 
     # In-place scaling (division by scalar)
-    #X = vcl_A.value
-    #X /= alpha.value
-    #vcl_A /= alpha
-    #act_diff = math.fabs(diff(X, vcl_A))
-    #if act_diff > epsilon:
-    #    raise RuntimeError("Failed: in-place scale (division)")
-    #print("Test: in-place scale (division) passed")
+    X = vcl_A.value
+    X /= alpha.value
+    vcl_A /= alpha
+    act_diff = math.fabs(diff(X, vcl_A))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed: in-place scale (division)")
+    print("Test: in-place scale (division) passed")
 
     # In-place add
     X = vcl_A.value
