@@ -1,3 +1,6 @@
 [submodule "external/boost_numpy"]
 	path = external/boost_numpy
 	url = git://github.com/tsmithe/Boost.NumPy.git
+[submodule "external/viennacl-dev"]
+	path = external/viennacl-dev
+	url = https://github.com/viennacl/viennacl-dev.git

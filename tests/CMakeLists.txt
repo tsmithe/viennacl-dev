@@ -1,137 +1,36 @@
+#if(NOT DEFINED PYTHON_EXECUTABLE)
+#  set(
+#    PYTHON_EXECUTABLE "python"
+#    CACHE STRING
+#    "Change this to the path for your interpreter; for instance 'python3'")
+#endif()
 
-include_directories(${Boost_INCLUDE_DIRS})
+#execute_process(
+#  COMMAND "${PYTHON_EXECUTABLE}" ${CMAKE_SOURCE_DIR}/pyviennacl/pyversions.py python
+#  OUTPUT_VARIABLE PYVERSION
+#  OUTPUT_STRIP_TRAILING_WHITESPACE
+#  )
 
-if (BUILD_PYVIENNACL)
-  add_subdirectory(pyviennacl)
-endif (BUILD_PYVIENNACL)
+#find_package(PythonInterp ${PYVERSION} EXACT)
 
-# tests with CPU backend
-#foreach(PROG blas3_prod_float blas3_prod_double blas3_solve_float blas3_solve_double iterators
-#             global_variables
-#             matrix_vector matrix_vector_int
-#             matrix_row_float matrix_row_double matrix_row_int
-#             matrix_col_float matrix_col_double matrix_col_int
-#             scalar scheduler_matrix scheduler_matrix_matrix scheduler_matrix_vector scheduler_sparse scheduler_vector sparse
-#             vector_float vector_double vector_int vector_uint vector_multi_inner_prod
-#             spmdm)
-#   add_executable(${PROG}-test-cpu src/${PROG}.cpp)
-#   add_test(${PROG}-cpu ${PROG}-test-cpu)
-#endforeach(PROG)
+add_test(NAME blas3_prod_py
+  WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/tests/pyviennacl"
+  COMMAND sh -c "PYTHONPATH=${PYTHONPATH}:$ENV{PYTHONPATH} ${PYTHON_EXECUTABLE} blas3_prod.py")
 
+add_test(NAME blas3_solve_py
+  WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/tests/pyviennacl"
+  COMMAND sh -c "PYTHONPATH=${PYTHONPATH}:$ENV{PYTHONPATH} ${PYTHON_EXECUTABLE} blas3_solve.py")
 
-# tests with OpenCL backend
-#if (ENABLE_OPENCL)
-#  foreach(PROG blas3_prod_float blas3_prod_double blas3_solve_float blas3_solve_double fft iterators
-#               generator_blas1 generator_blas2 generator_blas3 #generator_segmentation
-#               global_variables
-#               matrix_vector matrix_vector_int
-#               matrix_row_float matrix_row_double matrix_row_int
-#               matrix_col_float matrix_col_double matrix_col_int
-#               nmf qr_method
-#               scalar sparse structured-matrices svd
-#               vector_float vector_double vector_int vector_uint vector_multi_inner_prod
-#               spmdm)
-#     add_executable(${PROG}-test-opencl src/${PROG}.cpp)
-#     target_link_libraries(${PROG}-test-opencl ${OPENCL_LIBRARIES})
-#     add_test(${PROG}-opencl ${PROG}-test-opencl)
-#     set_target_properties(${PROG}-test-opencl PROPERTIES COMPILE_FLAGS "-DVIENNACL_WITH_OPENCL")
-#  endforeach(PROG)
+# TODO -- GPU SCALAR NOT WORKING YET
+#add_test(NAME scalar_operations_py
+#  WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/tests/pyviennacl"
+#  COMMAND sh -c "PYTHONPATH=${PYTHONPATH}:$ENV{PYTHONPATH} ${PYTHON_EXECUTABLE} scalar_operations.py")
 
- # include_directories(${PROJECT_SOURCE_DIR}/external)
-#  add_executable(external_linkage-opencl
-#                 src/external_1.cpp
-#                 src/external_2.cpp)
-#  target_link_libraries(external_linkage-opencl ${OPENCL_LIBRARIES})
-#  set_target_properties(external_linkage-opencl PROPERTIES COMPILE_FLAGS "-DVIENNACL_WITH_OPENCL")
-#endif (ENABLE_OPENCL)
+add_test(NAME vector_operations_py
+  WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/tests/pyviennacl"
+  COMMAND sh -c "PYTHONPATH=${PYTHONPATH}:$ENV{PYTHONPATH} ${PYTHON_EXECUTABLE} vector_operations.py")
 
-# tests with CUDA backend
-#if (ENABLE_CUDA)
-#  foreach(PROG blas3_prod_float blas3_prod_double blas3_solve_float blas3_solve_double iterators
-#               global_variables
-#               matrix_vector matrix_vector_int
-#               matrix_row_float matrix_row_double matrix_row_int
-#               matrix_col_float matrix_col_double matrix_col_int
-#               scalar sparse
-#               vector_float vector_double vector_int vector_uint vector_multi_inner_prod
-#               spmdm)
-#     cuda_add_executable(${PROG}-test-cuda src/${PROG}.cu)
-#     add_test(${PROG}-cuda ${PROG}-test-cuda)
-#  endforeach(PROG)
-#
-#  include_directories(${PROJECT_SOURCE_DIR}/external)
-#  cuda_add_executable(external_linkage-cuda
-#                      src/external_1.cu
-#                      src/external_2.cu)
-#endif (ENABLE_CUDA)
+add_test(NAME matrix_operations_py
+  WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/tests/pyviennacl"
+  COMMAND sh -c "PYTHONPATH=${PYTHONPATH}:$ENV{PYTHONPATH} ${PYTHON_EXECUTABLE} matrix_operations.py")
 
-# test shared library
-#include_directories(${PROJECT_SOURCE_DIR}/libviennacl/include/)
-
-#if(ENABLE_CUDA)
-#  if(ENABLE_OPENCL)
-#    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-DVIENNACL_WITH_OPENCL") #set flags before setting executable!
-#    cuda_add_executable(libviennacl_blas1-test src/libviennacl_blas1.cu)
-#    target_link_libraries(libviennacl_blas1-test viennacl ${OPENCL_LIBRARIES})
-#
-#    cuda_add_executable(libviennacl_blas2-test src/libviennacl_blas2.cu)
-#    target_link_libraries(libviennacl_blas2-test viennacl ${OPENCL_LIBRARIES})
-#
-#    cuda_add_executable(libviennacl_blas3-test src/libviennacl_blas3.cu)
-#    target_link_libraries(libviennacl_blas3-test viennacl ${OPENCL_LIBRARIES})
-#
-#  else(ENABLE_OPENCL)
-#    cuda_add_executable(libviennacl_blas1-test src/libviennacl_blas1.cu)
-#    target_link_libraries(libviennacl_blas1-test viennacl)
-#
-#    cuda_add_executable(libviennacl_blas2-test src/libviennacl_blas2.cu)
-#    target_link_libraries(libviennacl_blas2-test viennacl)
-#
-#    cuda_add_executable(libviennacl_blas3-test src/libviennacl_blas3.cu)
-#    target_link_libraries(libviennacl_blas3-test viennacl)
-#  endif(ENABLE_OPENCL)
-#else(ENABLE_CUDA)
-#  add_executable(libviennacl_blas1-test src/libviennacl_blas1.cpp)
-#  add_executable(libviennacl_blas2-test src/libviennacl_blas2.cpp)
-#  add_executable(libviennacl_blas3-test src/libviennacl_blas3.cpp)
-#  if(ENABLE_OPENCL)
-#    set_target_properties(libviennacl_blas1-test PROPERTIES COMPILE_FLAGS "-DVIENNACL_WITH_OPENCL")
-#    target_link_libraries(libviennacl_blas1-test viennacl ${OPENCL_LIBRARIES})
-#
-#    set_target_properties(libviennacl_blas2-test PROPERTIES COMPILE_FLAGS "-DVIENNACL_WITH_OPENCL")
-#    target_link_libraries(libviennacl_blas2-test viennacl ${OPENCL_LIBRARIES})
-#
-#    set_target_properties(libviennacl_blas3-test PROPERTIES COMPILE_FLAGS "-DVIENNACL_WITH_OPENCL")
-#    target_link_libraries(libviennacl_blas3-test viennacl ${OPENCL_LIBRARIES})
-#  else(ENABLE_OPENCL)
-#    target_link_libraries(libviennacl_blas1-test viennacl)
-#    target_link_libraries(libviennacl_blas2-test viennacl)
-#    target_link_libraries(libviennacl_blas3-test viennacl)
-#  endif(ENABLE_OPENCL)
-#endif(ENABLE_CUDA)
-#add_test(libviennacl-blas1 libviennacl_blas1-test)
-#add_test(libviennacl-blas2 libviennacl_blas2-test)
-#add_test(libviennacl-blas3 libviennacl_blas3-test)
-
-# test shared library
-#include_directories(${PROJECT_SOURCE_DIR}/libviennacl/include/)
-
-#if(ENABLE_CUDA)
-#  if(ENABLE_OPENCL)
-#    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-DVIENNACL_WITH_OPENCL") #set flags before setting executable!
-#    cuda_add_executable(libviennacl-test src/libviennacl.cu)
-#    target_link_libraries(libviennacl-test viennacl ${OPENCL_LIBRARIES})
-#  else(ENABLE_OPENCL)
-#    cuda_add_executable(libviennacl-test src/libviennacl.cu)
-#    target_link_libraries(libviennacl-test viennacl)
-#  endif(ENABLE_OPENCL)
-#else(ENABLE_CUDA)
-#  add_executable(libviennacl-test src/libviennacl.cpp)
-#  if(ENABLE_OPENCL)
-#    set_target_properties(libviennacl-test PROPERTIES COMPILE_FLAGS "-DVIENNACL_WITH_OPENCL")
-#    target_link_libraries(libviennacl-test viennacl ${OPENCL_LIBRARIES})
-#  else(ENABLE_OPENCL)
-#    target_link_libraries(libviennacl-test viennacl)
-#  endif(ENABLE_OPENCL)
-#endif(ENABLE_CUDA)
-#add_test(libviennacl libviennacl-test)
