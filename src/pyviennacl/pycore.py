@@ -511,6 +511,7 @@ class MagicMethods(object):
                 return self.value / rhs
         op = Div(self, rhs)
         return op
+    __div__ = __truediv__
 
     def __iadd__(self, rhs):
         """

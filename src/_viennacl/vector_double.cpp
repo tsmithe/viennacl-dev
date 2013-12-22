@@ -1,6 +1,7 @@
 #include "vector.h"
 
-PYVCL_MODULE(vector_double)
+PYVCL_SUBMODULE(vector_double)
+{
   EXPORT_VECTOR_CLASS(double);
 }
 

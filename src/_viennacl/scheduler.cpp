@@ -1,6 +1,7 @@
 #include "scheduler.h"
 
-PYVCL_MODULE(scheduler)
+PYVCL_SUBMODULE(scheduler)
+{
 
 #define VALUE(NS, V) .value( #V, NS :: V )
 

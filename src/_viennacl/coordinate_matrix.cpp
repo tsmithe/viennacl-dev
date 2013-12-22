@@ -1,6 +1,7 @@
 #include "sparse_matrix.h"
 
-PYVCL_MODULE(coordinate_matrix)
+PYVCL_SUBMODULE(coordinate_matrix)
+{
   bp::class_<vcl::coordinate_matrix<double>, 
              vcl::tools::shared_ptr<vcl::coordinate_matrix<double> >,
              boost::noncopyable >

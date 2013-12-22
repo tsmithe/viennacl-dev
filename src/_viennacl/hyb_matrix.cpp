@@ -1,6 +1,7 @@
 #include "sparse_matrix.h"
 
-PYVCL_MODULE(hyb_matrix)
+PYVCL_SUBMODULE(hyb_matrix)
+{
   bp::class_<vcl::hyb_matrix<double>, 
              vcl::tools::shared_ptr<vcl::hyb_matrix<double> >,
              boost::noncopyable >

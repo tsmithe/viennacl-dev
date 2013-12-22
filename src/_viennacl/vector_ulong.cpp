@@ -1,6 +1,7 @@
 #include "vector.h"
 
-PYVCL_MODULE(vector_ulong)
+PYVCL_SUBMODULE(vector_ulong)
+{
   EXPORT_VECTOR_CLASS(ulong);
 }
 

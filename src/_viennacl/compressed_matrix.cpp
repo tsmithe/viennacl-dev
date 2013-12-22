@@ -1,6 +1,7 @@
 #include "sparse_matrix.h"
 
-PYVCL_MODULE(compressed_matrix)
+PYVCL_SUBMODULE(compressed_matrix)
+{
   // TODO: Other types than double!
   bp::class_<cpu_compressed_matrix_wrapper<double> >
     ("cpu_compressed_matrix_double")

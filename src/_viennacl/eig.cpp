@@ -3,7 +3,8 @@
 #include <viennacl/linalg/power_iter.hpp>
 #include <viennacl/linalg/lanczos.hpp>
 
-PYVCL_MODULE(eig)
+PYVCL_SUBMODULE(eig)
+{
   DISAMBIGUATE_CLASS_FUNCTION_PTR(vcl::linalg::power_iter_tag, double,
                                   factor, get_power_iter_factor, () const)
   DISAMBIGUATE_CLASS_FUNCTION_PTR(vcl::linalg::power_iter_tag, std::size_t,

@@ -15,8 +15,8 @@
           TYPE, TYPE,                                                   \
           op_plane_rotation, 0>);                                  
 
-PYVCL_MODULE(extra_functions)
-
+PYVCL_SUBMODULE(extra_functions)
+{
   // vector: outer, element_pow, plane_rotation
   // matrix: element_pow
 

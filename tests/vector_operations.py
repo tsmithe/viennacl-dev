@@ -87,13 +87,13 @@ def run_test(*args, **kwargs):
     print("Test: in-place scale (multiplication) passed")
 
     # In-place scaling (division by scalar)
-    #X = vcl_A.value
-    #X /= alpha.value
-    #vcl_A /= alpha
-    #act_diff = math.fabs(diff(X, vcl_A))
-    #if act_diff > epsilon:
-    #    raise RuntimeError("Failed: in-place scale (division)")
-    #print("Test: in-place scale (division) passed")
+    X = vcl_A.value
+    X /= alpha.value
+    vcl_A /= alpha
+    act_diff = math.fabs(diff(X, vcl_A))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed: in-place scale (division)")
+    print("Test: in-place scale (division) passed")
 
     # In-place add
     X = vcl_A.value
@@ -203,12 +203,12 @@ def run_test(*args, **kwargs):
     # Scalar multiplication (GPU scalar)
 
     # Matrix divided by scalar
-    #X = vcl_A.value / alpha.value
-    #Y = vcl_A / alpha
-    #act_diff = math.fabs(diff(X, Y))
-    #if act_diff > epsilon:
-    #    raise RuntimeError("Failed: matrix-scalar division")
-    #print("Test: matrix-scalar division passed")
+    X = vcl_A.value / alpha.value
+    Y = vcl_A / alpha
+    act_diff = math.fabs(diff(X, Y))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed: matrix-scalar division")
+    print("Test: matrix-scalar division passed")
 
     # Binary elementwise operations -- prod and div
     X = vcl_A.value * vcl_B.value
@@ -387,29 +387,29 @@ def run_test(*args, **kwargs):
     #print("Test: norm(inf) passed")
 
     # in-place multiply-division-add
-    #X = vcl_C.value
-    #X += alpha.value * vcl_A.value + vcl_B.value / beta.value
-    #vcl_C += alpha * vcl_A + vcl_B / beta
-    #act_diff = math.fabs(diff(X, vcl_C))
-    #if act_diff > epsilon:
-    #    raise RuntimeError("Failed: in-place multiply-division-add")
-    #print("Test: in-place multiply-division-add passed")
+    X = vcl_C.value
+    X += alpha.value * vcl_A.value + vcl_B.value / beta.value
+    vcl_C += alpha * vcl_A + vcl_B / beta
+    act_diff = math.fabs(diff(X, vcl_C))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed: in-place multiply-division-add")
+    print("Test: in-place multiply-division-add passed")
 
     # lengthy sum of scaled vectors
-    #X = alpha.value * vcl_A.value - vcl_B.value / beta.value + vcl_A.value * beta.value - vcl_B.value / alpha.value + vcl_C.value
-    #Y = alpha * vcl_A - vcl_B / beta + vcl_A * beta - vcl_B / alpha + vcl_C
-    #act_diff = math.fabs(diff(X, Y))
-    #if act_diff > epsilon:
-    #    raise RuntimeError("Failed: lengthy sum of scaled vectors")
-    #print("Test: lengthy sum of scaled vectors passed")
+    X = alpha.value * vcl_A.value - vcl_B.value / beta.value + vcl_A.value * beta.value - vcl_B.value / alpha.value + vcl_C.value
+    Y = alpha * vcl_A - vcl_B / beta + vcl_A * beta - vcl_B / alpha + vcl_C
+    act_diff = math.fabs(diff(X, Y))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed: lengthy sum of scaled vectors")
+    print("Test: lengthy sum of scaled vectors passed")
 
     # sub-expression
-    #X = vcl_A.value + (((vcl_C.value + vcl_B.value) * alpha.value) - vcl_B.value) / beta.value
-    #Y = vcl_A + (((vcl_C + vcl_B) * alpha) - vcl_B) / beta
-    #act_diff = math.fabs(diff(X, Y))
-    #if act_diff > epsilon:
-    #    raise RuntimeError("Failed: vector sub-expression test %s")
-    #print("Test: vector sub-expression passed")
+    X = vcl_A.value + (((vcl_C.value + vcl_B.value) * alpha.value) - vcl_B.value) / beta.value
+    Y = vcl_A + (((vcl_C + vcl_B) * alpha) - vcl_B) / beta
+    act_diff = math.fabs(diff(X, Y))
+    if act_diff > epsilon:
+        raise RuntimeError("Failed: vector sub-expression test %s")
+    print("Test: vector sub-expression passed")
 
     # plane rotation
     V = (alpha * vcl_A + beta * vcl_B).result

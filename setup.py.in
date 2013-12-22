@@ -19,6 +19,12 @@ for boost_lib in boost_libraries:
 static_libs.append("${PROJECT_BINARY_DIR}/lib/libboost_numpy.a")
 
 extra_compile_args=[] #["-std=c++11","-g3"] # +"${CMAKE_CXX_FLAGS}".split(" ")
+define_macros=[
+#    ("VIENNACL_DEBUG_BUILD", None),
+#    ("VIENNACL_DEBUG_ALL", None),
+    ("VIENNACL_WITH_UBLAS", None),
+    ("VIENNACL_WITH_OPENCL", None),
+]              
 undef_macros=["NDEBUG"]
 
 submodules = ["core",
@@ -30,21 +36,24 @@ submodules = ["core",
               "scheduler"]
 
 ext_modules = []
+ext_module_files = []
 for submodule in submodules:
-    ext_modules.append(Extension(submodule, ["${CMAKE_CURRENT_SOURCE_DIR}/src/_viennacl/" + submodule + ".cpp"],
-                                 depends=["${CMAKE_CURRENT_SOURCE_DIR}/src/_viennacl/" + submodule + ".h",
-                                        "${CMAKE_CURRENT_SOURCE_DIR}/src/_viennacl/viennacl.h"],
-                                 extra_compile_args=extra_compile_args, undef_macros=undef_macros,
-                                 include_dirs=include_dirs, library_dirs=library_dirs, extra_link_args=static_libs, libraries=libraries))
+    ext_module_files.append("${CMAKE_CURRENT_SOURCE_DIR}/src/_viennacl/" + submodule + ".cpp")
+ext_modules.append(Extension("_viennacl", ext_module_files,
+                             depends=["${CMAKE_CURRENT_SOURCE_DIR}/src/_viennacl/viennacl.h"],
+                             extra_compile_args=extra_compile_args,
+                             define_macros=define_macros, undef_macros=undef_macros,
+                             include_dirs=include_dirs, library_dirs=library_dirs,
+                             extra_link_args=static_libs, libraries=libraries))
 
 
 if __name__=="__main__":
     setup( name="pyviennacl",
            version="${VERSION}",
-           packages=["pyviennacl",
-                     "pyviennacl._viennacl"],
-           package_dir={'pyviennacl': "${CMAKE_CURRENT_SOURCE_DIR}/src/pyviennacl",
-                        'pyviennacl._viennacl': "${CMAKE_CURRENT_SOURCE_DIR}/src/_viennacl"},
-           ext_package="pyviennacl._viennacl",
+           packages=["pyviennacl"],
+#                     "pyviennacl._viennacl"],
+           package_dir={'pyviennacl': "${CMAKE_CURRENT_SOURCE_DIR}/src/pyviennacl"},
+#                        'pyviennacl._viennacl': "${CMAKE_CURRENT_SOURCE_DIR}/src/_viennacl"},
+           ext_package="pyviennacl",
            ext_modules=ext_modules)
 

@@ -12,11 +12,29 @@
 /*******************************
   Python module initialisation
  *******************************/
+void translate_string_exception(const char* e)
+{
+  // Use the Python 'C' API to set up an exception object
+  PyErr_SetString(PyExc_RuntimeError, e);
+}
 
-PYVCL_MODULE(core)
+BOOST_PYTHON_MODULE(_viennacl)
+{
+  bp::register_exception_translator<const char*>            
+    (&translate_string_exception);                            
+
+  np::initialize();
+
+  // TODO: integrate version into build process
+  bp::scope().attr("__version__") = bp::object("1.5.0");
+
   bp::def("backend_finish", vcl::backend::finish);
 
   // TODO: EXPOSE ALL NUMERIC TYPES
+  //       + scalar: integer types
+  //       + vector: char, short, uchar, ushort
+  //       + dense matrix: char, short, uchar, ushort
+  //       + sparse matrix: everything other than double
 
   bp::class_<vcl::scalar<float> >("scalar_float") // TODO
     .def(bp::init<float>())
@@ -34,9 +52,6 @@ PYVCL_MODULE(core)
                          bp::init<std::size_t, std::size_t>());
   bp::class_<vcl::slice>("slice",
                          bp::init<std::size_t, std::size_t, std::size_t>());
-
-  //EXPORT_VECTOR_CLASS(char)
-  //EXPORT_VECTOR_CLASS(short)
 
   bp::class_<vcl::linalg::lower_tag>("lower_tag");
   bp::class_<vcl::linalg::unit_lower_tag>("unit_lower_tag");
@@ -84,16 +99,28 @@ PYVCL_MODULE(core)
     .add_property("max_restarts", &vcl::linalg::gmres_tag::max_restarts)
     ;
 
-  /* TODO:::::::::::::::
-  EXPORT_DENSE_MATRIX_CLASS(char, row, vcl::row_major, ublas::row_major)
-  EXPORT_DENSE_MATRIX_CLASS(char, col, vcl::column_major, ublas::column_major)
-  EXPORT_DENSE_MATRIX_CLASS(short, row, vcl::row_major, ublas::row_major)
-  EXPORT_DENSE_MATRIX_CLASS(short, col, vcl::column_major, ublas::column_major)
-  EXPORT_DENSE_MATRIX_CLASS(uchar, row, vcl::row_major, ublas::row_major)
-  EXPORT_DENSE_MATRIX_CLASS(uchar, col, vcl::column_major, ublas::column_major)
-  EXPORT_DENSE_MATRIX_CLASS(ushort, row, vcl::row_major, ublas::row_major)
-  EXPORT_DENSE_MATRIX_CLASS(ushort, col, vcl::column_major, ublas::column_major)
-  */
+export_vector_int();
+export_vector_long();
+export_vector_uint();
+export_vector_ulong();
+export_vector_float();
+export_vector_double();
+
+export_dense_matrix_int();
+export_dense_matrix_long();
+export_dense_matrix_uint();
+export_dense_matrix_ulong();
+export_dense_matrix_float();
+export_dense_matrix_double();
+
+export_compressed_matrix();
+export_coordinate_matrix();
+export_ell_matrix();
+export_hyb_matrix();
+
+export_eig();
+export_extra_functions();
+export_scheduler();
   
 }
 

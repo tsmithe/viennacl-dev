@@ -1,6 +1,7 @@
 #include "sparse_matrix.h"
 
-PYVCL_MODULE(ell_matrix)
+PYVCL_SUBMODULE(ell_matrix)
+{
   bp::class_<vcl::ell_matrix<double>, 
              vcl::tools::shared_ptr<vcl::ell_matrix<double> >,
              boost::noncopyable >

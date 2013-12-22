@@ -1,11 +1,6 @@
 #ifndef _PYVIENNACL_H
 #define _PYVIENNACL_H
 
-#define VIENNACL_DEBUG_BUILD
-#define VIENNACL_DEBUG_ALL
-#define VIENNACL_WITH_UBLAS
-#define VIENNACL_WITH_OPENCL
-
 #include <boost/python.hpp>
 #include <boost/numpy.hpp>
 
@@ -46,17 +41,6 @@ namespace boost {
     };
   }
 }
-
-void translate_string_exception(const char* e)
-{
-  // Use the Python 'C' API to set up an exception object
-  PyErr_SetString(PyExc_RuntimeError, e);
-}
-
-#define PYVCL_MODULE(NAME) BOOST_PYTHON_MODULE(NAME) {      \
-  bp::register_exception_translator<const char*>            \
-  (&translate_string_exception);                            \
-  np::initialize();
 
 // TODO: Use ViennaCL operation tags?
 enum op_t {
@@ -371,6 +355,36 @@ HostT vcl_scalar_to_host(const vcl::scalar<HostT>& vcl_s)
 
 #define DISAMBIGUATE_CLASS_FUNCTION_PTR(CLASS, RET, OLD_NAME, NEW_NAME, ARGS)\
   RET (CLASS::*NEW_NAME) ARGS = &CLASS::OLD_NAME;
+
+
+/**************
+   Submodules
+ **************/
+
+#define PYVCL_SUBMODULE(NAME) void export_ ## NAME ()
+
+PYVCL_SUBMODULE(vector_int);
+PYVCL_SUBMODULE(vector_long);
+PYVCL_SUBMODULE(vector_uint);
+PYVCL_SUBMODULE(vector_ulong);
+PYVCL_SUBMODULE(vector_float);
+PYVCL_SUBMODULE(vector_double);
+
+PYVCL_SUBMODULE(dense_matrix_int);
+PYVCL_SUBMODULE(dense_matrix_long);
+PYVCL_SUBMODULE(dense_matrix_uint);
+PYVCL_SUBMODULE(dense_matrix_ulong);
+PYVCL_SUBMODULE(dense_matrix_float);
+PYVCL_SUBMODULE(dense_matrix_double);
+
+PYVCL_SUBMODULE(compressed_matrix);
+PYVCL_SUBMODULE(coordinate_matrix);
+PYVCL_SUBMODULE(ell_matrix);
+PYVCL_SUBMODULE(hyb_matrix);
+
+PYVCL_SUBMODULE(eig);
+PYVCL_SUBMODULE(extra_functions);
+PYVCL_SUBMODULE(scheduler);
 
 
 #endif
