@@ -1,5 +1,5 @@
-pyviennacl (0.9999.5-0) UNRELEASED; urgency=low
+pyviennacl (0.9999.6-0) UNRELEASED; urgency=low
 
-  * Initial release (Closes: #nnnn)  <nnnn is the bug number of your ITP>
+  * Initial release (Closes: #732921)
 
  -- Toby Smithe <tsmithe@ubuntu.com>  Sat, 14 Dec 2013 15:41:54 +0000
