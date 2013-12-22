@@ -1,6 +1,11 @@
 #ifndef _PYVIENNACL_H
 #define _PYVIENNACL_H
 
+#define VIENNACL_DEBUG_BUILD
+#define VIENNACL_DEBUG_ALL
+#define VIENNACL_WITH_UBLAS
+#define VIENNACL_WITH_OPENCL
+
 #include <boost/python.hpp>
 #include <boost/numpy.hpp>
 
@@ -343,7 +348,7 @@ DO_OP_FUNC(op_prod)
 DO_OP_FUNC(op_solve)
 {
   return vcl::linalg::solve(o.operand1, o.operand2,
-				    o.operand3);
+                            o.operand3);
 } };
 
 DO_OP_FUNC(op_inplace_solve)

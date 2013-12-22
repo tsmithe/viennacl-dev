@@ -1,12 +1,12 @@
 #ifndef _PYVIENNACL_VECTOR_H
 #define _PYVIENNACL_VECTOR_H
 
+#include "viennacl.h"
+
 #include <boost/numeric/ublas/vector_sparse.hpp>
 
 #include <viennacl/vector.hpp>
 #include <viennacl/vector_proxy.hpp>
-
-#include "viennacl.h"
 
 namespace ublas = boost::numeric::ublas;
 

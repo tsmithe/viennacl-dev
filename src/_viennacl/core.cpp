@@ -2,17 +2,12 @@
 #include <iostream>
 #include <typeinfo>
 
-//#define VIENNACL_DEBUG_BUILD
-//#define VIENNACL_DEBUG_ALL
-#define VIENNACL_WITH_UBLAS
-#define VIENNACL_WITH_OPENCL
+#include "viennacl.h"
 
 #include <viennacl/linalg/cg.hpp>
 #include <viennacl/linalg/bicgstab.hpp>
 #include <viennacl/linalg/direct_solve.hpp>
 #include <viennacl/linalg/gmres.hpp>
-
-#include "viennacl.h"
 
 /*******************************
   Python module initialisation

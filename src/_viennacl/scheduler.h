@@ -1,9 +1,9 @@
 #ifndef _PYVIENNACL_VECTOR_H
 #define _PYVIENNACL_VECTOR_H
 
-#include <viennacl/scheduler/execute.hpp>
-
 #include "viennacl.h"
+
+#include <viennacl/scheduler/execute.hpp>
 
 class statement_node_wrapper {
 

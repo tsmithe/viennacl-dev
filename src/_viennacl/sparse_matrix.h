@@ -1,6 +1,8 @@
 #ifndef _PYVIENNACL_VECTOR_H
 #define _PYVIENNACL_VECTOR_H
 
+#include "viennacl.h"
+
 #include <boost/numeric/ublas/matrix_sparse.hpp>
 #include <boost/numeric/ublas/vector_of_vector.hpp>
 
@@ -9,8 +11,6 @@
 #include <viennacl/coordinate_matrix.hpp>
 #include <viennacl/ell_matrix.hpp>
 #include <viennacl/hyb_matrix.hpp>
-
-#include "viennacl.h"
 
 namespace ublas = boost::numeric::ublas;
 

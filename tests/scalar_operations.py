@@ -28,6 +28,7 @@ def test_scalar(epsilon, dtype):
     delta = p.HostScalar(d)
 
     if alpha != a:
+        print(alpha, a, alpha.value)
         raise RuntimeError("Failed to initialise device scalar")
     if beta != b:
         raise RuntimeError("Failed to initialise device scalar")

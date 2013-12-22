@@ -22,8 +22,8 @@ extra_compile_args=[] #["-std=c++11","-g3"] # +"${CMAKE_CXX_FLAGS}".split(" ")
 undef_macros=["NDEBUG"]
 
 submodules = ["core",
-              "vector_int", "vector_long", "vector_uint", "vector_ulong", "vector_float", "vector_double",
-              "dense_matrix_int", "dense_matrix_long", "dense_matrix_uint", "dense_matrix_ulong", "dense_matrix_float", "dense_matrix_double",
+              "vector_float", "vector_double", "vector_int", "vector_long", "vector_uint", "vector_ulong",
+              "dense_matrix_float", "dense_matrix_double", "dense_matrix_int", "dense_matrix_long", "dense_matrix_uint", "dense_matrix_ulong",
               "compressed_matrix", "coordinate_matrix", "ell_matrix", "hyb_matrix",
               "eig",
               "extra_functions",
