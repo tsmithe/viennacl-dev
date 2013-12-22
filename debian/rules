@@ -6,6 +6,7 @@ export DH_VERBOSE=1
 #export PYBUILD_NAME=pyviennacl # -- seems to cause install confusion
 export PYBUILD_SYSTEM=cmake
 export PYBUILD_DISABLE=test
+export PYBUILD_DISABLE_python3.4=1 # NumPy seems broken for now
 
 %:
 	dh $@ --with python2,python3 --buildsystem=pybuild
