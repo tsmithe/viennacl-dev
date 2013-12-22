@@ -3,7 +3,7 @@
 
 # Uncomment this to turn on verbose mode.
 export DH_VERBOSE=1
-export PYBUILD_NAME=pyviennacl
+#export PYBUILD_NAME=pyviennacl # -- seems to cause install confusion
 export PYBUILD_SYSTEM=cmake
 export PYBUILD_DISABLE=test
 
