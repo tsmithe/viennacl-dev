@@ -92,7 +92,7 @@ include_directories(
   ${PYTHON_INCLUDE_DIRS}
   ${Boost_INCLUDE_DIRS}
   ${PROJECT_SOURCE_DIR}/external/boost_numpy
-  ${PROJECT_SOURCE_DIR}/external/viennacl-dev/viennacl
+  ${PROJECT_SOURCE_DIR}/external/viennacl-dev
   ${NUMPY_INCLUDE_DIRS}
 )
 
