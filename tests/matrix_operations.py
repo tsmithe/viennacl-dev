@@ -28,7 +28,7 @@ def run_test(*args, **kwargs):
 
     dtype = kwargs['dtype']
 
-    alpha = p.HostScalar(dtype(3.1415)) ## TODO SHOULD BE GPU SCALAR
+    alpha = p.Scalar(dtype(3.1415))
     beta = p.HostScalar(dtype(2.718))
 
     # Test initialisers
