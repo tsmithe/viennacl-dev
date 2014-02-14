@@ -14,6 +14,8 @@
 
 namespace ublas = boost::numeric::ublas;
 
+// TODO: EXPOSE ALL NUMERIC TYPES
+
 template <class ScalarType>
 class cpu_compressed_matrix_wrapper
 {
@@ -94,7 +96,7 @@ public:
       bp::tuple coord = bp::extract<bp::tuple>(places[i]);
       uint32_t x = bp::extract<uint32_t>(coord[0]);
       uint32_t y = bp::extract<uint32_t>(coord[1]);
-      array[x][y] = get(x, y);
+      array[x][y] = get_entry(x, y);
     }
 
     return array;
@@ -202,12 +204,12 @@ public:
       bp::tuple coord = bp::extract<bp::tuple>(places[i]);
       uint32_t x = bp::extract<uint32_t>(coord[0]);
       uint32_t y = bp::extract<uint32_t>(coord[1]);
-      cpu_compressed_matrix(x, y) = temp.get(x, y);
+      cpu_compressed_matrix(x, y) = temp.get_entry(x, y);
     }
 
   }
 
-  void set(uint32_t n, uint32_t m, ScalarType val) 
+  void set_entry(uint32_t n, uint32_t m, ScalarType val) 
   {
     if (n >= size1() or m >= size2())
       resize(n+1, m+1);
@@ -221,7 +223,7 @@ public:
   }
 
   // Need this because bp cannot deal with operator()
-  ScalarType get(uint32_t n, uint32_t m)
+  ScalarType get_entry(uint32_t n, uint32_t m)
   {
     return cpu_compressed_matrix(n, m);
   }

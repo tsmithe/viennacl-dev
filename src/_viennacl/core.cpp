@@ -26,27 +26,21 @@ BOOST_PYTHON_MODULE(_viennacl)
   np::initialize();
 
   // TODO: integrate version into build process
-  bp::scope().attr("__version__") = bp::object("1.5.0");
+  bp::scope().attr("__version__") = bp::object("1.5.1");
 
   bp::def("backend_finish", vcl::backend::finish);
 
-  // TODO: EXPOSE ALL NUMERIC TYPES
-  //       + scalar: integer types
-  //       + vector: char, short, uchar, ushort
-  //       + dense matrix: char, short, uchar, ushort
-  //       + sparse matrix: everything other than double
+#define EXPORT_VECTOR_CLASS(TYPE)                                       \
+  bp::class_<vcl::scalar<TYPE> >("scalar_" #TYPE)                       \
+    .def(bp::init<TYPE>())                                              \
+    .def("to_host", &vcl_scalar_to_host<TYPE>)
 
-  bp::class_<vcl::scalar<float> >("scalar_float") // TODO
-    .def(bp::init<float>())
-    .def(bp::init<int>())
-    .def("to_host", &vcl_scalar_to_host<float>)
-    ;
-
-  bp::class_<vcl::scalar<double> >("scalar_double")
-    .def(bp::init<double>())
-    .def(bp::init<int>())
-    .def("to_host", &vcl_scalar_to_host<double>)
-    ;
+  EXPORT_VECTOR_CLASS(int);
+  EXPORT_VECTOR_CLASS(uint);
+  EXPORT_VECTOR_CLASS(long);
+  EXPORT_VECTOR_CLASS(ulong);
+  EXPORT_VECTOR_CLASS(float);
+  EXPORT_VECTOR_CLASS(double);
 
   bp::class_<vcl::range>("range",
                          bp::init<std::size_t, std::size_t>());

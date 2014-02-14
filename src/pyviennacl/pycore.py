@@ -431,6 +431,9 @@ class MagicMethods(object):
     def __str__(self):
         return self.value.__str__()
 
+    def __repr__(self):
+        return self.value.__repr__()
+
     def __add__(self, rhs):
         """
         x.__add__(y) <==> x+y
@@ -803,14 +806,34 @@ class Leaf(MagicMethods):
     def __setitem__(self, key, value):
         if isinstance(value, Node):
             value = value.result
-        if type(self[key]) != type(value):
+        ## TODO: This involves both a get and a set, if it works, so not very efficient..
+        item = self[key] ## get
+        if type(item) != type(value):
+            if isinstance(item, ScalarBase):
+                if isinstance(value, ScalarBase):
+                    value = value.value
+                if np_result_type(item) != np_result_type(value):
+                    try:
+                        value = np_result_type(item).type(value)
+                    except:
+                        log.exception("Failed to convert value dtype (%s) to item dtype (%s)" % 
+                                      (np_result_type(item), np_result_type(value)))
+                try:
+                    try: # Assume matrix type
+                        return self.vcl_leaf.set_entry(key[0], key[1], value) ## set
+                    except: # Otherwise, assume vector
+                        return self.vcl_leaf.set_entry(key, value) ## set
+                except:
+                    log.exception("Failed to set vcl entry")
             raise TypeError("Cannot assign %s to %s" % (type(value),
-                                                        type(self[key])))
-        if self[key].dtype != value.dtype:
-            raise TypeError("Cannot assign across different dtypes!")
-        if self[key].shape != value.shape:
-            raise TypeError("Cannot assign across different shapes!")
-        Assign(self[key], value).execute()
+                                                        type(item)))
+        if item.dtype != value.dtype:
+            raise TypeError("Cannot assign across different dtypes! (%s and %s)" %
+                            (item.dtype, value.dtype))
+        if item.shape != value.shape:
+            raise TypeError("Cannot assign across different shapes! (%s and %s)" %
+                            (item.shape, value.shape))
+        Assign(item, value).execute() ## set
 
     def _init_leaf(self, args, kwargs):
         """
@@ -1148,9 +1171,12 @@ class Vector(Leaf):
                 return self[key[0]]
             else:
                 raise IndexError("Too many indices")
+        elif isinstance(key, int) or isinstance(key, long):
+            # TODO: key is probably an int -- be sure?
+            return HostScalar(self.vcl_leaf.get_entry(key),
+                              dtype=self.dtype)
         else:
-            # key is probably an int
-            return self.as_ndarray()[key]
+            raise IndexError("Can't understand index")
 
     @property
     def index_norm_inf(self):
@@ -1461,7 +1487,7 @@ class SparseMatrixBase(Leaf):
             raise KeyError("Key must be a 2-tuple")
         if not (isinstance(key[0], int) and isinstance(key[1], int)):
             raise KeyError("Only integer keys are currently supported")
-        return self.cpu_leaf.get(key[0], key[1])
+        return self.cpu_leaf.get_entry(key[0], key[1])
 
     def __setitem__(self, key, value):
         if not isinstance(key, tuple):
@@ -1471,7 +1497,11 @@ class SparseMatrixBase(Leaf):
         if not (isinstance(key[0], int) and isinstance(key[1], int)):
             raise KeyError("Only integer keys are currently supported")
         self.flushed = False
-        self.cpu_leaf.set(key[0], key[1], (self[key] + value))
+        if isinstance(value, ScalarBase):
+            value = value.value
+        if np_result_type(self) != np_result_type(value):
+            value = np_result_type(self).type(value)
+        self.cpu_leaf.set_entry(key[0], key[1], value)
         self.nnz # Updates nonzero list
 
     def __delitem__(self, key):
@@ -1709,7 +1739,7 @@ class Matrix(Leaf):
                     # Choose from row
                     if isinstance(key[1], int):
                         #  (int, int) -> scalar
-                        return HostScalar(self.as_ndarray()[key],
+                        return HostScalar(self.vcl_leaf.get_entry(key[0], key[1]),
                                           dtype=self.dtype)
                     elif isinstance(key[1], slice):
                         #  (int, slice) - range/slice from row -> row vector
@@ -1872,6 +1902,12 @@ class Node(MagicMethods):
 
     def _test_init(self):
         layout_test = self.layout # NB QUIRK
+
+    def __getitem__(self, key):
+        return self.result[key]
+
+    def __setitem__(self, key, value):
+        self.result[key] = value
 
     def get_vcl_operand_setter(self, operand):
         """

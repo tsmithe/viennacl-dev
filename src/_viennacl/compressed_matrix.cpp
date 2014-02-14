@@ -19,8 +19,8 @@ PYVCL_SUBMODULE(compressed_matrix)
     .add_property("size1", &cpu_compressed_matrix_wrapper<double>::size1)
     .add_property("size2", &cpu_compressed_matrix_wrapper<double>::size2)
     .def("resize", &cpu_compressed_matrix_wrapper<double>::resize)
-    .def("set", &cpu_compressed_matrix_wrapper<double>::set)
-    .def("get", &cpu_compressed_matrix_wrapper<double>::get)
+    .def("set_entry", &cpu_compressed_matrix_wrapper<double>::set_entry)
+    .def("get_entry", &cpu_compressed_matrix_wrapper<double>::get_entry)
     .def("as_ndarray", &cpu_compressed_matrix_wrapper<double>::as_ndarray)
     .def("as_compressed_matrix",
          &cpu_compressed_matrix_wrapper<double>

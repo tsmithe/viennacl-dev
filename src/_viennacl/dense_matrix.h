@@ -1,6 +1,9 @@
 #ifndef _PYVIENNACL_DENSE_MATRIX_H
 #define _PYVIENNACL_DENSE_MATRIX_H
 
+#include "viennacl.h"
+#include "entry_proxy.hpp"
+
 #include <boost/numeric/ublas/matrix.hpp>
 
 #include <viennacl/linalg/cg.hpp>
@@ -9,8 +12,6 @@
 #include <viennacl/linalg/gmres.hpp>
 #include <viennacl/matrix.hpp>
 #include <viennacl/matrix_proxy.hpp>
-
-#include "viennacl.h"
 
 namespace ublas = boost::numeric::ublas;
 
@@ -121,6 +122,8 @@ np::ndarray vcl_matrix_to_ndarray(const vcl::matrix_base<SCALARTYPE, VCL_F>& m)
   bp::class_<vcl::matrix_base<TYPE, F>,                                 \
 	     vcl::tools::shared_ptr<vcl::matrix_base<TYPE, F> > >            \
     ("matrix_base", bp::no_init)                                        \
+    .def("get_entry", &get_vcl_matrix_entry<TYPE, vcl::matrix_base<TYPE, F> >) \
+    .def("set_entry", &set_vcl_matrix_entry<TYPE, vcl::matrix_base<TYPE, F> >) \
     .def("as_ndarray", &vcl_matrix_to_ndarray<TYPE, F>)                 \
     .add_property("size1", &vcl::matrix_base<TYPE, F>::size1)           \
     .add_property("internal_size1",                                     \
@@ -150,7 +153,7 @@ np::ndarray vcl_matrix_to_ndarray(const vcl::matrix_base<SCALARTYPE, VCL_F>& m)
     .def("solve", pyvcl_do_3ary_op<vcl::vector<TYPE>,                   \
 	 vcl::matrix_base<TYPE, F>&, vcl::vector_base<TYPE>&,           \
 	 vcl::linalg::unit_upper_tag&,                                  \
-	 op_solve, 0>)                                                  \
+	 op_solve, 0>)                                                 /* \
     .def("solve", pyvcl_do_3ary_op<vcl::vector<TYPE>,                   \
 	 vcl::matrix_base<TYPE, F>&, vcl::vector<TYPE>&,                \
 	 vcl::linalg::cg_tag&,                                          \
@@ -162,7 +165,7 @@ np::ndarray vcl_matrix_to_ndarray(const vcl::matrix_base<SCALARTYPE, VCL_F>& m)
     .def("solve", pyvcl_do_3ary_op<vcl::vector<TYPE>,                   \
 	 vcl::matrix_base<TYPE, F>&, vcl::vector<TYPE>&,                \
 	 vcl::linalg::gmres_tag&,                                       \
-	 op_solve, 0>)                                                  \
+	 op_solve, 0>)                                                 */ \
     .def("solve", pyvcl_do_3ary_op<vcl::matrix<TYPE, vcl::row_major>,   \
 	 vcl::matrix_base<TYPE, vcl::row_major>&,                       \
          vcl::matrix_base<TYPE, vcl::row_major>&,                       \
