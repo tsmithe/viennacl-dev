@@ -22,13 +22,6 @@ def read_mtx(fname):
     mat_type = p.np_result_type(mat).type
     def assign(l):
         i, j, v = int(l[0]), int(l[1]), mat_type(l[2])
-        mat[i, j] = v
-    #map(assign, lines[ln+1:])
-    c = 0
-    for l in lines[ln+1:]:
-        c += 1
-        if not c % 1000: break #print c
-        assign(l)
-    print("Done assigning")
-    print(mat.nnz)
+        mat[i-1, j-1] = v
+    map(assign, lines[ln+1:])
     return mat
