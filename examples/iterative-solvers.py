@@ -20,7 +20,7 @@ import random
 from util import read_mtx
 
 A = read_mtx("mat65k.mtx")
-#print(A)
+print(A)
 
 # We want a square N x N system.
 N = 5 

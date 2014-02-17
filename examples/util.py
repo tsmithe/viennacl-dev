@@ -8,10 +8,10 @@ def read_mtx(fname):
     """
     fd = open(fname)
     lines = map(lambda x: x.strip().split(" "), fd.readlines())
-    ln = 0
+    ln = -1
     for line in lines:
         ln += 1
-        if line[0][0] == "%":
+        if line[ln][0] == "%":
             continue
         else:
             break
@@ -23,9 +23,12 @@ def read_mtx(fname):
     def assign(l):
         i, j, v = int(l[0]), int(l[1]), mat_type(l[2])
         mat[i, j] = v
-        print(i, j, v, mat[i,j])
-    map(assign, lines[ln+1:])
-    print(mat)
-    #print(mat.nonzeros)
-    #print(mat.nnz)
+    #map(assign, lines[ln+1:])
+    c = 0
+    for l in lines[ln+1:]:
+        c += 1
+        if not c % 1000: break #print c
+        assign(l)
+    print("Done assigning")
+    print(mat.nnz)
     return mat
