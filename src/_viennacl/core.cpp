@@ -93,6 +93,8 @@ BOOST_PYTHON_MODULE(_viennacl)
     .add_property("max_restarts", &vcl::linalg::gmres_tag::max_restarts)
     ;
 
+  bp::class_<vcl::linalg::no_precond>("no_precond");
+
 export_vector_int();
 export_vector_long();
 export_vector_uint();
@@ -112,6 +114,8 @@ export_coordinate_matrix();
 export_ell_matrix();
 export_hyb_matrix();
 
+export_direct_solvers();
+export_iterative_solvers();
 export_eig();
 export_extra_functions();
 export_scheduler();

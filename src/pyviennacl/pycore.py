@@ -110,7 +110,7 @@ Node types
 ============ =============================================================
 Norm_1       Order-1 norm
 Norm_2       Order-2 norm
-Norm_Inf     Norm in the limit
+Norm_Inf     Infinity norm
 ElementAbs   Elementwise abs
 ElementAcos  Elementwise acos
 ElementAsin  Elementwise asin
@@ -170,6 +170,7 @@ scalar case, simple numerical equality is used.
 """
 
 from __future__ import division
+import logging, math
 from pyviennacl import (_viennacl as _v,
                         util)
 from numpy import (ndarray, array, zeros,
@@ -179,7 +180,6 @@ from numpy import (ndarray, array, zeros,
                    int8, int16, int32, int64,
                    uint8, uint16, uint32, uint64,
                    float16, float32, float64)
-import logging, math
 
 try:
     from scipy import sparse
@@ -1481,39 +1481,39 @@ class SparseMatrixBase(Leaf):
 
     def __getitem__(self, key):
         # TODO: extend beyond tuple keys
-        if not isinstance(key, tuple):
-            raise KeyError("Key must be a 2-tuple")
-        if len(key) != 2:
-            raise KeyError("Key must be a 2-tuple")
-        if not (isinstance(key[0], int) and isinstance(key[1], int)):
-            raise KeyError("Only integer keys are currently supported")
-        return self.cpu_leaf.get_entry(key[0], key[1])
+        #if not isinstance(key, tuple):
+        #    raise KeyError("Key must be a 2-tuple")
+        #if len(key) != 2:
+        #    raise KeyError("Key must be a 2-tuple")
+        #if not (isinstance(key[0], int) and isinstance(key[1], int)):
+        #    raise KeyError("Only integer keys are currently supported")
+        return np_result_type(self).type(self.cpu_leaf.get_entry(key[0], key[1]))
 
     def __setitem__(self, key, value):
-        if not isinstance(key, tuple):
-            raise KeyError("Key must be a 2-tuple")
-        if len(key) != 2:
-            raise KeyError("Key must be a 2-tuple")
-        if not (isinstance(key[0], int) and isinstance(key[1], int)):
-            raise KeyError("Only integer keys are currently supported")
+        #if not isinstance(key, tuple):
+        #    raise KeyError("Key must be a 2-tuple")
+        #if len(key) != 2:
+        #    raise KeyError("Key must be a 2-tuple")
+        #if not (isinstance(key[0], int) and isinstance(key[1], int)):
+        #    raise KeyError("Only integer keys are currently supported")
         self.flushed = False
         if isinstance(value, ScalarBase):
             value = value.value
-        if np_result_type(self) != np_result_type(value):
-            value = np_result_type(self).type(value)
+        #if np_result_type(self) != np_result_type(value):
+        #    value = np_result_type(self).type(value)
         self.cpu_leaf.set_entry(key[0], key[1], value)
-        self.nnz # Updates nonzero list
+        #self.nnz # Updates nonzero list
 
     def __delitem__(self, key):
-        if not isinstance(key, tuple):
-            raise KeyError("Key must be a 2-tuple")
-        if len(key) != 2:
-            raise KeyError("Key must be a 2-tuple")
-        if not (isinstance(key[0], int) and isinstance(key[1], int)):
-            raise KeyError("Only integer keys are currently supported")
+        #if not isinstance(key, tuple):
+        #    raise KeyError("Key must be a 2-tuple")
+        #if len(key) != 2:
+        #    raise KeyError("Key must be a 2-tuple")
+        #if not (isinstance(key[0], int) and isinstance(key[1], int)):
+        #    raise KeyError("Only integer keys are currently supported")
         self.flushed = False
         self[key] = 0
-        self.nnz # Updates nonzero list
+        #self.nnz # Updates nonzero list
 
     def __str__(self):
         out = []
@@ -1522,6 +1522,7 @@ class SparseMatrixBase(Leaf):
                     ")\t\t", "{}".format(self[coord]), "\n"]
         out = out[:-1]
         return "".join(out)
+    __repr__ = __str__
 
 
 class CompressedMatrix(SparseMatrixBase):
@@ -1845,6 +1846,8 @@ class Node(MagicMethods):
             """
             If opand is a scalar type, wrap it in a PyViennaCL scalar class.
             """
+            if isinstance(opand, list):
+                opand = array(opand)
             if (np_result_type(opand).name in HostScalarTypes
                 and not (isinstance(opand, MagicMethods)
                          or isinstance(opand, ndarray))):

@@ -6,7 +6,6 @@
 
 #include <viennacl/tools/shared_ptr.hpp>
 #include <viennacl/matrix.hpp>
-#include <viennacl/linalg/direct_solve.hpp>
 #include <viennacl/linalg/inner_prod.hpp>
 #include <viennacl/linalg/norm_1.hpp>
 #include <viennacl/linalg/norm_2.hpp>
@@ -65,6 +64,7 @@ enum op_t {
   op_trans,
   op_prod,
   op_solve,
+  op_solve_precond,
   op_inplace_solve
 };
 
@@ -329,19 +329,6 @@ DO_OP_FUNC(op_prod)
   return vcl::linalg::prod(o.operand1, o.operand2);
 } };
 
-DO_OP_FUNC(op_solve)
-{
-  return vcl::linalg::solve(o.operand1, o.operand2,
-                            o.operand3);
-} };
-
-DO_OP_FUNC(op_inplace_solve)
-{
-  vcl::linalg::inplace_solve(o.operand1, o.operand2,
-			     o.operand3);
-  return o.operand1;
-} };
-
 /** @brief Returns a double describing the VCL_T */
 template <class HostT>
 HostT vcl_scalar_to_host(const vcl::scalar<HostT>& vcl_s)
@@ -382,6 +369,8 @@ PYVCL_SUBMODULE(coordinate_matrix);
 PYVCL_SUBMODULE(ell_matrix);
 PYVCL_SUBMODULE(hyb_matrix);
 
+PYVCL_SUBMODULE(direct_solvers);
+PYVCL_SUBMODULE(iterative_solvers);
 PYVCL_SUBMODULE(eig);
 PYVCL_SUBMODULE(extra_functions);
 PYVCL_SUBMODULE(scheduler);

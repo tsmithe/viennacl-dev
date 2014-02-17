@@ -1,0 +1,12 @@
+#include "iterative_solvers.hpp"
+
+PYVCL_SUBMODULE(iterative_solvers)
+{
+  EXPORT_ITERATIVE_SOLVERS(float);
+  EXPORT_ITERATIVE_SOLVERS(double);
+  EXPORT_ITERATIVE_SOLVERS(int);
+  EXPORT_ITERATIVE_SOLVERS(uint);
+  EXPORT_ITERATIVE_SOLVERS(long);
+  EXPORT_ITERATIVE_SOLVERS(ulong);
+}
+

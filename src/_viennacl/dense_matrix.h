@@ -6,10 +6,6 @@
 
 #include <boost/numeric/ublas/matrix.hpp>
 
-#include <viennacl/linalg/cg.hpp>
-#include <viennacl/linalg/bicgstab.hpp>
-#include <viennacl/linalg/direct_solve.hpp>
-#include <viennacl/linalg/gmres.hpp>
 #include <viennacl/matrix.hpp>
 #include <viennacl/matrix_proxy.hpp>
 
@@ -138,114 +134,6 @@ np::ndarray vcl_matrix_to_ndarray(const vcl::matrix_base<SCALARTYPE, VCL_F>& m)
                                          vcl::matrix_base<TYPE, F>&,    \
                                          vcl::matrix_base<TYPE, F>&,    \
                                          op_element_pow, 0>)            \
-    .def("solve", pyvcl_do_3ary_op<vcl::vector<TYPE>,                   \
-	 vcl::matrix_base<TYPE, F>&, vcl::vector_base<TYPE>&,           \
-	 vcl::linalg::lower_tag&,                                       \
-	 op_solve, 0>)                                                  \
-    .def("solve", pyvcl_do_3ary_op<vcl::vector<TYPE>,                   \
-	 vcl::matrix_base<TYPE, F>&, vcl::vector_base<TYPE>&,           \
-	 vcl::linalg::unit_lower_tag&,                                  \
-	 op_solve, 0>)                                                  \
-    .def("solve", pyvcl_do_3ary_op<vcl::vector<TYPE>,                   \
-	 vcl::matrix_base<TYPE, F>&, vcl::vector_base<TYPE>&,           \
-	 vcl::linalg::upper_tag&,                                       \
-	 op_solve, 0>)                                                  \
-    .def("solve", pyvcl_do_3ary_op<vcl::vector<TYPE>,                   \
-	 vcl::matrix_base<TYPE, F>&, vcl::vector_base<TYPE>&,           \
-	 vcl::linalg::unit_upper_tag&,                                  \
-	 op_solve, 0>)                                                 /* \
-    .def("solve", pyvcl_do_3ary_op<vcl::vector<TYPE>,                   \
-	 vcl::matrix_base<TYPE, F>&, vcl::vector<TYPE>&,                \
-	 vcl::linalg::cg_tag&,                                          \
-	 op_solve, 0>)                                                  \
-    .def("solve", pyvcl_do_3ary_op<vcl::vector<TYPE>,                   \
-	 vcl::matrix_base<TYPE, F>&, vcl::vector<TYPE>&,                \
-	 vcl::linalg::bicgstab_tag&,                                    \
-	 op_solve, 0>)                                                  \
-    .def("solve", pyvcl_do_3ary_op<vcl::vector<TYPE>,                   \
-	 vcl::matrix_base<TYPE, F>&, vcl::vector<TYPE>&,                \
-	 vcl::linalg::gmres_tag&,                                       \
-	 op_solve, 0>)                                                 */ \
-    .def("solve", pyvcl_do_3ary_op<vcl::matrix<TYPE, vcl::row_major>,   \
-	 vcl::matrix_base<TYPE, vcl::row_major>&,                       \
-         vcl::matrix_base<TYPE, vcl::row_major>&,                       \
-	 vcl::linalg::lower_tag&,                                       \
-	 op_solve, 0>)                                                  \
-    .def("solve", pyvcl_do_3ary_op<vcl::matrix<TYPE, vcl::row_major>,   \
-	 vcl::matrix_base<TYPE, vcl::row_major>&,                       \
-         vcl::matrix_base<TYPE, vcl::row_major>&,                       \
-	 vcl::linalg::unit_lower_tag&,                                  \
-	 op_solve, 0>)                                                  \
-    .def("solve", pyvcl_do_3ary_op<vcl::matrix<TYPE, vcl::row_major>,   \
-	 vcl::matrix_base<TYPE, vcl::row_major>&,                       \
-         vcl::matrix_base<TYPE, vcl::row_major>&,                       \
-	 vcl::linalg::upper_tag&,                                       \
-	 op_solve, 0>)                                                  \
-    .def("solve", pyvcl_do_3ary_op<vcl::matrix<TYPE, vcl::row_major>,   \
-	 vcl::matrix_base<TYPE, vcl::row_major>&,                       \
-         vcl::matrix_base<TYPE, vcl::row_major>&,                       \
-	 vcl::linalg::unit_upper_tag&,                                  \
-	 op_solve, 0>)                                                  \
-    .def("solve", pyvcl_do_3ary_op<vcl::matrix<TYPE, vcl::column_major>, \
-	 vcl::matrix_base<TYPE, vcl::row_major>&,                       \
-         vcl::matrix_base<TYPE, vcl::column_major>&,                    \
-	 vcl::linalg::lower_tag&,                                       \
-	 op_solve, 0>)                                                  \
-    .def("solve", pyvcl_do_3ary_op<vcl::matrix<TYPE, vcl::column_major>, \
-	 vcl::matrix_base<TYPE, vcl::row_major>&,                       \
-         vcl::matrix_base<TYPE, vcl::column_major>&,                    \
-	 vcl::linalg::unit_lower_tag&,                                  \
-	 op_solve, 0>)                                                  \
-    .def("solve", pyvcl_do_3ary_op<vcl::matrix<TYPE, vcl::column_major>, \
-	 vcl::matrix_base<TYPE, vcl::row_major>&,                       \
-         vcl::matrix_base<TYPE, vcl::column_major>&,                    \
-	 vcl::linalg::upper_tag&,                                       \
-	 op_solve, 0>)                                                  \
-    .def("solve", pyvcl_do_3ary_op<vcl::matrix<TYPE, vcl::column_major>, \
-	 vcl::matrix_base<TYPE, vcl::row_major>&,                       \
-         vcl::matrix_base<TYPE, vcl::column_major>&,                    \
-	 vcl::linalg::unit_upper_tag&,                                  \
-	 op_solve, 0>)                                                  \
-    .def("solve", pyvcl_do_3ary_op<vcl::matrix<TYPE, vcl::column_major>, \
-	 vcl::matrix_base<TYPE, vcl::column_major>&,                    \
-         vcl::matrix_base<TYPE, vcl::column_major>&,                    \
-	 vcl::linalg::lower_tag&,                                       \
-	 op_solve, 0>)                                                  \
-    .def("solve", pyvcl_do_3ary_op<vcl::matrix<TYPE, vcl::column_major>, \
-	 vcl::matrix_base<TYPE, vcl::column_major>&,                    \
-         vcl::matrix_base<TYPE, vcl::column_major>&,                    \
-	 vcl::linalg::unit_lower_tag&,                                  \
-	 op_solve, 0>)                                                  \
-    .def("solve", pyvcl_do_3ary_op<vcl::matrix<TYPE, vcl::column_major>, \
-	 vcl::matrix_base<TYPE, vcl::column_major>&,                    \
-         vcl::matrix_base<TYPE, vcl::column_major>&,                    \
-	 vcl::linalg::upper_tag&,                                       \
-	 op_solve, 0>)                                                  \
-    .def("solve", pyvcl_do_3ary_op<vcl::matrix<TYPE, vcl::column_major>, \
-	 vcl::matrix_base<TYPE, vcl::column_major>&,                    \
-         vcl::matrix_base<TYPE, vcl::column_major>&,                    \
-	 vcl::linalg::unit_upper_tag&,                                  \
-	 op_solve, 0>)                                                  \
-    .def("solve", pyvcl_do_3ary_op<vcl::matrix<TYPE, vcl::row_major>,   \
-	 vcl::matrix_base<TYPE, vcl::column_major>&,                    \
-         vcl::matrix_base<TYPE, vcl::row_major>&,                       \
-	 vcl::linalg::lower_tag&,                                       \
-	 op_solve, 0>)                                                  \
-    .def("solve", pyvcl_do_3ary_op<vcl::matrix<TYPE, vcl::row_major>,   \
-	 vcl::matrix_base<TYPE, vcl::column_major>&,                    \
-         vcl::matrix_base<TYPE, vcl::row_major>&,                       \
-	 vcl::linalg::unit_lower_tag&,                                  \
-	 op_solve, 0>)                                                  \
-    .def("solve", pyvcl_do_3ary_op<vcl::matrix<TYPE, vcl::row_major>,   \
-	 vcl::matrix_base<TYPE, vcl::column_major>&,                    \
-         vcl::matrix_base<TYPE, vcl::row_major>&,                       \
-	 vcl::linalg::upper_tag&,                                       \
-	 op_solve, 0>)                                                  \
-    .def("solve", pyvcl_do_3ary_op<vcl::matrix<TYPE, vcl::row_major>,   \
-	 vcl::matrix_base<TYPE, vcl::column_major>&,                    \
-         vcl::matrix_base<TYPE, vcl::row_major>&,                       \
-	 vcl::linalg::unit_upper_tag&,                                  \
-	 op_solve, 0>)                                                  \
     ;                                                                   \
   bp::class_<vcl::matrix_range<vcl::matrix_base<TYPE, F> >,             \
              vcl::tools::shared_ptr<vcl::matrix_range<vcl::matrix_base<TYPE, \

@@ -8,6 +8,8 @@
 .. toctree::
    :maxdepth: 2
 
+   examples/index.rst
+
 .. automodule:: pyviennacl
    :members: 
 

@@ -12,14 +12,15 @@ community's most popular scientific packages, NumPy and SciPy.
 PyViennaCL is divided into four submodules, of which three are designed
 for direct use by users:
 
-  * _viennacl: a raw C++ interface to ViennaCL, with no stable API;
   * :doc:`pycore`: user-friendly classes for representing the main ViennaCL
     objects, such as Matrix or Vector;
   * :doc:`linalg`: an explicit interface to a number of ViennaCL's linear
     algebra routines, such as matrix solvers and eigenvalue computation;
+  * :doc:`math`: convenience functions akin to the standard math module;
   * :doc:`util`: utility functions, such as to construct an appropriate
     ViennaCL object from an ndarray (Matrix or Vector), or to provide basic
-    debug logging.
+    debug logging;
+  * _viennacl: a raw C++ interface to ViennaCL, with no stable API.
 
 Nonetheless, all of PyViennaCL's functionality is available from the top-
 level pyviennacl namespace. So, if you want help on the Matrix class, you
@@ -28,7 +29,7 @@ can just run::
   >>> import pyviennacl as p
   >>> help(p.Matrix)                                     # doctest: +SKIP
 
-However, if you want help on PyViennaCL's core functionality in general, or
+PyViennaCL's core functionality in general, or
 PyViennaCL's high-level linear algebra functions, run::
 
    >>> help(p.pycore)                                    # doctest: +SKIP
@@ -44,5 +45,8 @@ from ._viennacl import __version__ as __viennacl_version__
 from .pycore import *
 from .linalg import *
 from .util import *
+from .vclmath import *
+
+from . import vclmath as math
 
 # TODO: __all__, __version__

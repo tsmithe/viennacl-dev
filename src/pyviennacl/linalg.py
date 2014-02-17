@@ -7,31 +7,45 @@ import logging
 
 log = logging.getLogger(__name__)
 
+class no_precond:
+    vcl_precond = _v.no_precond()
+
+class precond_tag:
+    pass
+
 class lower_tag:
     """
     Instruct the solver to solve for a lower triangular system matrix
     """
     vcl_tag = _v.lower_tag()
+    def vcl_solve_call(self, *args):
+        return _v.direct_solve(*args)
 
 class unit_lower_tag:
     """
     Instruct the solver to solve for a unit lower triangular system matrix
     """
     vcl_tag = _v.unit_lower_tag()
+    def vcl_solve_call(self, *args):
+        return _v.direct_solve(*args)
 
 class upper_tag:
     """
     Instruct the solver to solve for an upper triangular system matrix
     """
     vcl_tag = _v.upper_tag()
+    def vcl_solve_call(self, *args):
+        return _v.direct_solve(*args)
 
 class unit_upper_tag:
     """
     Instruct the solver to solve for a unit upper triangular system matrix
     """
     vcl_tag = _v.unit_upper_tag()
+    def vcl_solve_call(self, *args):
+        return _v.direct_solve(*args)
 
-class cg_tag:
+class cg_tag(precond_tag):
     """
     Instruct the solver to solve using the conjugate gradient solver.
 
@@ -39,6 +53,9 @@ class cg_tag:
 
     Used for supplying solver parameters.
     """
+    def vcl_solve_call(self, *args):
+        return _v.iterative_solve(*args)
+
     def __init__(self, tolerance = 1e-8, max_iterations = 300):
         """
         Construct a cg_tag.
@@ -82,7 +99,7 @@ class cg_tag:
         return self.vcl_tag.error
 
 
-class bicgstab_tag:
+class bicgstab_tag(precond_tag):
     """
     Instruct the solver to solve using the stabilised bi-conjugate gradient
     (BiCGStab) solver.
@@ -91,6 +108,9 @@ class bicgstab_tag:
 
     Used for supplying solver parameters.
     """
+    def vcl_solve_call(self, *args):
+        return _v.iterative_solve(*args)
+
     def __init__(self, tolerance = 1e-8, 
                  max_iterations = 400, max_iterations_before_restart = 200):
         """
@@ -146,12 +166,15 @@ class bicgstab_tag:
         return self.vcl_tag.error
 
 
-class gmres_tag:
+class gmres_tag(precond_tag):
     """
     Instruct the solver to solve using the GMRES solver.
 
     Used for supplying solver parameters.
     """
+    def vcl_solve_call(self, *args):
+        return _v.iterative_solve(*args)
+
     def __init__(self,tolerance = 1e-8, max_iterations = 300, krylov_dim = 20):
         """
         Construct a gmres_tag
@@ -392,7 +415,7 @@ def prod(A, B):
     return (A * B)
 
 
-def solve(A, B, tag):
+def solve(A, B, tag, precond = None):
     """
     Solve the linear system expressed by ``A x = B`` for ``x``.
 
@@ -436,9 +459,15 @@ def solve(A, B, tag):
         raise TypeError("B must be Matrix or Vector type")
 
     try:
-        return result_type(A.vcl_leaf.solve(B.vcl_leaf, tag.vcl_tag),
-                           dtype = B.dtype,
-                           layout = B.layout)
+        if isinstance(tag, precond_tag) and precond is not None:
+            return result_type(tag.vcl_solve_call(A.vcl_leaf, B.vcl_leaf,
+                                                  tag.vcl_tag, precond.vcl_precond),
+                               dtype = B.dtype,
+                               layout = B.layout)
+        else:
+            return result_type(tag.vcl_solve_call(A.vcl_leaf, B.vcl_leaf, tag.vcl_tag),
+                               dtype = B.dtype,
+                               layout = B.layout)
     except AttributeError:
         raise TypeError("tag must be a supported solver tag!")
 Matrix.solve = solve # for convenience..

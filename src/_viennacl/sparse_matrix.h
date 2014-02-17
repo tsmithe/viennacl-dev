@@ -16,6 +16,14 @@ namespace ublas = boost::numeric::ublas;
 
 // TODO: EXPOSE ALL NUMERIC TYPES
 
+typedef struct placesElement {
+  vcl::vcl_size_t row;
+  vcl::vcl_size_t col;
+  placesElement* prev;
+  placesElement* next;
+  placesElement* last;
+} placesElement;
+
 template <class ScalarType>
 class cpu_compressed_matrix_wrapper
 {
@@ -25,19 +33,19 @@ class cpu_compressed_matrix_wrapper
   ublas_sparse_t cpu_compressed_matrix;
 
 public:
-  bp::list places;
+  placesElement* places = NULL;
 
   cpu_compressed_matrix_wrapper()
   {
     cpu_compressed_matrix = ublas_sparse_t(0,0,0);
   }
 
-  cpu_compressed_matrix_wrapper(uint32_t _size1, uint32_t _size2)
+  cpu_compressed_matrix_wrapper(vcl::vcl_size_t _size1, vcl::vcl_size_t _size2)
   {
     cpu_compressed_matrix = ublas_sparse_t(_size1, _size2);
   }
 
-  cpu_compressed_matrix_wrapper(uint32_t _size1, uint32_t _size2, uint32_t _nnz)
+  cpu_compressed_matrix_wrapper(vcl::vcl_size_t _size1, vcl::vcl_size_t _size2, vcl::vcl_size_t _nnz)
   {
     cpu_compressed_matrix = ublas_sparse_t(_size1, _size2, _nnz);
   }
@@ -67,18 +75,16 @@ public:
       bp::throw_error_already_set();
     }
     
-    uint32_t n = array.shape(0);
-    uint32_t m = array.shape(1);
+    vcl::vcl_size_t n = array.shape(0);
+    vcl::vcl_size_t m = array.shape(1);
     
     cpu_compressed_matrix = ublas_sparse_t(n, m);
     
-    for (uint32_t i = 0; i < n; ++i) {
-      for (uint32_t j = 0; j < m; ++j) {
+    for (vcl::vcl_size_t i = 0; i < n; ++i) {
+      for (vcl::vcl_size_t j = 0; j < m; ++j) {
 	ScalarType val = bp::extract<ScalarType>(array[i][j]);
-	if (val != 0) {
-	  cpu_compressed_matrix(i, j) = val;
-	  places.append(bp::make_tuple(i, j));
-	}
+	if (val != 0)
+          set_entry(i, j, val);
       }
     }
     
@@ -91,12 +97,11 @@ public:
     bp::tuple shape = bp::make_tuple(size1(), size2());
     
     np::ndarray array = np::zeros(shape, dt);
-  
-    for (std::size_t i = 0; i < bp::len(places); ++i) {
-      bp::tuple coord = bp::extract<bp::tuple>(places[i]);
-      uint32_t x = bp::extract<uint32_t>(coord[0]);
-      uint32_t y = bp::extract<uint32_t>(coord[1]);
-      array[x][y] = get_entry(x, y);
+
+    placesElement* place = places;
+    while(place) {
+      array[place->row][place->col] = get_entry(place->row, place->col);
+      place = place->next;
     }
 
     return array;
@@ -126,70 +131,100 @@ public:
     typedef typename ublas_sparse_t::iterator1 it1;
     typedef typename ublas_sparse_t::iterator2 it2;
 
+    if (places)
+      nnz(); // Make sure we have no bogus entries
+
     for (it1 i = cpu_compressed_matrix.begin1();
          i != cpu_compressed_matrix.end1(); ++i) {
       for (it2 j = i.begin(); j != i.end(); ++j) {
 
-	if (cpu_compressed_matrix(j.index1(), j.index2()) != 0) {
-          bp::tuple coord = bp::make_tuple(j.index1(), j.index2());
-          if (not places.count(coord)) {
-            places.append(coord);
+	if (cpu_compressed_matrix(j.index1(), j.index2())) {
+          placesElement* place = (placesElement*)malloc(sizeof(placesElement));
+          place->prev = NULL;
+          place->next = NULL;
+          place->last = place;
+          place->row = j.index1();
+          place->col = j.index2();
+
+          if (places) {
+            placesElement* last = places->last;
+            place->prev = last;
+            last->next = place;
+            last->last = place;
           } else {
-            while (places.count(coord) > 1) {
-              places.remove(coord);
-            }
-          }          
+            places = place;
+          }            
         }
 
       }
     }
 
-    nnz();
-
   }
 
-  uint32_t nnz()
+  vcl::vcl_size_t nnz()
   {
-    
-    uint32_t i = 0;  
+    vcl::vcl_size_t i = 0;  
 
-    while (i < bp::len(places)) {
-	
-      bp::tuple item = bp::extract<bp::tuple>(places[i]);
-      uint32_t n = bp::extract<uint32_t>(item[0]);
-      uint32_t m = bp::extract<uint32_t>(item[1]);
+    placesElement* place = places;
+    while (place) {
+      if (cpu_compressed_matrix(place->row, place->col) != 0) {
+        i++;
+        place = place->next;
+      } else {
+        // this place is 0, so we need to take it out of the list
+        if (place->prev) {
+          if (place->next) {
+            place->prev->next = place->next;
+            place->next->prev = place->prev;
+          } else {
+            place->prev->next = NULL;
+            placesElement* prev = place->prev;
+            while (prev) {
+              prev->last = place->prev;
+              prev = prev->prev;
+            }
+          }
+        } else {
+          if (place->next) {
+            places = place->next;
+            places->prev = NULL;
+          } else {
+            places = NULL;
+          }
+        }
+        placesElement* next = place->next;
+        free(place);
+        place = next;
+      }
+    }
 
-      // We want to shift along the list. Conceptually, removing an item
-      // has the same effect (for the "tape head") as increasing the index..
-      if (cpu_compressed_matrix(n, m) == 0)
-	places.remove(item);
-      else
-	++i;
-
-    } 
-      
-    return bp::len(places);
-
+    return i;
   }
 
-  uint32_t size1() const
+  bp::list places_to_python() 
+  {
+    bp::list pyplaces;
+    placesElement* place = places;
+    while (place) {
+      // add place to pyplaces
+      pyplaces.append(bp::make_tuple(place->row, place->col));
+      place = place->next;
+    }
+    return pyplaces;
+  }
+      
+  vcl::vcl_size_t size1() const
   {
     return cpu_compressed_matrix.size1();
   }
 
-  uint32_t size2() const
+  vcl::vcl_size_t size2() const
   {
     return cpu_compressed_matrix.size2();
   }
 
-  void resize(uint32_t _size1, uint32_t _size2)
+  void resize(vcl::vcl_size_t _size1, vcl::vcl_size_t _size2)
   {
-  
-    if (_size1 < size1())
-      _size1 = size1();
-
-    if (_size2 < size2())
-      _size2 = size2();
 
     if ((_size1 == size1()) and (_size2 == size2()))
       return;
@@ -200,30 +235,97 @@ public:
     cpu_compressed_matrix_wrapper temp(*this);
     cpu_compressed_matrix.resize(_size1, _size2, false); // preserve == false!
 
-    for (std::size_t i = 0; i < bp::len(places); ++i) {
-      bp::tuple coord = bp::extract<bp::tuple>(places[i]);
-      uint32_t x = bp::extract<uint32_t>(coord[0]);
-      uint32_t y = bp::extract<uint32_t>(coord[1]);
-      cpu_compressed_matrix(x, y) = temp.get_entry(x, y);
+    placesElement* place = places;
+    while (place) {
+      if ((place->row < size1()) and (place->col < size2())) {
+        cpu_compressed_matrix(place->row, place->col) = temp.get_entry(place->row, place->col);
+      } else {
+        // TODO: remove place from list
+      }
+      place = place->next;
     }
 
   }
 
-  void set_entry(uint32_t n, uint32_t m, ScalarType val) 
+  void set_entry(vcl::vcl_size_t n, vcl::vcl_size_t m, ScalarType val) 
   {
     if (n >= size1() or m >= size2())
       resize(n+1, m+1);
 
-    // We want to keep track of which places are filled.
-    bp::tuple coord = bp::make_tuple(n, m);
-    if (not places.count(coord))
-      places.append(coord);
-
+    // first we set the underlying entry
     cpu_compressed_matrix(n, m) = val;
+
+    if (val != 0) {
+
+      // then we need to make sure (n, m) is on the list of places
+      placesElement* place = (placesElement*)malloc(sizeof(placesElement));
+      place->prev = NULL;
+      place->next = NULL;
+      place->last = place;
+      place->row = n;
+      place->col = m;
+
+      if (places) {
+        // then we need to add (n, m) to the list
+        place->prev = places->last;
+        places->last->next = place;
+        places->last->last = place;
+        places->last = place;
+      } else {
+        // then we need to create a list and add (n, m) to it
+        places = place;
+      }
+
+    } else if ((val == 0) && places) {
+      printf("DEBUG (set_entry): %d, %d, %f\n", n, m, val);
+
+      // then we need to make sure (n, m) is *not* on the list
+
+      placesElement* next = places->next;
+
+      while ((places->row == n) && (places->col == m)) {
+        free(places);
+        if (next) {
+          places = next;
+          places->prev = NULL;
+          next = places->next;
+        } else {
+          places = NULL;
+          break;
+        }
+      }
+
+      placesElement* place = places;
+      bool update_last = false;
+
+      while (next) {
+        if ((next->row == n) && (next->col == m)) {
+          next->next->prev = place;
+          place->next = next->next;
+          if (!(place->next)) {
+            update_last = true;
+          }
+          free(next);
+        } else {
+          place = next;
+        }
+        next = place->next;
+      }
+      
+      if (update_last) {
+        placesElement* prev = place->prev;
+        while (prev) {
+          prev->last = place;
+          prev = prev->prev;
+        }
+      }        
+
+    }
+          
   }
 
   // Need this because bp cannot deal with operator()
-  ScalarType get_entry(uint32_t n, uint32_t m)
+  ScalarType get_entry(vcl::vcl_size_t n, vcl::vcl_size_t m)
   {
     return cpu_compressed_matrix(n, m);
   }

@@ -14,7 +14,7 @@ PYVCL_SUBMODULE(compressed_matrix)
     .def(bp::init<vcl::ell_matrix<double> >())
     .def(bp::init<vcl::hyb_matrix<double> >())
     .def(bp::init<np::ndarray>())
-    .def_readonly("nonzeros", &cpu_compressed_matrix_wrapper<double>::places)
+    .add_property("nonzeros", &cpu_compressed_matrix_wrapper<double>::places_to_python)
     .add_property("nnz", &cpu_compressed_matrix_wrapper<double>::nnz)
     .add_property("size1", &cpu_compressed_matrix_wrapper<double>::size1)
     .add_property("size2", &cpu_compressed_matrix_wrapper<double>::size2)
@@ -54,7 +54,8 @@ PYVCL_SUBMODULE(compressed_matrix)
     .def("prod", pyvcl_do_2ary_op<vcl::vector<double>,
 	 vcl::compressed_matrix<double>&, vcl::vector<double>&,
 	 op_prod, 0>)
-    
+
+      /*    
     .def("inplace_solve", pyvcl_do_3ary_op<vcl::compressed_matrix<double>,
 	 vcl::compressed_matrix<double>&, vcl::vector<double>&,
 	 vcl::linalg::lower_tag,
@@ -71,6 +72,7 @@ PYVCL_SUBMODULE(compressed_matrix)
 	 vcl::compressed_matrix<double>&, vcl::vector<double>&,
 	 vcl::linalg::upper_tag,
 	 op_inplace_solve, 0>)
+      */
     ;
 }
 
