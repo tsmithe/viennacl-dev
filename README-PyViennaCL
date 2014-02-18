@@ -30,10 +30,14 @@ default Python interpreter version.
 2. Installation
 ---------------
 
-First, extract the source archive:
+If you're using the tarball, extract the source archive:
 
 $> tar xzf PyViennaCL-1.0.0-src.tar.gz
 $> cd PyViennaCL-1.0.0-src
+
+Otherwise, clone the git repository and get the submodules with
+
+$> git submodule update --init
 
 Then, change to the build directory, configure, make and install:
 

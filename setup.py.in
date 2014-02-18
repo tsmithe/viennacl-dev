@@ -25,7 +25,7 @@ define_macros=[
     ("VIENNACL_WITH_UBLAS", None),
     ("VIENNACL_WITH_OPENCL", None),
 ]              
-undef_macros=["NDEBUG"]
+undef_macros=[]
 
 submodules = ["core",
               "vector_float", "vector_double", "vector_int", "vector_long", "vector_uint", "vector_ulong",
