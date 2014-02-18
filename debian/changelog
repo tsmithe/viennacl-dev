@@ -1,4 +1,4 @@
-pyviennacl (0.9999.6-0) UNRELEASED; urgency=low
+pyviennacl (0.9999.99-0) UNRELEASED; urgency=low
 
   * Initial release (Closes: #732921)
 

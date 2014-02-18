@@ -10,7 +10,7 @@ project(PyViennaCL)
 
 set(VERSION_MAJOR 0)
 set(VERSION_MINOR 9999)
-set(VERSION_PATCH 6)
+set(VERSION_PATCH 99)
 set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
 
 SET(CMAKE_VERBOSE_MAKEFILE ON)   #uncomment this line to increase CMake verbosity

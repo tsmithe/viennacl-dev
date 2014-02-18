@@ -9,7 +9,7 @@ make available to Python programmers ViennaCL's fast OpenCL and CUDA
 algorithms, in a way that is idiomatic and compatible with the Python
 community's most popular scientific packages, NumPy and SciPy.
 
-PyViennaCL is divided into four submodules, of which three are designed
+PyViennaCL is divided into five submodules, of which four are designed
 for direct use by users:
 
   * :doc:`pycore`: user-friendly classes for representing the main ViennaCL
