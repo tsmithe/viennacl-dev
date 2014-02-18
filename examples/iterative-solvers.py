@@ -1,7 +1,7 @@
 #!python
 
 """
-PyViennaCL provides iterative solvers for various dense linear systems.
+PyViennaCL provides iterative solvers for sparse and dense linear systems.
 The API is documented in ``help(pyviennacl.linalg.solve)``. In particular,
 the solver to use is determined by the tag instance supplied to the ``solve``
 function.
@@ -10,7 +10,7 @@ The iterative solvers have various parameters for tuning the error tolerance,
 and various requirements for the form of the system matrix, as described in the
 documentation for the corresponding tag classes.
 
-For this reason, we only demonstrate here the use of the GMRES solver for an
+For this reason, we only demonstrate here the use of the GMRES solver for a
 general system.
 """
 
