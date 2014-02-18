@@ -144,8 +144,7 @@ set(DIST_SOURCES_DIR "${PROJECT_BINARY_DIR}/dist/pyviennacl-${VERSION}")
 
 foreach(f LICENSE
     pyversions.py
-    README-ViennaCL
-    README-PyViennaCL
+    README.dist
     setup.py.in
     CMakeLists.txt
     cmake/FindNumpy.cmake # NumPy for PyViennaCL
