@@ -14,13 +14,9 @@
 
 namespace ublas = boost::numeric::ublas;
 
-// TODO: EXPOSE ALL NUMERIC TYPES
-
 template <class ScalarType>
 class cpu_compressed_matrix_wrapper
 {
-  // TODO: This is just a quick first implementation. Later, I may well want 
-  // TODO: a version that doesn't depend on boost.python types.
   typedef ublas::compressed_matrix<ScalarType, ublas::row_major> ublas_sparse_t;
   ublas_sparse_t cpu_compressed_matrix;
   bool _dirty;
@@ -190,7 +186,25 @@ public:
     ublas_sparse_t temp(cpu_compressed_matrix); // Incurs a copy of all the data!!
     cpu_compressed_matrix.resize(_size1, _size2, false); // preserve == false!
 
-    _dirty = true;
+    if (_places)
+      delete _places;
+
+    _places = new bp::list;
+
+    typedef typename ublas_sparse_t::iterator1 it1;
+    typedef typename ublas_sparse_t::iterator2 it2;
+
+    for (it1 i = temp.begin1(); i != temp.end1(); ++i) {
+      for (it2 j = i.begin(); j != i.end(); ++j) {
+	if ((temp(j.index1(), j.index2()) != 0)
+            and (j.index1() < _size1) and (j.index2() < _size2)) {
+          cpu_compressed_matrix(j.index1(), j.index2()) = temp(j.index1(), j.index2());
+          _places->append(bp::make_tuple(j.index1(), j.index2()));
+        }
+      }
+    }
+
+    _dirty = false;
 
   }
   
@@ -211,7 +225,6 @@ public:
       cpu_compressed_matrix(n, m) = val;
       _dirty = true;
     }
-
   }
 
   // Need this because bp cannot deal with operator()

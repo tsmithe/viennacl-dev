@@ -1,6 +1,6 @@
 from pyviennacl import _viennacl as _v
-from pyviennacl.pycore import (Matrix, ScalarBase, Vector, Node, MagicMethods,
-                               Mul)
+from pyviennacl.pycore import (Matrix, SparseMatrixBase, ScalarBase, Vector,
+                               Node, MagicMethods, Mul)
 from numpy import (ndarray, array, dtype,
                    result_type as np_result_type)
 import logging
@@ -421,7 +421,7 @@ def solve(A, B, tag, precond = None):
 
     Parameters
     ----------
-    A : (M, M) Matrix
+    A : (M, M) dense or sparse Matrix
         A square matrix
     B : {Vector, Matrix}
         Right-hand side in ``A x = B``
@@ -445,11 +445,12 @@ def solve(A, B, tag, precond = None):
     Raises
     ------
     TypeError
-        If ``A`` is not a ``Matrix`` instance, or ``B`` is neither a ``Matrix``
-        nor a ``Vector`` instance, or if ``tag`` is unsupported.
+        If ``A`` is not a ``Matrix``  or ``SparseMatrixBase`` instance,
+        or ``B`` is neither a ``Matrix`` nor a ``Vector`` instance,
+        or if ``tag`` is unsupported.
     """
-    if not isinstance(A, Matrix):
-        raise TypeError("A must be Matrix type")
+    if not (isinstance(A, Matrix) or isinstance(A, SparseMatrixBase)):
+        raise TypeError("A must be dense or sparse matrix type")
 
     if isinstance(B, Matrix):
         result_type = Matrix
@@ -470,7 +471,8 @@ def solve(A, B, tag, precond = None):
                                layout = B.layout)
     except AttributeError:
         raise TypeError("tag must be a supported solver tag!")
-Matrix.solve = solve # for convenience..
+Matrix.solve = solve           # for convenience..
+SparseMatrixBase.solve = solve #
 
 
 def eig(A, tag):

@@ -1343,13 +1343,15 @@ class SparseMatrixBase(Leaf):
                     raise TypeError("Sparse matrix cannot be constructed thus")
             elif isinstance(args[0], Matrix):
                 # 1: Matrix instance -> copy
-                self.dtype = args[0].dtype
+                if self.dtype is None:
+                    self.dtype = args[0].dtype
                 self.layout = args[0].layout
                 def get_cpu_leaf(cpu_t):
                     return cpu_t(args[0].as_ndarray())
             elif isinstance(args[0], SparseMatrixBase):
                 # 1: SparseMatrixBase instance -> copy
-                self.dtype = args[0].dtype
+                if self.dtype is None:
+                    self.dtype = args[0].dtype
                 self.layout = args[0].layout
                 def get_cpu_leaf(cpu_t):
                     return args[0].cpu_leaf
@@ -1357,12 +1359,14 @@ class SparseMatrixBase(Leaf):
                 # 1: Node instance -> get result and copy
                 result = args[0].result
                 if isinstance(result, SparseMatrixBase):
-                    self.dtype = result.dtype
+                    if self.dtype is None:
+                        self.dtype = result.dtype
                     self.layout = result.layout
                     def get_cpu_leaf(cpu_t):
                         return result.cpu_leaf
                 elif isinstance(result, Matrix):
-                    self.dtype = result.dtype
+                    if self.dtype is None:
+                        self.dtype = result.dtype
                     self.layout = result.layout
                     def get_cpu_leaf(cpu_t):
                         return cpu_t(result.as_ndarray())
@@ -1371,6 +1375,8 @@ class SparseMatrixBase(Leaf):
                         "Sparse matrix cannot be constructed thus")
             elif isinstance(args[0], ndarray):
                 # 1: ndarray -> init and fill
+                if self.dtype is None:
+                    self.dtype = np_result_type(args[0])
                 def get_cpu_leaf(cpu_t):
                     return cpu_t(args[0])
             else:

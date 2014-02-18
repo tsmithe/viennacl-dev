@@ -5,8 +5,10 @@
 
 DO_OP_FUNC(op_solve)
 {
-  return vcl::linalg::solve(o.operand1, o.operand2,
-                            o.operand3);
+  ReturnT r = vcl::linalg::solve(o.operand1, o.operand2,
+                                 o.operand3);
+  //printf("??? %f\n", r(0));
+  return r;
 } };
 
 DO_OP_FUNC(op_solve_precond)
