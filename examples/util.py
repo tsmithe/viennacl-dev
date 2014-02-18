@@ -21,8 +21,11 @@ def read_mtx(fname, dtype):
     mat = p.CompressedMatrix(n, m, nnz, dtype=dtype)
     mat_type = p.np_result_type(mat).type
     def assign(l):
-        i, j, v = int(l[0]), int(l[1]), mat_type(l[2])
-        mat[i-1, j-1] = v
+        try:
+            i, j, v = int(l[0]), int(l[1]), mat_type(l[2])
+            mat[i-1, j-1] = v
+        except ValueError:
+            pass
     map(assign, lines[ln+1:])
     return mat
 

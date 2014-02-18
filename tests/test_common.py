@@ -6,6 +6,9 @@ import os
 import pyviennacl as p
 import random
 
+import logging
+logger = logging.getLogger('pyviennacl')
+
 def noop(*args, **kwargs):
     return os.EX_OK
 
@@ -126,7 +129,7 @@ def test_vector_slice(test_func,
         if not "Vectors do not have the same layout" in e.args[0]:
             raise
         else:
-            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+            logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=vector, B=vector, C=range
     print("Now using A=vector, B=vector, C=range")
@@ -139,7 +142,7 @@ def test_vector_slice(test_func,
         if not "Vectors do not have the same layout" in e.args[0]:
             raise
         else:
-            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+            logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=vector, B=vector, C=slice
     #print("Now using A=vector, B=vector, C=slice")
@@ -152,7 +155,7 @@ def test_vector_slice(test_func,
     #    if not "Vectors do not have the same layout" in e.args[0]:
     #        raise
     #    else:
-    #        p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+    #        logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=vector, B=range, C=vector
     print("Now using A=vector, B=range, C=vector")
@@ -165,7 +168,7 @@ def test_vector_slice(test_func,
         if not "Vectors do not have the same layout" in e.args[0]:
             raise
         else:
-            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+            logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=vector, B=range, C=range
     print("Now using A=vector, B=range, C=range")
@@ -178,7 +181,7 @@ def test_vector_slice(test_func,
         if not "Vectors do not have the same layout" in e.args[0]:
             raise
         else:
-            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+            logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=vector, B=range, C=slice
     #print("Now using A=vector, B=range, C=slice")
@@ -191,7 +194,7 @@ def test_vector_slice(test_func,
     #    if not "Vectors do not have the same layout" in e.args[0]:
     #        raise
     #    else:
-    #        p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+    #        logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=vector, B=slice, C=vector
     #print("Now using A=vector, B=slice, C=vector")
@@ -204,7 +207,7 @@ def test_vector_slice(test_func,
     #    if not "Vectors do not have the same layout" in e.args[0]:
     #        raise
     #    else:
-    #        p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+    #        logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=vector, B=slice, C=range
     #print("Now using A=vector, B=slice, C=range")
@@ -217,7 +220,7 @@ def test_vector_slice(test_func,
     #    if not "Vectors do not have the same layout" in e.args[0]:
     #        raise
     #    else:
-    #        p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+    #        logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=vector, B=slice, C=slice
     #print("Now using A=vector, B=slice, C=slice")
@@ -230,7 +233,7 @@ def test_vector_slice(test_func,
     #    if not "Vectors do not have the same layout" in e.args[0]:
     #        raise
     #    else:
-    #        p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+    #        logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=range, B=vector, C=vector
     print("Now using A=range, B=vector, C=vector")
@@ -243,7 +246,7 @@ def test_vector_slice(test_func,
         if not "Vectors do not have the same layout" in e.args[0]:
             raise
         else:
-            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+            logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=range, B=vector, C=range
     print("Now using A=range, B=vector, C=range")
@@ -256,7 +259,7 @@ def test_vector_slice(test_func,
         if not "Vectors do not have the same layout" in e.args[0]:
             raise
         else:
-            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+            logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=range, B=vector, C=slice
     #print("Now using A=range, B=vector, C=slice")
@@ -269,7 +272,7 @@ def test_vector_slice(test_func,
     #    if not "Vectors do not have the same layout" in e.args[0]:
     #        raise
     #    else:
-    #        p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+    #        logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=range, B=range, C=vector
     print("Now using A=range, B=range, C=vector")
@@ -282,7 +285,7 @@ def test_vector_slice(test_func,
         if not "Vectors do not have the same layout" in e.args[0]:
             raise
         else:
-            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+            logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=range, B=range, C=range
     print("Now using A=range, B=range, C=range")
@@ -295,7 +298,7 @@ def test_vector_slice(test_func,
         if not "Vectors do not have the same layout" in e.args[0]:
             raise
         else:
-            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+            logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=range, B=range, C=slice
     #print("Now using A=range, B=range, C=slice")
@@ -308,7 +311,7 @@ def test_vector_slice(test_func,
     #    if not "Vectors do not have the same layout" in e.args[0]:
     #        raise
     #    else:
-    #        p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+    #        logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=range, B=slice, C=vector
     #print("Now using A=range, B=slice, C=vector")
@@ -321,7 +324,7 @@ def test_vector_slice(test_func,
     #    if not "Vectors do not have the same layout" in e.args[0]:
     #        raise
     #    else:
-    #        p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+    #        logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=range, B=slice, C=range
     #print("Now using A=range, B=slice, C=range")
@@ -334,7 +337,7 @@ def test_vector_slice(test_func,
     #    if not "Vectors do not have the same layout" in e.args[0]:
     #        raise
     #    else:
-    #        p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+    #        logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=range, B=slice, C=slice
     #print("Now using A=range, B=slice, C=slice")
@@ -347,7 +350,7 @@ def test_vector_slice(test_func,
     #    if not "Vectors do not have the same layout" in e.args[0]:
     #        raise
     #    else:
-    #        p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+    #        logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=slice, B=vector, C=vector
     #print("Now using A=slice, B=vector, C=vector")
@@ -360,7 +363,7 @@ def test_vector_slice(test_func,
     #    if not "Vectors do not have the same layout" in e.args[0]:
     #        raise
     #    else:
-    #        p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+    #        logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=slice, B=vector, C=range
     #print("Now using A=slice, B=vector, C=range")
@@ -373,7 +376,7 @@ def test_vector_slice(test_func,
     #    if not "Vectors do not have the same layout" in e.args[0]:
     #        raise
     #    else:
-    #        p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+    #        logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=slice, B=vector, C=slice
     #print("Now using A=slice, B=vector, C=slice")
@@ -386,7 +389,7 @@ def test_vector_slice(test_func,
     #    if not "Vectors do not have the same layout" in e.args[0]:
     #        raise
     #    else:
-    #        p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+    #        logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=slice, B=range, C=vector
     #print("Now using A=slice, B=range, C=vector")
@@ -399,7 +402,7 @@ def test_vector_slice(test_func,
     #    if not "Vectors do not have the same layout" in e.args[0]:
     #        raise
     #    else:
-    #        p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+    #        logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=slice, B=range, C=range
     #print("Now using A=slice, B=range, C=range")
@@ -412,7 +415,7 @@ def test_vector_slice(test_func,
     #    if not "Vectors do not have the same layout" in e.args[0]:
     #        raise
     #    else:
-    #        p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+    #        logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=slice, B=range, C=slice
     #print("Now using A=slice, B=range, C=slice")
@@ -425,7 +428,7 @@ def test_vector_slice(test_func,
     #    if not "Vectors do not have the same layout" in e.args[0]:
     #        raise
     #    else:
-    #        p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+    #        logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=slice, B=slice, C=vector
     #print("Now using A=slice, B=slice, C=vector")
@@ -438,7 +441,7 @@ def test_vector_slice(test_func,
     #    if not "Vectors do not have the same layout" in e.args[0]:
     #        raise
     #    else:
-    #        p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+    #        logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=slice, B=slice, C=range
     #print("Now using A=slice, B=slice, C=range")
@@ -451,7 +454,7 @@ def test_vector_slice(test_func,
     #    if not "Vectors do not have the same layout" in e.args[0]:
     #        raise
     #    else:
-    #        p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+    #        logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=slice, B=slice, C=slice
     #print("Now using A=slice, B=slice, C=slice")
@@ -464,7 +467,7 @@ def test_vector_slice(test_func,
     #    if not "Vectors do not have the same layout" in e.args[0]:
     #        raise
     #    else:
-    #        p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+    #        logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     return os.EX_OK
 
@@ -573,7 +576,7 @@ def test_matrix_slice(test_func,
         if not "Matrices do not have the same layout" in e.args[0]:
             raise
         else:
-            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+            logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=matrix, B=matrix, C=range
     print("Now using A=matrix, B=matrix, C=range")
@@ -587,7 +590,7 @@ def test_matrix_slice(test_func,
         if not "Matrices do not have the same layout" in e.args[0]:
             raise
         else:
-            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+            logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=matrix, B=matrix, C=slice
     print("Now using A=matrix, B=matrix, C=slice")
@@ -601,7 +604,7 @@ def test_matrix_slice(test_func,
         if not "Matrices do not have the same layout" in e.args[0]:
             raise
         else:
-            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+            logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=matrix, B=range, C=matrix
     print("Now using A=matrix, B=range, C=matrix")
@@ -615,7 +618,7 @@ def test_matrix_slice(test_func,
         if not "Matrices do not have the same layout" in e.args[0]:
             raise
         else:
-            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+            logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=matrix, B=range, C=range
     print("Now using A=matrix, B=range, C=range")
@@ -629,7 +632,7 @@ def test_matrix_slice(test_func,
         if not "Matrices do not have the same layout" in e.args[0]:
             raise
         else:
-            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+            logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=matrix, B=range, C=slice
     print("Now using A=matrix, B=range, C=slice")
@@ -643,7 +646,7 @@ def test_matrix_slice(test_func,
         if not "Matrices do not have the same layout" in e.args[0]:
             raise
         else:
-            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+            logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=matrix, B=slice, C=matrix
     print("Now using A=matrix, B=slice, C=matrix")
@@ -657,7 +660,7 @@ def test_matrix_slice(test_func,
         if not "Matrices do not have the same layout" in e.args[0]:
             raise
         else:
-            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+            logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=matrix, B=slice, C=range
     print("Now using A=matrix, B=slice, C=range")
@@ -671,7 +674,7 @@ def test_matrix_slice(test_func,
         if not "Matrices do not have the same layout" in e.args[0]:
             raise
         else:
-            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+            logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=matrix, B=slice, C=slice
     print("Now using A=matrix, B=slice, C=slice")
@@ -685,7 +688,7 @@ def test_matrix_slice(test_func,
         if not "Matrices do not have the same layout" in e.args[0]:
             raise
         else:
-            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+            logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=range, B=matrix, C=matrix
     print("Now using A=range, B=matrix, C=matrix")
@@ -699,7 +702,7 @@ def test_matrix_slice(test_func,
         if not "Matrices do not have the same layout" in e.args[0]:
             raise
         else:
-            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+            logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=range, B=matrix, C=range
     print("Now using A=range, B=matrix, C=range")
@@ -713,7 +716,7 @@ def test_matrix_slice(test_func,
         if not "Matrices do not have the same layout" in e.args[0]:
             raise
         else:
-            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+            logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=range, B=matrix, C=slice
     print("Now using A=range, B=matrix, C=slice")
@@ -727,7 +730,7 @@ def test_matrix_slice(test_func,
         if not "Matrices do not have the same layout" in e.args[0]:
             raise
         else:
-            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+            logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=range, B=range, C=matrix
     print("Now using A=range, B=range, C=matrix")
@@ -741,7 +744,7 @@ def test_matrix_slice(test_func,
         if not "Matrices do not have the same layout" in e.args[0]:
             raise
         else:
-            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+            logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=range, B=range, C=range
     print("Now using A=range, B=range, C=range")
@@ -755,7 +758,7 @@ def test_matrix_slice(test_func,
         if not "Matrices do not have the same layout" in e.args[0]:
             raise
         else:
-            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+            logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=range, B=range, C=slice
     print("Now using A=range, B=range, C=slice")
@@ -769,7 +772,7 @@ def test_matrix_slice(test_func,
         if not "Matrices do not have the same layout" in e.args[0]:
             raise
         else:
-            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+            logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=range, B=slice, C=matrix
     print("Now using A=range, B=slice, C=matrix")
@@ -783,7 +786,7 @@ def test_matrix_slice(test_func,
         if not "Matrices do not have the same layout" in e.args[0]:
             raise
         else:
-            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+            logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=range, B=slice, C=range
     print("Now using A=range, B=slice, C=range")
@@ -797,7 +800,7 @@ def test_matrix_slice(test_func,
         if not "Matrices do not have the same layout" in e.args[0]:
             raise
         else:
-            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+            logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=range, B=slice, C=slice
     print("Now using A=range, B=slice, C=slice")
@@ -811,7 +814,7 @@ def test_matrix_slice(test_func,
         if not "Matrices do not have the same layout" in e.args[0]:
             raise
         else:
-            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+            logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=slice, B=matrix, C=matrix
     print("Now using A=slice, B=matrix, C=matrix")
@@ -825,7 +828,7 @@ def test_matrix_slice(test_func,
         if not "Matrices do not have the same layout" in e.args[0]:
             raise
         else:
-            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+            logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=slice, B=matrix, C=range
     print("Now using A=slice, B=matrix, C=range")
@@ -839,7 +842,7 @@ def test_matrix_slice(test_func,
         if not "Matrices do not have the same layout" in e.args[0]:
             raise
         else:
-            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+            logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=slice, B=matrix, C=slice
     print("Now using A=slice, B=matrix, C=slice")
@@ -853,7 +856,7 @@ def test_matrix_slice(test_func,
         if not "Matrices do not have the same layout" in e.args[0]:
             raise
         else:
-            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+            logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=slice, B=range, C=matrix
     print("Now using A=slice, B=range, C=matrix")
@@ -867,7 +870,7 @@ def test_matrix_slice(test_func,
         if not "Matrices do not have the same layout" in e.args[0]:
             raise
         else:
-            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+            logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=slice, B=range, C=range
     print("Now using A=slice, B=range, C=range")
@@ -881,7 +884,7 @@ def test_matrix_slice(test_func,
         if not "Matrices do not have the same layout" in e.args[0]:
             raise
         else:
-            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+            logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=slice, B=range, C=slice
     print("Now using A=slice, B=range, C=slice")
@@ -895,7 +898,7 @@ def test_matrix_slice(test_func,
         if not "Matrices do not have the same layout" in e.args[0]:
             raise
         else:
-            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+            logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=slice, B=slice, C=matrix
     print("Now using A=slice, B=slice, C=matrix")
@@ -909,7 +912,7 @@ def test_matrix_slice(test_func,
         if not "Matrices do not have the same layout" in e.args[0]:
             raise
         else:
-            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+            logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=slice, B=slice, C=range
     print("Now using A=slice, B=slice, C=range")
@@ -923,7 +926,7 @@ def test_matrix_slice(test_func,
         if not "Matrices do not have the same layout" in e.args[0]:
             raise
         else:
-            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+            logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=slice, B=slice, C=slice
     print("Now using A=slice, B=slice, C=slice")
@@ -937,7 +940,7 @@ def test_matrix_slice(test_func,
         if not "Matrices do not have the same layout" in e.args[0]:
             raise
         else:
-            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+            logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     return os.EX_OK
 
@@ -1159,7 +1162,7 @@ def test_matrix_solvers(test_func,
         if not "Matrices do not have the same layout" in e.args[0]:
             raise
         else:
-            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+            logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=matrix, B=range
     print("Now using A=matrix, B=range")
@@ -1179,7 +1182,7 @@ def test_matrix_solvers(test_func,
         if not "Matrices do not have the same layout" in e.args[0]:
             raise
         else:
-            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+            logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=matrix, B=slice
     print("Now using A=matrix, B=slice")
@@ -1199,7 +1202,7 @@ def test_matrix_solvers(test_func,
         if not "Matrices do not have the same layout" in e.args[0]:
             raise
         else:
-            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+            logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=range, B=matrix
     print("Now using A=range, B=matrix")
@@ -1219,7 +1222,7 @@ def test_matrix_solvers(test_func,
         if not "Matrices do not have the same layout" in e.args[0]:
             raise
         else:
-            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+            logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=range, B=range
     print("Now using A=range, B=range")
@@ -1239,7 +1242,7 @@ def test_matrix_solvers(test_func,
         if not "Matrices do not have the same layout" in e.args[0]:
             raise
         else:
-            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+            logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=range, B=slice
     print("Now using A=range, B=slice")
@@ -1259,7 +1262,7 @@ def test_matrix_solvers(test_func,
         if not "Matrices do not have the same layout" in e.args[0]:
             raise
         else:
-            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+            logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=slice, B=matrix
     print("Now using A=slice, B=matrix")
@@ -1279,7 +1282,7 @@ def test_matrix_solvers(test_func,
         if not "Matrices do not have the same layout" in e.args[0]:
             raise
         else:
-            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+            logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=slice, B=range
     print("Now using A=slice, B=range")
@@ -1299,7 +1302,7 @@ def test_matrix_solvers(test_func,
         if not "Matrices do not have the same layout" in e.args[0]:
             raise
         else:
-            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+            logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     # A=slice, B=slice
     print("Now using A=slice, B=slice")
@@ -1319,7 +1322,7 @@ def test_matrix_solvers(test_func,
         if not "Matrices do not have the same layout" in e.args[0]:
             raise
         else:
-            p.log.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
+            logger.debug("EXCEPTION EXECUTING was: %s" % e.args[0])
 
     return os.EX_OK
 

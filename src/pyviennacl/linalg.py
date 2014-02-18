@@ -1,6 +1,7 @@
 from pyviennacl import _viennacl as _v
 from pyviennacl.pycore import (Matrix, SparseMatrixBase, ScalarBase, Vector,
-                               Node, MagicMethods, Mul)
+                               Node, MagicMethods, Mul,
+                               vcl_statement_node_numeric_type_strings)
 from numpy import (ndarray, array, dtype,
                    result_type as np_result_type)
 import logging
@@ -456,11 +457,15 @@ def solve(A, B, tag, precond = None):
         result_type = Matrix
     elif isinstance(B, Vector):
         result_type = Vector
+        if not isinstance(B.vcl_leaf,
+                getattr(_v, "vector_" + vcl_statement_node_numeric_type_strings[
+                    B.statement_node_numeric_type])):
+            B = Vector(B)
     else:
         raise TypeError("B must be Matrix or Vector type")
 
     try:
-        if isinstance(tag, precond_tag) and precond is not None:
+        if isinstance(tag, precond_tag) and not (precond is None):
             return result_type(tag.vcl_solve_call(A.vcl_leaf, B.vcl_leaf,
                                                   tag.vcl_tag, precond.vcl_precond),
                                dtype = B.dtype,

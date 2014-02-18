@@ -297,35 +297,47 @@ class MagicMethods(object):
 
     def norm(self, ord=None):
         """
-        Returns the vector norm of this instance, if that is defined.
-
+        Returns a norm of this instance, if that is defined.
+        
         The norm returned depends on the ``ord`` parameter, as in SciPy.
+        * If this instance is a ``Matrix``, then ``ord`` must be ``None``,
+          and the only norm supported is the Frobenius norm.
 
         Parameters
         ----------
-        ord : {1, 2, inf}
-            Order of the norm. inf means NumPy's ``inf`` object.
+        ord : {1, 2, inf, 'fro', None}
+            Order of the norm.
+            inf means NumPy's ``inf`` object.
+            'fro' means the string 'fro', and denotes the Frobenius norm.
+            If None and self is a Matrix instance, then assumes 'fro'.
         """
         if ord == 1:
-            return Norm_1(self) #.value # Is this the best idea?
+            #return Norm_1(self) TODO NOT WORKING WITH SCHEDULER
+            return Scalar(_v.norm_1(self.vcl_leaf),
+                          dtype = self.dtype)
         elif ord == 2:
-            return Norm_2(self) #.value
+            #return Norm_2(self)
+            return Scalar(_v.norm_2(self.vcl_leaf),
+                          dtype = self.dtype)
         elif ord == inf:
-            return Norm_Inf(self) #.value 
+            #return Norm_Inf(self)
+            return Scalar(_v.norm_inf(self.vcl_leaf),
+                          dtype = self.dtype)
         else:
-            return NotImplemented
+            return Scalar(_v.norm_frobenius(self.vcl_leaf),
+                          dtype = self.dtype)
 
-    @property
-    def norm_1(self):
-        return Norm_1(self) #.result
+    #@property
+    #def norm_1(self):
+    #    return Norm_1(self) #.result
 
-    @property
-    def norm_2(self):
-        return Norm_2(self) #.result
+    #@property
+    #def norm_2(self):
+    #    return Norm_2(self) #.result
 
-    @property
-    def norm_inf(self):
-        return Norm_Inf(self) #.result
+    #@property
+    #def norm_inf(self):
+    #    return Norm_Inf(self) #.result
 
     def prod(self, rhs):
         """
@@ -419,6 +431,9 @@ class MagicMethods(object):
                 return self.value == rhs
         else:
             return self.result == rhs
+
+    def __ne__(self, rhs):
+        return not (self == rhs)
 
     def __hash__(self):
         ## TODO implement better hash function
@@ -672,6 +687,7 @@ class MagicMethods(object):
                                                  dtype = rhs.dtype)
             return rhs / self
         return rhs / self.value
+    __rdiv__ = __rtruediv__
 
     def __neg__(self):
         """
@@ -935,7 +951,7 @@ class ScalarBase(Leaf):
             else:
                 self._value = args[0]
         else:
-            self._value = 666
+            self._value = 0
 
         if self.dtype is None:
             self.dtype = np_result_type(self._value)
@@ -1062,7 +1078,11 @@ class Scalar(ScalarBase):
             vcl_type = getattr(_v, "scalar_" + vcl_statement_node_numeric_type_strings[self.statement_node_numeric_type])
         except (KeyError, AttributeError):
             raise TypeError("ViennaCL type %s not supported" % self.statement_node_numeric_type)
-        self.vcl_leaf = vcl_type(self._value)
+        if isinstance(self._value, vcl_type):
+            self.vcl_leaf = self._value
+            self._value = self._value.to_host()
+        else:
+            self.vcl_leaf = vcl_type(self._value)
 
 
 class Vector(Leaf):
@@ -1220,7 +1240,9 @@ class Vector(Leaf):
         Returns an expression representing the inner product of ``self`` and
         ``rhs``: ``Dot(self, rhs)``.
         """
-        return Dot(self, rhs)
+        #return Dot(self, rhs) NOT WORKING WITH SCHEDULER
+        return Scalar(_v.inner_prod(self.vcl_leaf, rhs.vcl_leaf),
+                      dtype = self.dtype)
     inner = dot
 
     def as_column(self):
@@ -2138,6 +2160,10 @@ class Node(MagicMethods):
         else:
             return self._result
 
+    @property
+    def vcl_leaf(self):
+        return self.result.vcl_leaf
+
     def execute(self):
         """
         Execute the expression tree taking this instance as the root, and
@@ -2170,7 +2196,7 @@ class Norm_1(Node):
     Represent the computation of the L^1-norm of a Vector.
     """
     result_types = {
-        ('Vector',): Scalar
+        ('Vector',): HostScalar
     }
     operation_node_type = _v.operation_node_type.OPERATION_UNARY_NORM_1_TYPE
 
@@ -2180,7 +2206,7 @@ class Norm_2(Node):
     Represent the computation of the L^2-norm of a Vector.
     """
     result_types = {
-        ('Vector',): Scalar
+        ('Vector',): HostScalar
     }
     operation_node_type = _v.operation_node_type.OPERATION_UNARY_NORM_2_TYPE
 
@@ -2190,7 +2216,7 @@ class Norm_Inf(Node):
     Represent the computation of the L^inf-norm of a Vector.
     """
     result_types = {
-        ('Vector',): Scalar
+        ('Vector',): HostScalar
     }
     operation_node_type = _v.operation_node_type.OPERATION_UNARY_NORM_INF_TYPE
 

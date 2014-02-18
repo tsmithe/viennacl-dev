@@ -20,24 +20,18 @@ import os, random
 from util import read_mtx, read_vector
 
 A = read_mtx(os.path.join(os.path.dirname(os.path.realpath(__file__)), "mat65k.mtx"),
-             dtype=np.float64)
+             dtype=np.float32)
+print("Loaded system matrix")
+
 b = read_vector(os.path.join(os.path.dirname(os.path.realpath(__file__)), "rhs65025.txt"),
-                dtype=np.float64)
+                dtype=np.float32)
+print("Loaded RHS vector", b[1:10:1].vcl_leaf)
 
 # Construct the tag to denote the GMRES solver
-tag = p.gmres_tag() #tolerance = 1e-10, max_iterations = 300, krylov_dim = 20)
+tag = p.gmres_tag(tolerance = 1e-5, max_iterations = 150, krylov_dim = 50)
 
 # Solve the system
 x = p.solve(A, b, tag)
-
-#print(A.vcl_leaf.prod(b.vcl_leaf).as_ndarray())
-#a = p._viennacl.cpu_compressed_matrix_double(A.vcl_leaf)
-#a1 = p.CompressedMatrix()
-#a1.cpu_leaf = a
-#print(a1.nnz)
-
-# Copy the solution from the device to host and display it
-print("Solution of Ax = b for x:\n%s" % x)
 
 # Show some info
 print("Num. iterations: %s" % tag.iters)

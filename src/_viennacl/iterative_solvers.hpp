@@ -16,15 +16,15 @@
 
 #define EXPORT_DENSE_ITERATIVE_SOLVERS_F(TYPE, F)                       \
   bp::def("iterative_solve", pyvcl_do_3ary_op<vcl::vector<TYPE>,        \
-          vcl::matrix_base<TYPE, F>&, vcl::vector_base<TYPE>&,          \
+          vcl::matrix_base<TYPE, F>&, vcl::vector<TYPE>&,               \
           vcl::linalg::cg_tag&,                                         \
           op_solve, 0>);                                                \
   bp::def("iterative_solve", pyvcl_do_3ary_op<vcl::vector<TYPE>,        \
-          vcl::matrix_base<TYPE, F>&, vcl::vector_base<TYPE>&,          \
+          vcl::matrix_base<TYPE, F>&, vcl::vector<TYPE>&,               \
           vcl::linalg::bicgstab_tag&,                                   \
           op_solve, 0>);                                                \
   bp::def("iterative_solve", pyvcl_do_3ary_op<vcl::vector<TYPE>,        \
-          vcl::matrix_base<TYPE, F>&, vcl::vector_base<TYPE>&,          \
+          vcl::matrix_base<TYPE, F>&, vcl::vector<TYPE>&,               \
           vcl::linalg::gmres_tag&,                                      \
           op_solve, 0>);
 
@@ -35,51 +35,51 @@
 
 #define EXPORT_SPARSE_ITERATIVE_SOLVERS(TYPE)                           \
   bp::def("iterative_solve", pyvcl_do_3ary_op<vcl::vector<TYPE>,        \
-          vcl::compressed_matrix<TYPE>&, vcl::vector_base<TYPE>&,       \
+          vcl::compressed_matrix<TYPE>&, vcl::vector<TYPE>&,            \
           vcl::linalg::cg_tag&,                                         \
           op_solve, 0>);                                                \
   bp::def("iterative_solve", pyvcl_do_3ary_op<vcl::vector<TYPE>,        \
-          vcl::compressed_matrix<TYPE>&, vcl::vector_base<TYPE>&,       \
+          vcl::compressed_matrix<TYPE>&, vcl::vector<TYPE>&,            \
           vcl::linalg::bicgstab_tag&,                                   \
           op_solve, 0>);                                                \
   bp::def("iterative_solve", pyvcl_do_3ary_op<vcl::vector<TYPE>,        \
-          vcl::compressed_matrix<TYPE>&, vcl::vector_base<TYPE>&,       \
+          vcl::compressed_matrix<TYPE>&, vcl::vector<TYPE>&,            \
           vcl::linalg::gmres_tag&,                                      \
           op_solve, 0>);                                                \
   bp::def("iterative_solve", pyvcl_do_3ary_op<vcl::vector<TYPE>,        \
-          vcl::coordinate_matrix<TYPE>&, vcl::vector_base<TYPE>&,       \
+          vcl::coordinate_matrix<TYPE>&, vcl::vector<TYPE>&,            \
           vcl::linalg::cg_tag&,                                         \
           op_solve, 0>);                                                \
   bp::def("iterative_solve", pyvcl_do_3ary_op<vcl::vector<TYPE>,        \
-          vcl::coordinate_matrix<TYPE>&, vcl::vector_base<TYPE>&,       \
+          vcl::coordinate_matrix<TYPE>&, vcl::vector<TYPE>&,            \
           vcl::linalg::bicgstab_tag&,                                   \
           op_solve, 0>);                                                \
   bp::def("iterative_solve", pyvcl_do_3ary_op<vcl::vector<TYPE>,        \
-          vcl::coordinate_matrix<TYPE>&, vcl::vector_base<TYPE>&,       \
+          vcl::coordinate_matrix<TYPE>&, vcl::vector<TYPE>&,            \
           vcl::linalg::gmres_tag&,                                      \
           op_solve, 0>);                                                \
   bp::def("iterative_solve", pyvcl_do_3ary_op<vcl::vector<TYPE>,        \
-          vcl::ell_matrix<TYPE>&, vcl::vector_base<TYPE>&,              \
+          vcl::ell_matrix<TYPE>&, vcl::vector<TYPE>&,                   \
           vcl::linalg::cg_tag&,                                         \
           op_solve, 0>);                                                \
   bp::def("iterative_solve", pyvcl_do_3ary_op<vcl::vector<TYPE>,        \
-          vcl::ell_matrix<TYPE>&, vcl::vector_base<TYPE>&,              \
+          vcl::ell_matrix<TYPE>&, vcl::vector<TYPE>&,                   \
           vcl::linalg::bicgstab_tag&,                                   \
           op_solve, 0>);                                                \
   bp::def("iterative_solve", pyvcl_do_3ary_op<vcl::vector<TYPE>,        \
-          vcl::ell_matrix<TYPE>&, vcl::vector_base<TYPE>&,              \
+          vcl::ell_matrix<TYPE>&, vcl::vector<TYPE>&,                   \
           vcl::linalg::gmres_tag&,                                      \
           op_solve, 0>);                                                \
   bp::def("iterative_solve", pyvcl_do_3ary_op<vcl::vector<TYPE>,        \
-          vcl::hyb_matrix<TYPE>&, vcl::vector_base<TYPE>&,              \
+          vcl::hyb_matrix<TYPE>&, vcl::vector<TYPE>&,                   \
           vcl::linalg::cg_tag&,                                         \
           op_solve, 0>);                                                \
   bp::def("iterative_solve", pyvcl_do_3ary_op<vcl::vector<TYPE>,        \
-          vcl::hyb_matrix<TYPE>&, vcl::vector_base<TYPE>&,              \
+          vcl::hyb_matrix<TYPE>&, vcl::vector<TYPE>&,                   \
           vcl::linalg::bicgstab_tag&,                                   \
           op_solve, 0>);                                                \
   bp::def("iterative_solve", pyvcl_do_3ary_op<vcl::vector<TYPE>,        \
-          vcl::hyb_matrix<TYPE>&, vcl::vector_base<TYPE>&,              \
+          vcl::hyb_matrix<TYPE>&, vcl::vector<TYPE>&,                   \
           vcl::linalg::gmres_tag&,                                      \
           op_solve, 0>);
 

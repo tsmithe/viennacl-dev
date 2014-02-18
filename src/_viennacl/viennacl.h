@@ -10,6 +10,7 @@
 #include <viennacl/linalg/norm_1.hpp>
 #include <viennacl/linalg/norm_2.hpp>
 #include <viennacl/linalg/norm_inf.hpp>
+#include <viennacl/linalg/norm_frobenius.hpp>
 #include <viennacl/linalg/prod.hpp>
 
 #define CONCAT(...) __VA_ARGS__
@@ -59,6 +60,7 @@ enum op_t {
   op_norm_1,
   op_norm_2,
   op_norm_inf,
+  op_norm_frobenius,
   op_index_norm_inf,
   op_plane_rotation,
   op_trans,
@@ -305,6 +307,11 @@ DO_OP_FUNC(op_norm_2)
 DO_OP_FUNC(op_norm_inf)
 {
   return vcl::linalg::norm_inf(o.operand1);
+} };
+
+DO_OP_FUNC(op_norm_frobenius)
+{
+  return vcl::linalg::norm_frobenius(o.operand1);
 } };
 
 DO_OP_FUNC(op_index_norm_inf)

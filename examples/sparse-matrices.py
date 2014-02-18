@@ -3,8 +3,9 @@
 """
 Sparse matrix support is still limited in PyViennaCL. The construction
 of spare matrices from host data is supported, as is sparse matrix-vector
-multiplication. However, no other operations have yet been implemented,
-and SciPy support is rudimentary. Solvers are planned for the next release.
+multiplication and the use of iterative solvers (see iterative-solvers.py
+in this directory). However, no other operations have yet been implemented,
+and SciPy support is rudimentary.
 
 Here, we demonstrate the construction of a CompressedMatrix instance, and the
 calculation of a matrix-vector product.

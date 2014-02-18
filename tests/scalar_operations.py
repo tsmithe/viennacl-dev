@@ -27,14 +27,13 @@ def test_scalar(epsilon, dtype):
     gamma = p.HostScalar(c)
     delta = p.HostScalar(d)
 
-    if alpha != a:
-        print(alpha, a, alpha.value)
+    if not alpha == a:
         raise RuntimeError("Failed to initialise device scalar")
-    if beta != b:
+    if not beta == b:
         raise RuntimeError("Failed to initialise device scalar")
-    if gamma != c:
+    if not gamma == c:
         raise RuntimeError("Failed to initialise host scalar")
-    if delta != d:
+    if not delta == d:
         raise RuntimeError("Failed to initialise host scalar")
     print("Test: scalar initialisation passed")
 

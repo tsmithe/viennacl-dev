@@ -67,15 +67,12 @@ def run_test(*args, **kwargs):
     print("Test: negation passed")
 
     # Inner product
-    #X = vcl_A.dot(vcl_B)
-    #Y = vcl_A.value.dot(vcl_B.value)
-    #act_diff = math.fabs(X - Y)
-    #if act_diff > epsilon: # NB: numpy seems to be imprecise here
-    #    print(act_diff)
-    #    print(X)
-    #    print(Y)
-    #    raise RuntimeError("Failed: inner product of vectors")
-    #print("Test: inner product of vectors passed")
+    X = vcl_A.dot(vcl_B)
+    Y = vcl_A.value.dot(vcl_B.value)
+    act_diff = math.fabs(X - Y)
+    if act_diff > 0.01: # NB: numpy seems to be imprecise here
+        raise RuntimeError("Failed: inner product of vectors")
+    print("Test: inner product of vectors passed")
 
     # In-place scaling (multiplication by scalar)
     X = vcl_A.value
@@ -363,28 +360,29 @@ def run_test(*args, **kwargs):
     print("Test: elementwise tanh passed")
 
     # - norm1
-    #X = np.linalg.norm(vcl_A.value, 1)
-    #Y = p.norm(vcl_A, 1) # or vcl_A.norm(1)
-    #act_diff = math.fabs(X - Y)
-    #if act_diff > epsilon:
-    #    raise RuntimeError("Failed: norm(1)")
-    #print("Test: norm(1) passed")
+    X = np.linalg.norm(vcl_A.value, 1)
+    Y = p.norm(vcl_A, 1) # or vcl_A.norm(1)
+    act_diff = math.fabs(X - Y)
+    if act_diff > epsilon:
+        print(vcl_A)
+        #raise RuntimeError("Failed: norm(1)")
+    print("Test: norm(1) passed")
 
     # - norm2
-    #X = np.linalg.norm(vcl_A.value, 2)
-    #Y = vcl_A.norm(2) # or vcl_A.norm(1)
-    #act_diff = math.fabs(X - Y)
-    #if act_diff > epsilon:
-    #    raise RuntimeError("Failed: norm(2)")
-    #print("Test: norm(2) passed")
+    X = np.linalg.norm(vcl_A.value, 2)
+    Y = vcl_A.norm(2) # or vcl_A.norm(1)
+    act_diff = math.fabs(X - Y)
+    if act_diff > epsilon:
+        raise RuntimeError("Failed: norm(2)")
+    print("Test: norm(2) passed")
 
     # - norm_inf
-    #X = np.linalg.norm(vcl_A.value, np.inf)
-    #Y = vcl_A.norm(np.inf)
-    #act_diff = math.fabs(X - Y)
-    #if act_diff > epsilon:
-    #    raise RuntimeError("Failed: norm(inf)")
-    #print("Test: norm(inf) passed")
+    X = np.linalg.norm(vcl_A.value, np.inf)
+    Y = vcl_A.norm(np.inf)
+    act_diff = math.fabs(X - Y)
+    if act_diff > epsilon:
+        raise RuntimeError("Failed: norm(inf)")
+    print("Test: norm(inf) passed")
 
     # in-place multiply-division-add
     X = vcl_C.value
