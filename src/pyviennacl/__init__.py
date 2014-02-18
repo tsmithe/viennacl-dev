@@ -16,7 +16,8 @@ for direct use by users:
     objects, such as Matrix or Vector;
   * :doc:`linalg`: an explicit interface to a number of ViennaCL's linear
     algebra routines, such as matrix solvers and eigenvalue computation;
-  * :doc:`math`: convenience functions akin to the standard math module;
+  * :doc:`vclmath`: convenience functions akin to the standard math module
+    (you can also access it as ``pyviennacl.math``);
   * :doc:`util`: utility functions, such as to construct an appropriate
     ViennaCL object from an ndarray (Matrix or Vector), or to provide basic
     debug logging;

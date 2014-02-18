@@ -3,15 +3,19 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-.. py:module:: pyviennacl
+.. .. py:module:: pyviennacl
+
+.. automodule:: pyviennacl
+   :members: 
+
+Usage examples
+==============
 
 .. toctree::
    :maxdepth: 2
 
    examples/index.rst
 
-.. automodule:: pyviennacl
-   :members: 
 
 Indices and tables
 ==================
