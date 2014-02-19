@@ -25,7 +25,7 @@ print("Loaded system matrix")
 
 b = read_vector(os.path.join(os.path.dirname(os.path.realpath(__file__)), "rhs65025.txt"),
                 dtype=np.float32)
-print("Loaded RHS vector", b[1:10:1].vcl_leaf)
+print("Loaded RHS vector")
 
 # Construct the tag to denote the GMRES solver
 tag = p.gmres_tag(tolerance = 1e-5, max_iterations = 150, krylov_dim = 50)

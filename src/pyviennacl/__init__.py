@@ -23,14 +23,14 @@ for direct use by users:
     debug logging;
   * _viennacl: a raw C++ interface to ViennaCL, with no stable API.
 
-Nonetheless, all of PyViennaCL's functionality is available from the top-
-level pyviennacl namespace. So, if you want help on the Matrix class, you
-can just run::
+Nonetheless, all of PyViennaCL's functionality is available from the
+top-level pyviennacl namespace. So, if you want help on the Matrix class,
+you can just run::
 
   >>> import pyviennacl as p
   >>> help(p.Matrix)                                     # doctest: +SKIP
 
-PyViennaCL's core functionality in general, or
+For help on PyViennaCL's core functionality in general, or
 PyViennaCL's high-level linear algebra functions, run::
 
    >>> help(p.pycore)                                    # doctest: +SKIP

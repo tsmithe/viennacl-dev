@@ -6,7 +6,7 @@ PyViennaCL's dense matrix (Matrix) and Vector types, and discuss some
 important issues about integration with Python and NumPy data types, and
 PyViennaCL's computational architecture.
 
-If you are familiar with NumPy, you will need about 5 minutes to grasp the
+If you are familiar with NumPy, you might need about 5 minutes to grasp the
 content here. If you are not so familiar, you might need 10 minutes.
 """
 
